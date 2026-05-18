@@ -1,0 +1,130 @@
+import { Injectable, Logger, BadRequestException, Inject } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import Redis from 'ioredis';
+import { REDIS_CLIENT } from '../common/cache/redis.constants';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { AllocationService } from './allocation.service';
+import { CreateWaveDto } from './dtos/wave.dto';
+
+@Injectable()
+export class WaveService {
+  private readonly logger = new Logger(WaveService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
+    private readonly eventEmitter: EventEmitter2,
+    private readonly allocationService: AllocationService,
+  ) {}
+
+  async create(dto: CreateWaveDto, tenantId: string): Promise<any> {
+    const count = await (this.prisma as any).pickingWave.count({
+      where: { tenantId, facilityId: dto.facilityId },
+    });
+    const waveNumber = `WV-${dto.facilityId.slice(0, 4).toUpperCase()}-${(count + 1).toString().padStart(4, '0')}`;
+
+    return (this.prisma as any).pickingWave.create({
+      data: {
+        tenantId,
+        facilityId: dto.facilityId,
+        waveNumber,
+        selectionCriteria: dto.selectionCriteria || undefined,
+      },
+    });
+  }
+
+  async releaseWave(waveId: string, tenantId: string): Promise<any> {
+    const wave = await (this.prisma as any).pickingWave.findFirst({
+      where: { id: waveId, tenantId },
+    });
+    if (!wave) throw new BadRequestException('Wave not found');
+
+    const criteria = (wave.selectionCriteria as any) || {};
+    const orders = await (this.prisma as any).salesOrder.findMany({
+      where: {
+        tenantId,
+        facilityId: wave.facilityId,
+        status: 'ALLOCATED',
+        ...(criteria.clientCode ? { clientCode: criteria.clientCode } : {}),
+        ...(criteria.carrier ? {} : {}),
+      },
+      include: {
+        lines: {
+          where: { status: 'ALLOCATED' },
+          include: { allocations: { where: { status: 'HARD_ALLOCATED' } } },
+        },
+      },
+    });
+
+    let totalTasks = 0;
+    for (const order of orders) {
+      for (const line of order.lines) {
+        for (const alloc of line.allocations) {
+          const taskCount = await (this.prisma as any).pickingTask.count({
+            where: { tenantId, facilityId: wave.facilityId },
+          });
+          const taskNumber = `PK-${wave.facilityId.slice(0, 4).toUpperCase()}-${(taskCount + 1).toString().padStart(6, '0')}`;
+
+          const location = await (this.prisma as any).storageLocation.findFirst({
+            where: { id: alloc.locationId, tenantId },
+          });
+
+          await (this.prisma as any).pickingTask.create({
+            data: {
+              tenantId,
+              facilityId: wave.facilityId,
+              taskNumber,
+              waveId,
+              orderLineId: line.id,
+              productId: line.productId,
+              locationId: alloc.locationId,
+              lotId: alloc.lotId,
+              quantityToPick: alloc.quantityAllocated,
+              uomId: alloc.uomId,
+              status: 'CREATED',
+              sequenceNumber: location?.pickSequence || 0,
+            },
+          });
+          totalTasks++;
+        }
+
+        await (this.prisma as any).salesOrderLine.update({
+          where: { id: line.id },
+          data: { status: 'RELEASED' },
+        });
+      }
+    }
+
+    await (this.prisma as any).pickingWave.update({
+      where: { id: waveId },
+      data: { status: 'RELEASED', totalTasks, releasedAt: new Date() },
+    });
+
+    this.eventEmitter.emit('wave.released', { waveId, orders: orders.length, tasks: totalTasks, tenantId });
+    return { waveId, ordersProcessed: orders.length, tasksGenerated: totalTasks };
+  }
+
+  async getBoard(tenantId: string, filters: {
+    status?: string;
+    facilityId?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ data: any[]; total: number }> {
+    const where: any = { tenantId };
+    if (filters.status) where.status = filters.status;
+    if (filters.facilityId) where.facilityId = filters.facilityId;
+
+    const page = filters.page || 1;
+    const limit = Math.min(filters.limit || 50, 200);
+    const [data, total] = await Promise.all([
+      (this.prisma as any).pickingWave.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      (this.prisma as any).pickingWave.count({ where }),
+    ]);
+    return { data, total };
+  }
+}

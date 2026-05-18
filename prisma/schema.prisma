@@ -1,0 +1,1281 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+  output          = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["multitenant"]
+}
+
+// ── Enums ──
+enum FacilityType {
+  WAREHOUSE           @map("WAREHOUSE")
+  DISTRIBUTION_CENTER @map("DISTRIBUTION_CENTER")
+  CROSS_DOCK          @map("CROSS_DOCK")
+  FULFILLMENT_CENTER  @map("FULFILLMENT_CENTER")
+
+  @@schema("multitenant")
+}
+
+enum ZoneType {
+  BULK     @map("BULK")
+  PICKING  @map("PICKING")
+  RECEIVING @map("RECEIVING")
+  SHIPPING @map("SHIPPING")
+  PACKING  @map("PACKING")
+  STAGING  @map("STAGING")
+  QC       @map("QC")
+  HOLD     @map("HOLD")
+  YARD     @map("YARD")
+
+  @@schema("multitenant")
+}
+
+enum LocationType {
+  PALLET @map("PALLET")
+  CASE   @map("CASE")
+  EACH   @map("EACH")
+  FLOOR  @map("FLOOR")
+  STAGING @map("STAGING")
+  DOCK   @map("DOCK")
+  TEMP   @map("TEMP")
+
+  @@schema("multitenant")
+}
+
+// ── Quota Model ──
+model ResourceQuota {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  resourceType String   @map("resource_type") @db.VarChar(100)
+  limitAmount  Int      @map("limit_amount")
+  currentUsage Int      @default(0) @map("current_usage")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, resourceType], name: "resource_quotas_type_uq")
+  @@schema("multitenant")
+  @@map("resource_quotas")
+}
+
+// ── Warehouse Hierarchy (Lean 3-table) ──
+model WarehouseFacility {
+  id           String         @id @default(uuid()) @db.Uuid
+  tenantId     String         @map("tenant_id") @db.Uuid
+  facilityCode String         @map("facility_code") @db.VarChar(50)
+  name         String         @db.VarChar(255)
+  facilityType FacilityType   @default(WAREHOUSE) @map("facility_type")
+  isActive     Boolean        @default(true) @map("is_active")
+  attributes   Json?          @db.Json
+  zones        WarehouseZone[]
+  createdAt    DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, facilityCode], name: "warehouse_facilities_code_uq")
+  @@schema("multitenant")
+  @@map("warehouse_facilities")
+}
+
+model WarehouseZone {
+  id         String           @id @default(uuid()) @db.Uuid
+  tenantId   String           @map("tenant_id") @db.Uuid
+  facilityId String           @map("facility_id") @db.Uuid
+  zoneCode   String           @map("zone_code") @db.VarChar(50)
+  name       String           @db.VarChar(255)
+  zoneType   ZoneType         @map("zone_type")
+  isActive   Boolean          @default(true) @map("is_active")
+  attributes Json?            @db.Json
+  locations  StorageLocation[]
+  facility   WarehouseFacility @relation(fields: [facilityId], references: [id], onDelete: Cascade)
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, facilityId, zoneCode], name: "warehouse_zones_code_uq")
+  @@schema("multitenant")
+  @@map("warehouse_zones")
+}
+
+model StorageLocation {
+  id           String           @id @default(uuid()) @db.Uuid
+  tenantId     String           @map("tenant_id") @db.Uuid
+  facilityId   String           @map("facility_id") @db.Uuid
+  zoneId       String           @map("zone_id") @db.Uuid
+  parentId     String?          @map("parent_id") @db.Uuid
+  locationCode String           @map("location_code") @db.VarChar(100)
+  locationType LocationType     @map("location_type")
+  isActive     Boolean          @default(true) @map("is_active")
+  isBlocked    Boolean          @default(false) @map("is_blocked")
+  attributes   Json?            @db.Json
+  children     StorageLocation[] @relation("LocationHierarchy")
+  parent       StorageLocation?  @relation("LocationHierarchy", fields: [parentId], references: [id])
+  zone         WarehouseZone     @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, facilityId, locationCode], name: "storage_locations_code_uq")
+  @@index([tenantId, facilityId, zoneId], name: "idx_sl_tenant_facility_zone")
+  @@schema("multitenant")
+  @@map("storage_locations")
+}
+
+// ── Product Catalog Enums ──
+enum CategoryStatus {
+  ACTIVE   @map("ACTIVE")
+  INACTIVE @map("INACTIVE")
+
+  @@schema("multitenant")
+}
+
+enum BarcodeType {
+  CODE128  @map("CODE128")
+  EAN13    @map("EAN13")
+  UPC_A    @map("UPC_A")
+  GS1_128  @map("GS1_128")
+  QR_CODE  @map("QR_CODE")
+  INTERNAL @map("INTERNAL")
+
+  @@schema("multitenant")
+}
+
+// ── Product Catalog ──
+model ProductCategory {
+  id           String            @id @default(uuid()) @db.Uuid
+  tenantId     String            @map("tenant_id") @db.Uuid
+  parentId     String?           @map("parent_id") @db.Uuid
+  categoryCode String            @map("category_code") @db.VarChar(50)
+  name         String            @db.VarChar(255)
+  status       CategoryStatus    @default(ACTIVE) @map("status")
+  children     ProductCategory[] @relation("CategoryTree")
+  parent       ProductCategory?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  products     Product[]
+  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime          @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, categoryCode], name: "product_categories_code_uq")
+  @@index([tenantId, status], name: "idx_pc_tenant_status")
+  @@schema("multitenant")
+  @@map("product_categories")
+}
+
+model UnitOfMeasure {
+  id        String    @id @default(uuid()) @db.Uuid
+  tenantId  String    @map("tenant_id") @db.Uuid
+  code      String    @map("code") @db.VarChar(10)
+  name      String    @db.VarChar(100)
+  isBase    Boolean   @default(false) @map("is_base")
+  isActive  Boolean   @default(true) @map("is_active")
+  products  Product[]
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, code], name: "units_of_measure_code_uq")
+  @@schema("multitenant")
+  @@map("units_of_measure")
+}
+
+model Product {
+  id            String             @id @default(uuid()) @db.Uuid
+  tenantId      String             @map("tenant_id") @db.Uuid
+  categoryId    String             @map("category_id") @db.Uuid
+  baseUomId     String             @map("base_uom_id") @db.Uuid
+  productCode   String             @map("product_code") @db.VarChar(100)
+  name          String             @db.VarChar(255)
+  description   String?            @db.Text
+  isActive      Boolean            @default(true) @map("is_active")
+  trackLot      Boolean            @default(false) @map("track_lot")
+  trackSerial   Boolean            @default(false) @map("track_serial")
+  trackExpiry   Boolean            @default(false) @map("track_expiry")
+  shelfLifeDays Int?               @map("shelf_life_days")
+  velocityClass String?            @map("velocity_class") @db.VarChar(1)
+  attributes    ProductAttribute[]
+  barcodes      ProductBarcode[]
+  category      ProductCategory    @relation(fields: [categoryId], references: [id])
+  baseUom       UnitOfMeasure      @relation(fields: [baseUomId], references: [id])
+  createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime           @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, productCode], name: "products_code_uq")
+  @@index([tenantId, isActive], name: "idx_prod_tenant_active")
+  @@index([tenantId, velocityClass], name: "idx_prod_velocity")
+  @@schema("multitenant")
+  @@map("products")
+}
+
+model ProductBarcode {
+  id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String    @map("tenant_id") @db.Uuid
+  productId    String    @map("product_id") @db.Uuid
+  barcodeValue String    @unique @map("barcode_value") @db.VarChar(200)
+  type         BarcodeType @default(CODE128) @map("type")
+  isPrimary    Boolean   @default(false) @map("is_primary")
+  isActive     Boolean   @default(true) @map("is_active")
+  quantityPerScan Int?   @default(1) @map("quantity_per_scan")
+  childUomCode String?   @map("child_uom_code") @db.VarChar(10)
+  product      Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([barcodeValue, tenantId], name: "idx_pb_barcode_tenant")
+  @@index([tenantId, isActive], name: "idx_pb_tenant_active")
+  @@schema("multitenant")
+  @@map("product_barcodes")
+}
+
+model ProductAttribute {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  productId String   @map("product_id") @db.Uuid
+  key       String   @map("key") @db.VarChar(100)
+  value     String   @map("value") @db.Text
+  isActive  Boolean  @default(true) @map("is_active")
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, productId, key], name: "product_attributes_uq")
+  @@schema("multitenant")
+  @@map("product_attributes")
+}
+
+model ProductImportJob {
+  id            String               @id @default(uuid()) @db.Uuid
+  tenantId      String               @map("tenant_id") @db.Uuid
+  fileName      String               @map("file_name") @db.VarChar(255)
+  status        String               @default("PENDING") @map("status") @db.VarChar(20)
+  totalRows     Int                  @default(0) @map("total_rows")
+  processedRows Int                  @default(0) @map("processed_rows")
+  successRows   Int                  @default(0) @map("success_rows")
+  failedRows    Int                  @default(0) @map("failed_rows")
+  errorSummary  String?              @map("error_summary") @db.Text
+  completedAt   DateTime?            @map("completed_at") @db.Timestamptz
+  results       ProductImportResult[]
+  createdAt     DateTime             @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime             @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([tenantId, status], name: "idx_pij_tenant_status")
+  @@schema("multitenant")
+  @@map("product_import_jobs")
+}
+
+model ProductImportResult {
+  id           String            @id @default(uuid()) @db.Uuid
+  tenantId     String            @map("tenant_id") @db.Uuid
+  jobId        String            @map("job_id") @db.Uuid
+  rowNum       Int               @map("row_num")
+  productCode  String?           @map("product_code") @db.VarChar(100)
+  status       String            @map("status") @db.VarChar(20)
+  errorMessage String?           @map("error_message") @db.Text
+  job          ProductImportJob  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([tenantId, jobId, status], name: "idx_pir_job_status")
+  @@schema("multitenant")
+  @@map("product_import_results")
+}
+
+// ── Inventory Enums ──
+enum TransactionType {
+  RECEIPT              @map("RECEIPT")
+  PUTAWAY              @map("PUTAWAY")
+  PICK                 @map("PICK")
+  PACK                 @map("PACK")
+  SHIP                 @map("SHIP")
+  ADJUSTMENT_INCREASE  @map("ADJUSTMENT_INCREASE")
+  ADJUSTMENT_DECREASE  @map("ADJUSTMENT_DECREASE")
+  TRANSFER_IN          @map("TRANSFER_IN")
+  TRANSFER_OUT         @map("TRANSFER_OUT")
+  CYCLE_COUNT_RESERVE  @map("CYCLE_COUNT_RESERVE")
+  CYCLE_COUNT_RELEASE  @map("CYCLE_COUNT_RELEASE")
+  HOLD_RELEASE         @map("HOLD_RELEASE")
+  QC_PASS              @map("QC_PASS")
+  QC_FAIL              @map("QC_FAIL")
+  REWORK               @map("REWORK")
+  SCRAPP               @map("SCRAPP")
+
+  @@schema("multitenant")
+}
+
+enum TransactionStatus {
+  COMPLETED @map("COMPLETED")
+  CANCELLED @map("CANCELLED")
+  ERROR     @map("ERROR")
+
+  @@schema("multitenant")
+}
+
+enum HoldType {
+  QC_PENDING       @map("QC_PENDING")
+  QC_FAILED        @map("QC_FAILED")
+  DAMAGE           @map("DAMAGE")
+  CYCLE_COUNT      @map("CYCLE_COUNT")
+  CREDIT_HOLD      @map("CREDIT_HOLD")
+  CUSTOMER_REQUEST @map("CUSTOMER_REQUEST")
+  QUARANTINE       @map("QUARANTINE")
+
+  @@schema("multitenant")
+}
+
+enum HoldStatus {
+  ACTIVE   @map("ACTIVE")
+  RELEASED @map("RELEASED")
+  EXPIRED  @map("EXPIRED")
+
+  @@schema("multitenant")
+}
+
+// ── Inventory & Stock Management ──
+model InventoryLot {
+  id                String           @id @default(uuid()) @db.Uuid
+  tenantId          String           @map("tenant_id") @db.Uuid
+  facilityId        String           @map("facility_id") @db.Uuid
+  productId         String           @map("product_id") @db.Uuid
+  lotNumber         String           @map("lot_number") @db.VarChar(100)
+  supplierLotNumber String?          @map("supplier_lot_number") @db.VarChar(100)
+  mfgDate           DateTime?        @map("mfg_date") @db.Date
+  expiryDate        DateTime?        @map("expiry_date") @db.Date
+  receivedDate      DateTime         @default(now()) @map("received_date") @db.Timestamptz
+  status            String           @default("AVAILABLE") @map("status") @db.VarChar(20)
+  onHands           InventoryOnHand[]
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, facilityId, productId, lotNumber], name: "inventory_lots_uq")
+  @@index([tenantId, productId, expiryDate], name: "idx_lot_fefo")
+  @@schema("multitenant")
+  @@map("inventory_lots")
+}
+
+model InventoryOnHand {
+  id                String        @id @default(uuid()) @db.Uuid
+  tenantId          String        @map("tenant_id") @db.Uuid
+  facilityId        String        @map("facility_id") @db.Uuid
+  productId         String        @map("product_id") @db.Uuid
+  locationId        String        @map("location_id") @db.Uuid
+  lotId             String        @map("lot_id") @db.Uuid
+  quantityOnHand    Float         @default(0) @map("quantity_on_hand")
+  quantityAllocated Float         @default(0) @map("quantity_allocated")
+  quantityReserved  Float         @default(0) @map("quantity_reserved")
+  quantityPicked    Float         @default(0) @map("quantity_picked")
+  quantityOnHold    Float         @default(0) @map("quantity_on_hold")
+  quantityDamaged   Float         @default(0) @map("quantity_damaged")
+  uomId             String        @map("uom_id") @db.Uuid
+  lot               InventoryLot  @relation(fields: [lotId], references: [id])
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, facilityId, productId, locationId, lotId], name: "inventory_on_hand_uq")
+  @@index([tenantId, facilityId, productId], name: "idx_onhand_product")
+  @@index([tenantId, facilityId, locationId], name: "idx_onhand_location")
+  @@schema("multitenant")
+  @@map("inventory_on_hand")
+}
+
+model InventoryTransaction {
+  id                String            @id @default(uuid()) @db.Uuid
+  tenantId          String            @map("tenant_id") @db.Uuid
+  facilityId        String            @map("facility_id") @db.Uuid
+  productId         String            @map("product_id") @db.Uuid
+  locationId        String?           @map("location_id") @db.Uuid
+  locationIdTo      String?           @map("location_id_to") @db.Uuid
+  lotId             String?           @map("lot_id") @db.Uuid
+  transactionType   TransactionType   @map("transaction_type")
+  transactionStatus TransactionStatus @default(COMPLETED) @map("transaction_status")
+  quantity          Float             @map("quantity")
+  quantityBefore    Float             @map("quantity_before")
+  quantityAfter     Float             @map("quantity_after")
+  uomId             String            @map("uom_id") @db.Uuid
+  referenceType     String            @map("reference_type") @db.VarChar(50)
+  referenceId       String?           @map("reference_id") @db.VarChar(100)
+  reasonCode        String?           @map("reason_code") @db.VarChar(50)
+  performedByUserId String?           @map("performed_by_user_id") @db.Uuid
+  metadata          Json?             @db.Json
+  transactionAt     DateTime          @default(now()) @map("transaction_at") @db.Timestamptz
+  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([tenantId, productId, transactionAt(sort: Desc)], name: "idx_txn_product_time")
+  @@index([tenantId, locationId], name: "idx_txn_location")
+  @@index([tenantId, referenceType, referenceId], name: "idx_txn_reference")
+  @@schema("multitenant")
+  @@map("inventory_transactions")
+}
+
+model InventoryHold {
+  id               String     @id @default(uuid()) @db.Uuid
+  tenantId         String     @map("tenant_id") @db.Uuid
+  facilityId       String     @map("facility_id") @db.Uuid
+  productId        String?    @map("product_id") @db.Uuid
+  locationId       String?    @map("location_id") @db.Uuid
+  lotId            String?    @map("lot_id") @db.Uuid
+  holdType         HoldType   @map("hold_type")
+  status           HoldStatus @default(ACTIVE) @map("status")
+  reason           String?    @map("reason") @db.Text
+  placedByUserId   String     @map("placed_by_user_id") @db.Uuid
+  releasedByUserId String?    @map("released_by_user_id") @db.Uuid
+  releasedAt       DateTime?  @map("released_at") @db.Timestamptz
+  expiresAt        DateTime?  @map("expires_at") @db.Timestamptz
+  createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([tenantId, status], name: "idx_hold_status")
+  @@index([tenantId, lotId, status], name: "idx_hold_lot_status")
+  @@schema("multitenant")
+  @@map("inventory_holds")
+}
+
+model InventoryAdjustment {
+  id                  String                    @id @default(uuid()) @db.Uuid
+  tenantId            String                    @map("tenant_id") @db.Uuid
+  facilityId          String                    @map("facility_id") @db.Uuid
+  adjustmentNumber    String                    @map("adjustment_number") @db.VarChar(50)
+  status              String                    @default("DRAFT") @map("status") @db.VarChar(20)
+  reasonCode          String                    @map("reason_code") @db.VarChar(50)
+  requestedByUserId   String                    @map("requested_by_user_id") @db.Uuid
+  approvedByUserId    String?                   @map("approved_by_user_id") @db.Uuid
+  notes               String?                   @map("notes") @db.Text
+  lines               InventoryAdjustmentLine[]
+  createdAt           DateTime                  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime                  @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, facilityId, adjustmentNumber], name: "inventory_adjustments_uq")
+  @@schema("multitenant")
+  @@map("inventory_adjustments")
+}
+
+model InventoryAdjustmentLine {
+  id                 String              @id @default(uuid()) @db.Uuid
+  tenantId           String              @map("tenant_id") @db.Uuid
+  facilityId         String              @map("facility_id") @db.Uuid
+  adjustmentId       String              @map("adjustment_id") @db.Uuid
+  productId          String              @map("product_id") @db.Uuid
+  locationId         String              @map("location_id") @db.Uuid
+  lotId              String?             @map("lot_id") @db.Uuid
+  quantityBefore     Float               @map("quantity_before")
+  quantityAdjustment Float               @map("quantity_adjustment")
+  quantityAfter      Float               @map("quantity_after")
+  uomId              String              @map("uom_id") @db.Uuid
+  adjustment         InventoryAdjustment @relation(fields: [adjustmentId], references: [id], onDelete: Cascade)
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([tenantId, adjustmentId], name: "idx_adj_line_adjustment")
+  @@schema("multitenant")
+  @@map("inventory_adjustment_lines")
+}
+
+model InventoryPolicy {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @map("tenant_id") @db.Uuid
+  facilityId    String   @map("facility_id") @db.Uuid
+  productId     String   @map("product_id") @db.Uuid
+  locationId    String?  @map("location_id") @db.Uuid
+  reorderPoint  Float    @map("reorder_point")
+  maxStockLevel Float    @map("max_stock_level")
+  safetyStock   Float    @default(0) @map("safety_stock")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, facilityId, productId, locationId], name: "inventory_policies_uq")
+  @@schema("multitenant")
+  @@map("inventory_policies")
+}
+
+// ── Inbound/Receiving Enums ──
+enum AsnStatus {
+  CREATED               @map("CREATED")
+  IN_TRANSIT            @map("IN_TRANSIT")
+  ARRIVED               @map("ARRIVED")
+  IN_RECEIVING          @map("IN_RECEIVING")
+  PARTIALLY_RECEIVED    @map("PARTIALLY_RECEIVED")
+  RECEIVED              @map("RECEIVED")
+  CLOSED                @map("CLOSED")
+  CANCELLED             @map("CANCELLED")
+
+  @@schema("multitenant")
+}
+
+enum GrnStatus {
+  CREATED               @map("CREATED")
+  ARRIVED               @map("ARRIVED")
+  RECEIVING             @map("RECEIVING")
+  PARTIAL               @map("PARTIAL")
+  RECEIVED              @map("RECEIVED")
+  INSPECTION_IN_PROGRESS @map("INSPECTION_IN_PROGRESS")
+  INSPECTED             @map("INSPECTED")
+  COMPLETED             @map("COMPLETED")
+  CANCELLED             @map("CANCELLED")
+
+  @@schema("multitenant")
+}
+
+enum GrnLineStatus {
+  OPEN                  @map("OPEN")
+  RECEIVING             @map("RECEIVING")
+  RECEIVED              @map("RECEIVED")
+  QC_PENDING            @map("QC_PENDING")
+  QC_PASSED             @map("QC_PASSED")
+  QC_FAILED             @map("QC_FAILED")
+  PUTAWAY_PENDING       @map("PUTAWAY_PENDING")
+  PUTAWAY_DONE          @map("PUTAWAY_DONE")
+  CANCELLED             @map("CANCELLED")
+
+  @@schema("multitenant")
+}
+
+enum LpnStatus {
+  RECEIVED              @map("RECEIVED")
+  IN_STAGING            @map("IN_STAGING")
+  IN_QC                 @map("IN_QC")
+  PUTAWAY_PENDING       @map("PUTAWAY_PENDING")
+  STORED                @map("STORED")
+  QUARANTINED           @map("QUARANTINED")
+  CONSUMED              @map("CONSUMED")
+  DISPOSED              @map("DISPOSED")
+  NESTED                @map("NESTED")
+
+  @@schema("multitenant")
+}
+
+enum LpnType {
+  PALLET                @map("PALLET")
+  CARTON                @map("CARTON")
+  CASE                  @map("CASE")
+  EACH                  @map("EACH")
+  MIXED                 @map("MIXED")
+
+  @@schema("multitenant")
+}
+
+enum DispositionAction {
+  ACCEPT                @map("ACCEPT")
+  REJECT                @map("REJECT")
+  QUARANTINE            @map("QUARANTINE")
+  RETURN_TO_VENDOR      @map("RETURN_TO_VENDOR")
+  REWORK                @map("REWORK")
+  DESTROY               @map("DESTROY")
+
+  @@schema("multitenant")
+}
+
+// ── Inbound / Receiving ──
+model AdvanceShipNotice {
+  id                  String     @id @default(uuid()) @db.Uuid
+  tenantId            String     @map("tenant_id") @db.Uuid
+  facilityId          String     @map("facility_id") @db.Uuid
+  asnNumber           String     @map("asn_number") @db.VarChar(50)
+  vendorId            String?    @map("vendor_id") @db.Uuid
+  poNumber            String?    @map("po_number") @db.VarChar(50)
+  status              AsnStatus  @default(CREATED) @map("status")
+  carrierName         String?    @map("carrier_name") @db.VarChar(100)
+  trackingNumber      String?    @map("tracking_number") @db.VarChar(100)
+  expectedArrivalDate DateTime?  @map("expected_arrival_date") @db.Timestamptz
+  actualArrivalDate   DateTime?  @map("actual_arrival_date") @db.Timestamptz
+  notes               String?    @map("notes") @db.Text
+  lines               AsnLine[]
+  createdAt           DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime   @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, facilityId, asnNumber], name: "advance_ship_notices_uq")
+  @@index([tenantId, facilityId, status], name: "idx_asn_status")
+  @@schema("multitenant")
+  @@map("advance_ship_notices")
+}
+
+model AsnLine {
+  id                String           @id @default(uuid()) @db.Uuid
+  tenantId          String           @map("tenant_id") @db.Uuid
+  facilityId        String           @map("facility_id") @db.Uuid
+  asnId             String           @map("asn_id") @db.Uuid
+  productId         String           @map("product_id") @db.Uuid
+  expectedQuantity  Float            @map("expected_quantity")
+  receivedQuantity  Float            @default(0) @map("received_quantity")
+  uomId             String           @map("uom_id") @db.Uuid
+  lotNumber         String?          @map("lot_number") @db.VarChar(100)
+  expiryDate        DateTime?        @map("expiry_date") @db.Date
+  status            String           @default("OPEN") @map("status") @db.VarChar(20)
+  asn               AdvanceShipNotice @relation(fields: [asnId], references: [id], onDelete: Cascade)
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([tenantId, asnId], name: "idx_asnl_asn")
+  @@schema("multitenant")
+  @@map("asn_lines")
+}
+
+model GoodsReceipt {
+  id                String          @id @default(uuid()) @db.Uuid
+  tenantId          String          @map("tenant_id") @db.Uuid
+  facilityId        String          @map("facility_id") @db.Uuid
+  receiptNumber     String          @map("receipt_number") @db.VarChar(50)
+  asnNumber         String?         @map("asn_number") @db.VarChar(50)
+  poNumber          String?         @map("po_number") @db.VarChar(50)
+  vendorId          String?         @map("vendor_id") @db.Uuid
+  status            GrnStatus       @default(CREATED) @map("status")
+  qcRequired        Boolean         @default(false) @map("qc_required")
+  qcResult          String?         @map("qc_result") @db.VarChar(20)
+  receivedByUserId  String?         @map("received_by_user_id") @db.Uuid
+  notes             String?         @map("notes") @db.Text
+  lines             GoodsReceiptLine[]
+  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime        @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, facilityId, receiptNumber], name: "goods_receipts_uq")
+  @@index([tenantId, facilityId, status], name: "idx_grn_status")
+  @@schema("multitenant")
+  @@map("goods_receipts")
+}
+
+model GoodsReceiptLine {
+  id                String           @id @default(uuid()) @db.Uuid
+  tenantId          String           @map("tenant_id") @db.Uuid
+  facilityId        String           @map("facility_id") @db.Uuid
+  receiptId         String           @map("receipt_id") @db.Uuid
+  asnLineId         String?          @map("asn_line_id") @db.Uuid
+  productId         String           @map("product_id") @db.Uuid
+  expectedQuantity  Float            @map("expected_quantity")
+  receivedQuantity  Float            @default(0) @map("received_quantity")
+  damagedQuantity   Float            @default(0) @map("damaged_quantity")
+  uomId             String           @map("uom_id") @db.Uuid
+  lotNumber         String?          @map("lot_number") @db.VarChar(100)
+  expiryDate        DateTime?        @map("expiry_date") @db.Date
+  status            GrnLineStatus    @default(OPEN) @map("status")
+  disposition       DispositionAction @default(ACCEPT) @map("disposition")
+  qcResult          String?          @map("qc_result") @db.VarChar(20)
+  lineLots          Json?            @map("line_lots") @db.Json
+  lPNS              LPN[]            @relation("GrnLineLPNs")
+  inspections       Inspection[]     @relation("GrnLineInspections")
+  qcDispositions    QcDisposition[]  @relation("GrnLineQcDispositions")
+  receipt           GoodsReceipt     @relation(fields: [receiptId], references: [id], onDelete: Cascade)
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([tenantId, receiptId], name: "idx_grnl_receipt")
+  @@schema("multitenant")
+  @@map("goods_receipt_lines")
+}
+
+model Inspection {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  facilityId      String   @map("facility_id") @db.Uuid
+  grnLineId       String   @map("grn_line_id") @db.Uuid
+  lpnId           String?  @map("lpn_id") @db.Uuid
+  inspectorUserId String   @map("inspector_user_id") @db.VarChar(100)
+  result          String   @map("result") @db.VarChar(20)
+  notes           String?  @map("notes") @db.Text
+  inspectedAt     DateTime @default(now()) @map("inspected_at") @db.Timestamptz
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  grnLine GoodsReceiptLine @relation("GrnLineInspections", fields: [grnLineId], references: [id], onDelete: Cascade)
+  lPN     LPN?             @relation("LpnInspections", fields: [lpnId], references: [id])
+
+  @@index([tenantId, grnLineId], name: "idx_insp_grnl")
+  @@schema("multitenant")
+  @@map("inspections")
+}
+
+model QcDisposition {
+  id              String   @id @default(uuid()) @db.Uuid
+  tenantId        String   @map("tenant_id") @db.Uuid
+  facilityId      String   @map("facility_id") @db.Uuid
+  grnLineId       String   @map("grn_line_id") @db.Uuid
+  lpnId           String?  @map("lpn_id") @db.Uuid
+  action          DispositionAction @map("action")
+  notes           String?  @map("notes") @db.Text
+  appliedByUserId String   @map("applied_by_user_id") @db.VarChar(100)
+  appliedAt       DateTime @default(now()) @map("applied_at") @db.Timestamptz
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  grnLine GoodsReceiptLine @relation("GrnLineQcDispositions", fields: [grnLineId], references: [id], onDelete: Cascade)
+  lPN     LPN?             @relation("LpnQcDispositions", fields: [lpnId], references: [id])
+
+  @@index([tenantId, grnLineId], name: "idx_qcd_grnl")
+  @@schema("multitenant")
+  @@map("qc_dispositions")
+}
+
+model LPN {
+  id                String     @id @default(uuid()) @db.Uuid
+  tenantId          String     @map("tenant_id") @db.Uuid
+  facilityId        String     @map("facility_id") @db.Uuid
+  lpnNumber         String     @map("lpn_number") @db.VarChar(100)
+  lpnType           LpnType    @default(PALLET) @map("lpn_type")
+  status            LpnStatus  @default(RECEIVED) @map("status")
+  locationId        String     @map("location_id") @db.Uuid
+  productId         String?    @map("product_id") @db.Uuid
+  lotNumber         String?    @map("lot_number") @db.VarChar(100)
+  expiryDate        DateTime?  @map("expiry_date") @db.Date
+  quantity          Float      @default(0) @map("quantity")
+  uomId             String     @map("uom_id") @db.Uuid
+  grnLineId         String?    @map("grn_line_id") @db.Uuid
+  grnLine           GoodsReceiptLine? @relation("GrnLineLPNs", fields: [grnLineId], references: [id])
+  parentLpnId       String?    @map("parent_lpn_id") @db.Uuid
+  children          LPN[]      @relation("LpnHierarchy")
+  parent            LPN?       @relation("LpnHierarchy", fields: [parentLpnId], references: [id], onDelete: Restrict)
+  createdAt         DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime   @updatedAt @map("updated_at") @db.Timestamptz
+
+  inspections       Inspection[]     @relation("LpnInspections")
+  qcDispositions    QcDisposition[]  @relation("LpnQcDispositions")
+
+  @@unique([tenantId, lpnNumber], name: "lpn_number_uq")
+  @@index([tenantId, facilityId, status], name: "idx_lpn_status")
+  @@index([tenantId, locationId], name: "idx_lpn_location")
+  @@schema("multitenant")
+  @@map("license_plate_numbers")
+}
+
+model PutawayTask {
+  id                  String    @id @default(uuid()) @db.Uuid
+  tenantId            String    @map("tenant_id") @db.Uuid
+  facilityId          String    @map("facility_id") @db.Uuid
+  taskNumber          String    @map("task_number") @db.VarChar(50)
+  grnLineId           String?   @map("grn_line_id") @db.Uuid
+  lpnId               String    @map("lpn_id") @db.Uuid
+  productId           String    @map("product_id") @db.Uuid
+  quantity            Float     @map("quantity")
+  uomId               String    @map("uom_id") @db.Uuid
+  suggestedLocationId String?   @map("suggested_location_id") @db.Uuid
+  assignedLocationId  String?   @map("assigned_location_id") @db.Uuid
+  assignedToUserId    String?   @map("assigned_to_user_id") @db.Uuid
+  status              String    @default("CREATED") @map("status") @db.VarChar(20)
+  priority            Int       @default(5) @map("priority")
+  notes               String?   @map("notes") @db.Text
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, taskNumber], name: "putaway_tasks_uq")
+  @@index([tenantId, facilityId, status], name: "idx_put_status")
+  @@index([tenantId, assignedToUserId, status], name: "idx_put_assignee")
+  @@schema("multitenant")
+  @@map("putaway_tasks")
+}
+
+// ── Outbound / Orders Enums ──
+enum OrderStatus {
+  CREATED    @map("CREATED")
+  VALIDATED  @map("VALIDATED")
+  ON_HOLD    @map("ON_HOLD")
+  RELEASED   @map("RELEASED")
+  ALLOCATED  @map("ALLOCATED")
+  WAVED      @map("WAVED")
+  PICKED     @map("PICKED")
+  PACKED     @map("PACKED")
+  SHIPPED    @map("SHIPPED")
+  CLOSED     @map("CLOSED")
+  CANCELLED  @map("CANCELLED")
+
+  @@schema("multitenant")
+}
+
+enum OrderLineStatus {
+  CREATED       @map("CREATED")
+  ON_HOLD       @map("ON_HOLD")
+  ALLOCATED     @map("ALLOCATED")
+  RELEASED      @map("RELEASED")
+  PICK_IN_PROGRESS @map("PICK_IN_PROGRESS")
+  PICKED        @map("PICKED")
+  SHORT         @map("SHORT")
+  PACKED        @map("PACKED")
+  READY_TO_SHIP @map("READY_TO_SHIP")
+  SHIPPED       @map("SHIPPED")
+  BACKORDERED   @map("BACKORDERED")
+  CANCELLED     @map("CANCELLED")
+
+  @@schema("multitenant")
+}
+
+enum AllocationStatus {
+  SOFT           @map("SOFT")
+  RESERVED       @map("RESERVED")
+  HARD_ALLOCATED @map("HARD_ALLOCATED")
+  FULFILLED      @map("FULFILLED")
+  CANCELLED      @map("CANCELLED")
+
+  @@schema("multitenant")
+}
+
+enum AllocationType {
+  SALES_ORDER_PICK @map("SALES_ORDER_PICK")
+  TRANSFER         @map("TRANSFER")
+  PICK_TO_CARTON   @map("PICK_TO_CARTON")
+  CROSS_DOCK       @map("CROSS_DOCK")
+
+  @@schema("multitenant")
+}
+
+enum WaveStatus {
+  PLANNED    @map("PLANNED")
+  RELEASED   @map("RELEASED")
+  IN_PROGRESS @map("IN_PROGRESS")
+  COMPLETED  @map("COMPLETED")
+  CANCELLED  @map("CANCELLED")
+
+  @@schema("multitenant")
+}
+
+enum PackingSessionStatus {
+  STATION_ASSIGNED @map("STATION_ASSIGNED")
+  PACKING_ACTIVE   @map("PACKING_ACTIVE")
+  PACKING_PAUSED   @map("PACKING_PAUSED")
+  COMPLETED        @map("COMPLETED")
+  CANCELLED        @map("CANCELLED")
+  TIMEOUT          @map("TIMEOUT")
+
+  @@schema("multitenant")
+}
+
+enum ContainerStatus {
+  ACTIVE   @map("ACTIVE")
+  SEALED   @map("SEALED")
+  STAGED   @map("STAGED")
+  LOADED   @map("LOADED")
+  SHIPPED  @map("SHIPPED")
+
+  @@schema("multitenant")
+}
+
+enum ShipmentStatus {
+  CREATED         @map("CREATED")
+  CARRIER_ASSIGNED @map("CARRIER_ASSIGNED")
+  STAGED          @map("STAGED")
+  LOADED          @map("LOADED")
+  SHIPPED         @map("SHIPPED")
+  DELIVERED       @map("DELIVERED")
+  CANCELLED       @map("CANCELLED")
+
+  @@schema("multitenant")
+}
+
+// ── Outbound / Orders ──
+model SalesOrder {
+  id                    String           @id @default(uuid()) @db.Uuid
+  tenantId              String           @map("tenant_id") @db.Uuid
+  facilityId            String           @map("facility_id") @db.Uuid
+  orderNumber           String           @map("order_number") @db.VarChar(50)
+  clientCode            String           @map("client_code") @db.VarChar(50)
+  status                OrderStatus      @default(CREATED) @map("status")
+  orderType             String           @default("STANDARD") @map("order_type") @db.VarChar(20)
+  priority              Int              @default(10) @map("priority")
+  deliveryAddress       Json?            @map("delivery_address") @db.Json
+  requestedDeliveryDate DateTime?        @map("requested_delivery_date") @db.Timestamptz
+  notes                 String?          @map("notes") @db.Text
+  lines                 SalesOrderLine[]
+  createdAt             DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, facilityId, orderNumber], name: "sales_orders_uq")
+  @@index([tenantId, facilityId, status], name: "idx_so_status")
+  @@schema("multitenant")
+  @@map("sales_orders")
+}
+
+model SalesOrderLine {
+  id                 String              @id @default(uuid()) @db.Uuid
+  tenantId           String              @map("tenant_id") @db.Uuid
+  facilityId         String              @map("facility_id") @db.Uuid
+  orderId            String              @map("order_id") @db.Uuid
+  productId          String              @map("product_id") @db.Uuid
+  requestedQuantity  Float               @map("requested_quantity")
+  fulfilledQuantity  Float               @default(0) @map("fulfilled_quantity")
+  uomId              String              @map("uom_id") @db.Uuid
+  status             OrderLineStatus     @default(CREATED) @map("status")
+  notes              String?             @map("notes") @db.Text
+  order              SalesOrder          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  allocations        InventoryAllocation[]
+  pickingTasks       PickingTask[]
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt          DateTime            @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([tenantId, orderId], name: "idx_sol_order")
+  @@schema("multitenant")
+  @@map("sales_order_lines")
+}
+
+model InventoryAllocation {
+  id                String           @id @default(uuid()) @db.Uuid
+  tenantId          String           @map("tenant_id") @db.Uuid
+  facilityId        String           @map("facility_id") @db.Uuid
+  productId         String           @map("product_id") @db.Uuid
+  lotId             String?          @map("lot_id") @db.Uuid
+  locationId        String           @map("location_id") @db.Uuid
+  quantityAllocated Float            @map("quantity_allocated")
+  uomId             String           @map("uom_id") @db.Uuid
+  allocationType    AllocationType   @map("allocation_type")
+  status            AllocationStatus @default(SOFT) @map("status")
+  orderId           String           @map("order_id") @db.Uuid
+  orderLineId       String           @map("order_line_id") @db.Uuid
+  expiresAt         DateTime?        @map("expires_at") @db.Timestamptz
+  orderLine         SalesOrderLine   @relation(fields: [orderLineId], references: [id])
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([tenantId, facilityId, productId, status], name: "idx_alloc_product_status")
+  @@index([tenantId, orderId, orderLineId], name: "idx_alloc_order")
+  @@schema("multitenant")
+  @@map("inventory_allocations")
+}
+
+model PickingWave {
+  id                String       @id @default(uuid()) @db.Uuid
+  tenantId          String       @map("tenant_id") @db.Uuid
+  facilityId        String       @map("facility_id") @db.Uuid
+  waveNumber        String       @map("wave_number") @db.VarChar(50)
+  status            WaveStatus   @default(PLANNED) @map("status")
+  selectionCriteria Json?        @map("selection_criteria") @db.Json
+  totalTasks        Int          @default(0) @map("total_tasks")
+  completedTasks    Int          @default(0) @map("completed_tasks")
+  releasedByUserId  String?      @map("released_by_user_id") @db.Uuid
+  releasedAt        DateTime?    @map("released_at") @db.Timestamptz
+  tasks             PickingTask[]
+  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, facilityId, waveNumber], name: "picking_waves_uq")
+  @@index([tenantId, facilityId, status], name: "idx_wave_status")
+  @@schema("multitenant")
+  @@map("picking_waves")
+}
+
+model PickingTask {
+  id                String       @id @default(uuid()) @db.Uuid
+  tenantId          String       @map("tenant_id") @db.Uuid
+  facilityId        String       @map("facility_id") @db.Uuid
+  taskNumber        String       @map("task_number") @db.VarChar(50)
+  waveId            String?      @map("wave_id") @db.Uuid
+  orderLineId       String       @map("order_line_id") @db.Uuid
+  productId         String       @map("product_id") @db.Uuid
+  locationId        String       @map("location_id") @db.Uuid
+  lotId             String?      @map("lot_id") @db.Uuid
+  quantityToPick    Float        @map("quantity_to_pick")
+  quantityPicked    Float        @default(0) @map("quantity_picked")
+  uomId             String       @map("uom_id") @db.Uuid
+  status            String       @default("CREATED") @map("status") @db.VarChar(20)
+  assignedToUserId  String?      @map("assigned_to_user_id") @db.Uuid
+  assignedAt        DateTime?    @map("assigned_at") @db.Timestamptz
+  completedAt       DateTime?    @map("completed_at") @db.Timestamptz
+  exceptionNotes    String?      @map("exception_notes") @db.Text
+  sequenceNumber    Int          @default(0) @map("sequence_number")
+  wave              PickingWave? @relation(fields: [waveId], references: [id], onDelete: SetNull)
+  orderLine         SalesOrderLine @relation(fields: [orderLineId], references: [id])
+  createdAt         DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime     @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, taskNumber], name: "picking_tasks_uq")
+  @@index([tenantId, facilityId, status], name: "idx_ptask_status")
+  @@index([tenantId, assignedToUserId, status], name: "idx_ptask_assignee")
+  @@schema("multitenant")
+  @@map("picking_tasks")
+}
+
+model PackingSession {
+  id                String               @id @default(uuid()) @db.Uuid
+  tenantId          String               @map("tenant_id") @db.Uuid
+  facilityId        String               @map("facility_id") @db.Uuid
+  userId            String               @map("user_id") @db.Uuid
+  stationCode       String?              @map("station_code") @db.VarChar(50)
+  status            PackingSessionStatus @default(STATION_ASSIGNED) @map("status")
+  startAt           DateTime             @default(now()) @map("start_at") @db.Timestamptz
+  endAt             DateTime?            @map("end_at") @db.Timestamptz
+  lastActivityAt    DateTime             @default(now()) @map("last_activity_at") @db.Timestamptz
+  cartons           PackingContainer[]
+  createdAt         DateTime             @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime             @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([tenantId, facilityId, status], name: "idx_psess_status")
+  @@schema("multitenant")
+  @@map("packing_sessions")
+}
+
+model PackingContainer {
+  id              String           @id @default(uuid()) @db.Uuid
+  tenantId        String           @map("tenant_id") @db.Uuid
+  facilityId      String           @map("facility_id") @db.Uuid
+  sessionId       String           @map("session_id") @db.Uuid
+  containerCode   String           @map("container_code") @db.VarChar(50)
+  containerType   String           @map("container_type") @db.VarChar(20)
+  status          ContainerStatus  @default(ACTIVE) @map("status")
+  weight          Float?           @map("weight")
+  trackingNumber  String?          @map("tracking_number") @db.VarChar(100)
+  carrierCode     String?          @map("carrier_code") @db.VarChar(20)
+  pickedLpns      Json?            @map("picked_lpns") @db.Json
+  session         PackingSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, containerCode], name: "packing_containers_uq")
+  @@index([tenantId, sessionId], name: "idx_pcont_session")
+  @@schema("multitenant")
+  @@map("packing_containers")
+}
+
+model OutboundShipment {
+  id              String         @id @default(uuid()) @db.Uuid
+  tenantId        String         @map("tenant_id") @db.Uuid
+  facilityId      String         @map("facility_id") @db.Uuid
+  shipmentNumber  String         @map("shipment_number") @db.VarChar(50)
+  orderId         String?        @map("order_id") @db.Uuid
+  loadId          String?        @map("load_id") @db.VarChar(50)
+  status          ShipmentStatus @default(CREATED) @map("status")
+  carrierCode     String?        @map("carrier_code") @db.VarChar(20)
+  trackingNumber  String?        @map("tracking_number") @db.VarChar(100)
+  dockDoorCode    String?        @map("dock_door_code") @db.VarChar(20)
+  shippedAt       DateTime?      @map("shipped_at") @db.Timestamptz
+  containers      Json?          @map("containers") @db.Json
+  orderLineShipments Json?       @map("order_line_shipments") @db.Json
+  labelUrl        String?        @map("label_url") @db.VarChar(500)
+  metadata        Json?          @map("metadata") @db.Json
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, shipmentNumber], name: "outbound_shipments_uq")
+  @@index([tenantId, facilityId, status], name: "idx_oshp_status")
+  @@index([tenantId, orderId], name: "idx_oshp_order")
+  @@schema("multitenant")
+  @@map("outbound_shipments")
+}
+
+// ── Transfers / Cycle Counts / Approvals Enums ──
+enum TransferType {
+  INTRA_FACILITY   @map("INTRA_FACILITY")
+  INTER_FACILITY   @map("INTER_FACILITY")
+  CUSTOMER_RETURN  @map("CUSTOMER_RETURN")
+  VENDOR_RETURN    @map("VENDOR_RETURN")
+
+  @@schema("multitenant")
+}
+
+enum TransferStatus {
+  DRAFT     @map("DRAFT")
+  REQUESTED @map("REQUESTED")
+  DISPATCHED @map("DISPATCHED")
+  IN_TRANSIT @map("IN_TRANSIT")
+  PARTIALLY_RECEIVED @map("PARTIALLY_RECEIVED")
+  RECEIVED  @map("RECEIVED")
+  CANCELLED @map("CANCELLED")
+
+  @@schema("multitenant")
+}
+
+enum CountMethod {
+  BLIND         @map("BLIND")
+  KNOWN         @map("KNOWN")
+  SPOT          @map("SPOT")
+  CONTROL_GROUP @map("CONTROL_GROUP")
+
+  @@schema("multitenant")
+}
+
+enum CountStatus {
+  SCHEDULED  @map("SCHEDULED")
+  ASSIGNED   @map("ASSIGNED")
+  IN_PROGRESS @map("IN_PROGRESS")
+  COMPLETED  @map("COMPLETED")
+  RECONCILED @map("RECONCILED")
+  CANCELLED  @map("CANCELLED")
+
+  @@schema("multitenant")
+}
+
+enum CountFrequencyType {
+  MANUAL       @map("MANUAL")
+  DAILY        @map("DAILY")
+  WEEKLY       @map("WEEKLY")
+  MONTHLY      @map("MONTHLY")
+  QUARTERLY    @map("QUARTERLY")
+  ABC_DRIVEN   @map("ABC_DRIVEN")
+
+  @@schema("multitenant")
+}
+
+enum ApprovalLevel {
+  AUTO_APPROVED @map("AUTO_APPROVED")
+  SUPERVISOR    @map("SUPERVISOR")
+  MANAGER       @map("MANAGER")
+  DIRECTOR      @map("DIRECTOR")
+
+  @@schema("multitenant")
+}
+
+enum ApprovalStatus {
+  PENDING    @map("PENDING")
+  APPROVED   @map("APPROVED")
+  REJECTED   @map("REJECTED")
+  ESCALATED  @map("ESCALATED")
+
+  @@schema("multitenant")
+}
+
+// ── Transfers ──
+model InventoryTransfer {
+  id                  String                @id @default(uuid()) @db.Uuid
+  tenantId            String                @map("tenant_id") @db.Uuid
+  facilityId          String                @map("facility_id") @db.Uuid
+  transferNumber      String                @map("transfer_number") @db.VarChar(50)
+  transferType        TransferType          @default(INTRA_FACILITY) @map("transfer_type")
+  status              TransferStatus        @default(DRAFT) @map("status")
+  fromLocationId      String?               @map("from_location_id") @db.Uuid
+  toLocationId        String                @map("to_location_id") @db.Uuid
+  toFacilityId        String?               @map("to_facility_id") @db.Uuid
+  requestedByUserId   String?               @map("requested_by_user_id") @db.Uuid
+  dispatchedByUserId  String?               @map("dispatched_by_user_id") @db.Uuid
+  receivedByUserId    String?               @map("received_by_user_id") @db.Uuid
+  notes               String?               @map("notes") @db.Text
+  lines               InventoryTransferLine[]
+  createdAt           DateTime              @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt           DateTime              @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, facilityId, transferNumber], name: "inventory_transfers_uq")
+  @@index([tenantId, facilityId, status], name: "idx_trf_status")
+  @@schema("multitenant")
+  @@map("inventory_transfers")
+}
+
+model InventoryTransferLine {
+  id                String             @id @default(uuid()) @db.Uuid
+  tenantId          String             @map("tenant_id") @db.Uuid
+  facilityId        String             @map("facility_id") @db.Uuid
+  transferId        String             @map("transfer_id") @db.Uuid
+  productId         String             @map("product_id") @db.Uuid
+  lotId             String?            @map("lot_id") @db.Uuid
+  uomId             String             @map("uom_id") @db.Uuid
+  quantityRequested Float              @map("quantity_requested")
+  quantityShipped   Float              @default(0) @map("quantity_shipped")
+  quantityReceived  Float              @default(0) @map("quantity_received")
+  status            String             @default("REQUESTED") @map("status") @db.VarChar(20)
+  transfer          InventoryTransfer  @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime           @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([tenantId, transferId], name: "idx_trfl_transfer")
+  @@schema("multitenant")
+  @@map("inventory_transfer_lines")
+}
+
+// ── Cycle Counts ──
+model CycleCount {
+  id                String             @id @default(uuid()) @db.Uuid
+  tenantId          String             @map("tenant_id") @db.Uuid
+  facilityId        String             @map("facility_id") @db.Uuid
+  countNumber       String             @map("count_number") @db.VarChar(50)
+  countMethod       CountMethod        @default(BLIND) @map("count_method")
+  status            CountStatus        @default(SCHEDULED) @map("status")
+  scopeType         String             @map("scope_type") @db.VarChar(20)
+  scopeIdentifier   String?            @map("scope_identifier") @db.VarChar(50)
+  frequencyType     CountFrequencyType @default(MANUAL) @map("frequency_type")
+  assignedToUserId  String?            @map("assigned_to_user_id") @db.Uuid
+  scheduledDate     DateTime?          @map("scheduled_date") @db.Timestamptz
+  startedAt         DateTime?          @map("started_at") @db.Timestamptz
+  completedAt       DateTime?          @map("completed_at") @db.Timestamptz
+  autoAdjust        Boolean            @default(false) @map("auto_adjust")
+  notes             String?            @map("notes") @db.Text
+  lines             CycleCountLine[]
+  createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime           @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, facilityId, countNumber], name: "cycle_counts_uq")
+  @@index([tenantId, facilityId, status], name: "idx_cc_status")
+  @@index([tenantId, facilityId, frequencyType, status], name: "idx_cc_freq")
+  @@schema("multitenant")
+  @@map("cycle_counts")
+}
+
+model CycleCountLine {
+  id                String      @id @default(uuid()) @db.Uuid
+  tenantId          String      @map("tenant_id") @db.Uuid
+  facilityId        String      @map("facility_id") @db.Uuid
+  countId           String      @map("count_id") @db.Uuid
+  productId         String      @map("product_id") @db.Uuid
+  locationId        String      @map("location_id") @db.Uuid
+  lotId             String?     @map("lot_id") @db.Uuid
+  uomId             String      @map("uom_id") @db.Uuid
+  systemQuantity    Float       @default(0) @map("system_quantity")
+  countedQuantity   Float?      @map("counted_quantity")
+  varianceQuantity  Float?      @map("variance_quantity")
+  status            String      @default("PENDING") @map("status") @db.VarChar(20)
+  countedByUserId   String?     @map("counted_by_user_id") @db.Uuid
+  countedAt         DateTime?   @map("counted_at") @db.Timestamptz
+  count             CycleCount  @relation(fields: [countId], references: [id])
+  createdAt         DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime    @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([tenantId, countId], name: "idx_ccl_count")
+  @@index([tenantId, facilityId, productId, status], name: "idx_ccl_product_status")
+  @@schema("multitenant")
+  @@map("cycle_count_lines")
+}
+
+// ── Adjustment Approvals ──
+model AdjustmentApproval {
+  id                String           @id @default(uuid()) @db.Uuid
+  tenantId          String           @map("tenant_id") @db.Uuid
+  facilityId        String           @map("facility_id") @db.Uuid
+  countLineId       String?          @map("count_line_id") @db.Uuid
+  transferLineId    String?          @map("transfer_line_id") @db.Uuid
+  varianceValue     Float            @map("variance_value")
+  varianceQty       Float            @map("variance_qty")
+  approvalLevel     ApprovalLevel    @default(AUTO_APPROVED) @map("approval_level")
+  status            ApprovalStatus   @default(PENDING) @map("status")
+  thresholdVersion  String?          @map("threshold_version") @db.VarChar(20)
+  requestedByUserId String           @map("requested_by_user_id") @db.Uuid
+  assignedToUserId  String?          @map("assigned_to_user_id") @db.Uuid
+  approvedByUserId  String?          @map("approved_by_user_id") @db.Uuid
+  comments          String?          @map("comments") @db.Text
+  rejectionReason   String?          @map("rejection_reason") @db.Text
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([tenantId, facilityId, status, approvalLevel], name: "idx_aa_status_level")
+  @@schema("multitenant")
+  @@map("adjustment_approvals")
+}
+
+// ── Threshold Versioning History ──
+model ApprovalThresholdConfig {
+  id                String   @id @default(uuid()) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  version           String   @map("version") @db.VarChar(20)
+  autoThreshold     Float    @map("auto_threshold")
+  supervisorThreshold Float  @map("supervisor_threshold")
+  managerThreshold   Float   @map("manager_threshold")
+  active            Boolean  @default(true) @map("active")
+  appliedAt         DateTime @default(now()) @map("applied_at") @db.Timestamptz
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@unique([tenantId, version], name: "threshold_config_uq")
+  @@index([tenantId, active], name: "idx_threshold_active")
+  @@schema("multitenant")
+  @@map("approval_threshold_configs")
+}
+
+// ── Count Scheduler Metrics ──
+model CountSchedulerMetric {
+  id                  String   @id @default(uuid()) @db.Uuid
+  tenantId            String   @map("tenant_id") @db.Uuid
+  runAt               DateTime @default(now()) @map("run_at") @db.Timestamptz
+  generationDurationMs Int     @map("generation_duration_ms")
+  successRate         Float    @map("success_rate")
+  totalGenerated      Int      @map("total_generated")
+  failedProductCodes  Json?    @map("failed_product_codes") @db.Json
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([tenantId, runAt], name: "idx_csm_run")
+  @@schema("multitenant")
+  @@map("count_scheduler_metrics")
+}
+
+// ── System Settings History (migration-safe audit) ──
+model SystemSettingHistory {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  settingKey  String   @map("setting_key") @db.VarChar(100)
+  oldValue    Json?    @map("old_value") @db.Json
+  newValue    Json?    @map("new_value") @db.Json
+  changedBy   String?  @map("changed_by") @db.VarChar(100)
+  changedAt   DateTime @default(now()) @map("changed_at") @db.Timestamptz
+
+  @@index([tenantId, settingKey, changedAt], name: "idx_ssh_key_time")
+  @@schema("multitenant")
+  @@map("system_setting_histories")
+}
