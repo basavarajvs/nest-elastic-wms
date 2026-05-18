@@ -1,12 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class PutawayReconciliationJob {
   private readonly logger = new Logger(PutawayReconciliationJob.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_4AM)
   async runReconciliation(): Promise<void> {
@@ -31,7 +35,7 @@ export class PutawayReconciliationJob {
             AND ioh.facility_id = lp.facility_id
             AND ioh.location_id = lp.location_id
             AND ioh.product_id = lp.product_id
-            AND ioh.quantity_on_hand > 0
+            AND ioh.quantity_on_hand >= 0
         )
     `);
 
@@ -69,7 +73,7 @@ export class PutawayReconciliationJob {
               productId: lpn.product_id,
               locationId: lpn.location_id,
               lotId,
-              transactionType: 'RECEIPT',
+              transactionType: 'SYSTEM_CORRECTION' as any,
               transactionStatus: 'COMPLETED',
               quantity: lpn.quantity,
               quantityBefore: 0,
@@ -87,6 +91,13 @@ export class PutawayReconciliationJob {
       }
     }
 
-    this.logger.warn(`PUTAWAY_RECONCILIATION_COMPLETE: ${phantomLpns.length} corrections applied. Alerting WAREHOUSE_SUPERVISOR.`);
+    this.eventEmitter.emit('inventory.drift.detected', {
+      type: 'PUTAWAY_RECONCILIATION',
+      totalCorrected: phantomLpns.length,
+      details: phantomLpns.map((lpn: any) => ({ lpnNumber: lpn.lpn_number, tenantId: lpn.tenant_id })),
+      timestamp: new Date(),
+    });
+
+    this.logger.warn(`${phantomLpns.length} corrections applied. Supervisor notification sent via event.`);
   }
 }

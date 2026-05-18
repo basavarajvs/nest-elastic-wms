@@ -15,7 +15,8 @@ export class InventoryTransactionService {
   ) {}
 
   async executeTransaction(dto: CreateTransactionDto, tenantId: string): Promise<any> {
-    const lockKey = `inventory:lock:${dto.productId}:${dto.lotId || 'null'}`;
+    const lotId = dto.lotId || '00000000-0000-0000-0000-000000000000';
+    const lockKey = `inv:lock:${dto.productId}:${lotId}`;
     const lock = await this.redis.set(lockKey, '1', 'PX', this.LOCK_TTL, 'NX');
     if (!lock) {
       throw new Error('Concurrent transaction in progress for this product/lot');
@@ -30,7 +31,7 @@ export class InventoryTransactionService {
               tenantId,
               facilityId: dto.facilityId,
               locationId: dto.locationId,
-              lotId: dto.lotId,
+              lotId,
               productId: dto.productId,
             },
           });
@@ -45,7 +46,7 @@ export class InventoryTransactionService {
                 tenantId,
                 facilityId: dto.facilityId,
                 locationId: dto.locationId,
-                lotId: dto.lotId,
+                lotId,
                 productId: dto.productId,
                 quantityOnHand: { gte: Math.abs(dto.quantity) },
               },
@@ -62,7 +63,7 @@ export class InventoryTransactionService {
                   facilityId: dto.facilityId,
                   productId: dto.productId,
                   locationId: dto.locationId,
-                  lotId: dto.lotId,
+                  lotId,
                 },
               },
               update: { quantityOnHand: { increment: qtyDelta } },
@@ -71,7 +72,7 @@ export class InventoryTransactionService {
                 facilityId: dto.facilityId,
                 productId: dto.productId,
                 locationId: dto.locationId,
-                lotId: dto.lotId,
+                lotId,
                 quantityOnHand: qtyAfter,
                 uomId: dto.uomId,
               },
@@ -86,7 +87,7 @@ export class InventoryTransactionService {
             productId: dto.productId,
             locationId: dto.locationId,
             locationIdTo: dto.locationIdTo,
-            lotId: dto.lotId,
+            lotId,
             transactionType: dto.transactionType,
             quantity: dto.quantity,
             quantityBefore: qtyBefore,
@@ -101,13 +102,20 @@ export class InventoryTransactionService {
         });
 
         if (dto.locationId && dto.lotId) {
-          this.redis.del(`inventory:availability:${dto.productId}:${dto.facilityId}`);
+          this.redis.del(`inv:availability:${dto.productId}:${dto.facilityId}`);
         }
         return txn;
       });
       return result;
     } finally {
-      this.redis.del(lockKey).catch(() => {});
+      const script = `
+        if redis.call("get", KEYS[1]) == ARGV[1] then
+          return redis.call("del", KEYS[1])
+        else
+          return 0
+        end
+      `;
+      await this.redis.eval(script, 1, lockKey, '1').catch(() => {});
     }
   }
 

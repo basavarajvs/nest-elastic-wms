@@ -57,24 +57,27 @@ export class WaveService {
     });
 
     let totalTasks = 0;
+    const taskBatch: Array<{
+      data: any;
+      location?: any;
+    }> = [];
+
     for (const order of orders) {
       for (const line of order.lines) {
         for (const alloc of line.allocations) {
-          const taskCount = await (this.prisma as any).pickingTask.count({
-            where: { tenantId, facilityId: wave.facilityId },
-          });
-          const taskNumber = `PK-${wave.facilityId.slice(0, 4).toUpperCase()}-${(taskCount + 1).toString().padStart(6, '0')}`;
-
           const location = await (this.prisma as any).storageLocation.findFirst({
             where: { id: alloc.locationId, tenantId },
+            include: { zone: true },
           });
 
-          await (this.prisma as any).pickingTask.create({
+          const zoneType = location?.zone?.zoneType || 'ZZZ';
+          const zoneCode = location?.zone?.zoneCode || 'ZZ';
+          const pickSeq = (location?.attributes as any)?.pickSequence || 0;
+
+          taskBatch.push({
             data: {
               tenantId,
               facilityId: wave.facilityId,
-              taskNumber,
-              waveId,
               orderLineId: line.id,
               productId: line.productId,
               locationId: alloc.locationId,
@@ -82,12 +85,42 @@ export class WaveService {
               quantityToPick: alloc.quantityAllocated,
               uomId: alloc.uomId,
               status: 'CREATED',
-              sequenceNumber: location?.pickSequence || 0,
             },
+            location,
           });
-          totalTasks++;
         }
+      }
+    }
 
+    taskBatch.sort((a, b) => {
+      const aZone = a.location?.zone?.zoneType || 'ZZZ';
+      const bZone = b.location?.zone?.zoneType || 'ZZZ';
+      if (aZone !== bZone) return aZone.localeCompare(bZone);
+      const aLoc = a.location?.locationCode || '';
+      const bLoc = b.location?.locationCode || '';
+      return aLoc.localeCompare(bLoc);
+    });
+
+    for (let i = 0; i < taskBatch.length; i++) {
+      const entry = taskBatch[i];
+      const taskCount = await (this.prisma as any).pickingTask.count({
+        where: { tenantId, facilityId: wave.facilityId },
+      });
+      const taskNumber = `PK-${wave.facilityId.slice(0, 4).toUpperCase()}-${(taskCount + 1).toString().padStart(6, '0')}`;
+
+      await (this.prisma as any).pickingTask.create({
+        data: {
+          ...entry.data,
+          taskNumber,
+          waveId,
+          sequenceNumber: i + 1,
+        },
+      });
+      totalTasks++;
+    }
+
+    for (const order of orders) {
+      for (const line of order.lines) {
         await (this.prisma as any).salesOrderLine.update({
           where: { id: line.id },
           data: { status: 'RELEASED' },

@@ -1,3 +1,4 @@
+import { ApiTags } from '@nestjs/swagger';
 import { Controller, Get, UseGuards, Req } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CheckAbility } from '../common/decorators/check-ability.decorator';
@@ -5,6 +6,7 @@ import { CaslGuard } from '../common/guards/casl.guard';
 import { RfSessionGuard } from '../common/guards/rf-session.guard';
 import { RfAction } from '../common/guards/rf-action.decorator';
 
+@ApiTags('Master-Data', 'WMS-WEB')
 @Controller()
 export class WarehouseFacilityController {
   constructor(private readonly prisma: PrismaService) {}

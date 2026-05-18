@@ -1,14 +1,18 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
-import { Logger } from '@nestjs/common';
+import { Logger, Inject } from '@nestjs/common';
+import Redis from 'ioredis';
+import { REDIS_CLIENT } from '../common/cache/redis.constants';
 import { PutawayService } from './putaway.service';
 
 @Processor('putaway-generator')
 export class PutawayGeneratorProcessor extends WorkerHost {
   private readonly logger = new Logger(PutawayGeneratorProcessor.name);
-  private static lastRun = new Map<string, number>();
 
-  constructor(private readonly putawayService: PutawayService) {
+  constructor(
+    private readonly putawayService: PutawayService,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
+  ) {
     super();
   }
 
@@ -16,13 +20,12 @@ export class PutawayGeneratorProcessor extends WorkerHost {
     const { grnId, tenantId } = job.data;
     this.logger.log(`Processing putaway generation for GRN ${grnId}`);
 
-    const now = Date.now();
-    const lastRun = PutawayGeneratorProcessor.lastRun.get(grnId) || 0;
-    if (now - lastRun < 5000) {
-      this.logger.log(`Debouncing GRN ${grnId} (last run ${now - lastRun}ms ago)`);
+    const lockKey = `putaway:gen:${grnId}`;
+    const lock = await this.redis.set(lockKey, 'LOCK', 'EX', 10, 'NX');
+    if (!lock) {
+      this.logger.log(`Debouncing GRN ${grnId} (already being processed)`);
       return { debounced: true, grnId };
     }
-    PutawayGeneratorProcessor.lastRun.set(grnId, now);
 
     try {
       const tasks = await this.putawayService.generateTasks(grnId, tenantId);
@@ -31,6 +34,8 @@ export class PutawayGeneratorProcessor extends WorkerHost {
     } catch (err: any) {
       this.logger.error(`Putaway generation failed for GRN ${grnId}: ${err.message}`);
       throw err;
+    } finally {
+      await this.redis.del(lockKey).catch(() => {});
     }
   }
 }

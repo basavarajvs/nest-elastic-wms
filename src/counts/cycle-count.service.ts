@@ -47,6 +47,10 @@ export class CycleCountService {
       include: { lines: true },
     });
 
+    for (const line of countRec.lines) {
+      await this.freezeLocation(line.locationId, tenantId);
+    }
+
     return countRec;
   }
 
@@ -177,6 +181,8 @@ export class CycleCountService {
       where: { id: countId },
       data: { status: 'RECONCILED', completedAt: new Date() },
     });
+
+    await this.releaseFrozenLocations(countId, tenantId);
 
     this.eventEmitter.emit('count.completed', { countId, tenantId });
     return result;

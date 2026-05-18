@@ -17,6 +17,21 @@ export interface PlanLimits {
   }>;
 }
 
+export interface WmsDispatchResponse {
+  queued: boolean;
+  recipients: number;
+  requestId: string;
+}
+
+export interface WmsDispatchPayload {
+  tenantId: string;
+  notificationType: string;
+  recipients: Array<{ userId?: string; roleCode?: string }>;
+  variables: Record<string, any>;
+  priority?: string;
+  bypassPreferences?: boolean;
+}
+
 @Injectable()
 export class CoreClientService {
   private readonly logger = new Logger(CoreClientService.name);
@@ -92,6 +107,16 @@ export class CoreClientService {
     } catch {
       return false;
     }
+  }
+
+  async dispatchNotification(
+    payload: WmsDispatchPayload,
+  ): Promise<WmsDispatchResponse> {
+    return this.retry(() =>
+      this.http
+        .post<WmsDispatchResponse>('/notifications/wms/dispatch', payload)
+        .then((r) => r.data),
+    );
   }
 
   private async retry<T>(

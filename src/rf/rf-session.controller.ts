@@ -1,3 +1,4 @@
+import { ApiTags } from '@nestjs/swagger';
 import {
   Controller,
   Post,
@@ -12,6 +13,7 @@ import {
 import { RfSessionService } from './rf-session.service';
 import { Public } from '../common/decorators/public.decorator';
 
+@ApiTags('WMS-RF')
 @Controller('rf/sessions')
 export class RfSessionController {
   constructor(private readonly rfSession: RfSessionService) {}

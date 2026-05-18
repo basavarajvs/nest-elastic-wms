@@ -1,0 +1,220 @@
+name: WMS CI/CD
+on:
+  push: { branches: [main, develop] }
+  pull_request: { branches: [main] }
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: 'latest'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: elasticwmsdbadmin
+          POSTGRES_PASSWORD: elasticwmsdbadmin
+          POSTGRES_DB: elasticwms
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+
+      # Prisma generate + validate
+      - run: pnpm prisma generate --schema=prisma/schema.prisma
+      - run: pnpm prisma validate --schema=prisma/schema.prisma
+
+      # Unit tests
+      - run: pnpm test -- --passWithNoTests
+
+      # Lint
+      - run: pnpm lint
+
+      # E2E tests against test DB schema
+      - name: Create test schema
+        run: |
+          PGPASSWORD=elasticwmsdbadmin psql -h localhost -U elasticwmsdbadmin -d elasticwms -c "CREATE SCHEMA IF NOT EXISTS e2e_test;"
+      - name: Run E2E tests
+        run: pnpm run test:e2e
+        env:
+          E2E_TEST_DB_URL: postgresql://elasticwmsdbadmin:elasticwmsdbadmin@localhost:5432/elasticwms?schema=e2e_test
+          JWT_ACCESS_SECRET: ci-test-access-secret-that-is-at-least-32-chars!!
+          JWT_REFRESH_SECRET: ci-test-refresh-secret-that-is-at-least-32-chars!!
+          CORE_API_URL: http://localhost:3000/api/v1
+          CORE_API_TOKEN: ci-test-system-token-that-is-min-32-chars!!
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+
+  e2e:
+    needs: validate
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: elasticwmsdbadmin
+          POSTGRES_PASSWORD: elasticwmsdbadmin
+          POSTGRES_DB: elasticwms
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm prisma generate --schema=prisma/schema.prisma
+
+      - name: Run Prisma migrations on test schema
+        run: pnpm prisma migrate deploy --schema=prisma/schema.prisma
+        env:
+          DATABASE_URL: postgresql://elasticwmsdbadmin:elasticwmsdbadmin@localhost:5432/elasticwms?schema=e2e_test
+
+      - name: E2E Test Suite
+        run: pnpm run test:e2e
+        env:
+          E2E_TEST_DB_URL: postgresql://elasticwmsdbadmin:elasticwmsdbadmin@localhost:5432/elasticwms?schema=e2e_test
+          JWT_ACCESS_SECRET: ci-test-access-secret-that-is-at-least-32-chars!!
+          JWT_REFRESH_SECRET: ci-test-refresh-secret-that-is-at-least-32-chars!!
+          CORE_API_URL: http://localhost:3000/api/v1
+          CORE_API_TOKEN: ci-test-system-token-that-is-min-32-chars!!
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          NODE_ENV: test
+
+  load-test:
+    needs: validate
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install k6
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gnupg
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+      - name: k6 RF Barcode Spike
+        run: k6 run load-tests/rf-barcode-spike.js --out json=load-results.json
+        env:
+          TARGET: http://localhost:3001
+          JWT_TOKEN: ci-test-access-secret-that-is-at-least-32-chars!!
+      - name: Check Thresholds
+        run: |
+          echo "=== Load Test Results ==="
+          jq '.metrics.http_req_duration.values["p(95)"]' load-results.json
+          jq '.metrics.http_req_failed.values.rate' load-results.json
+          jq '.metrics.rf_errors.rate // 0' load-results.json
+          p95=$(jq '.metrics.http_req_duration.values["p(95)"]' load-results.json)
+          failed=$(jq '.metrics.http_req_failed.values.rate' load-results.json)
+          p95_int=${p95%.*}
+          if [ "$p95_int" -gt 50 ] 2>/dev/null; then
+            echo "FAIL: p95 latency ${p95}ms > 50ms threshold"
+            exit 1
+          fi
+          if (( $(echo "$failed > 0.01" | bc -l) )); then
+            echo "FAIL: error rate ${failed} > 1% threshold"
+            exit 1
+          fi
+          echo "All thresholds PASS"
+      - name: Upload load test artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-results
+          path: load-results.json
+
+  build-and-push:
+    needs: [validate, e2e, load-test]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/wms-app:${{ github.sha }}
+            ghcr.io/${{ github.repository }}/wms-app:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          secrets: |
+            DATABASE_URL=${{ secrets.DATABASE_URL }}
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository }}/wms-app
+
+  deploy:
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trigger migration + rollout
+        run: |
+          curl -X POST ${{ secrets.DEPLOY_HOOK_URL }} \
+            -H "Content-Type: application/json" \
+            -d '{
+              "image": "ghcr.io/${{ github.repository }}/wms-app:${{ github.sha }}",
+              "migration_timeout": "300000",
+              "rollout_strategy": "rolling"
+            }'

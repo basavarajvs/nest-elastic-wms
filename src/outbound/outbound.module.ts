@@ -20,6 +20,7 @@ import { OutboundRfController } from './rf/outbound.controller';
       { name: 'allocation-engine' },
       { name: 'wave-planner' },
       { name: 'shipping-labels' },
+      { name: 'reconcile-allocations' },
     ),
   ],
   controllers: [OutboundWebController, OutboundRfController],

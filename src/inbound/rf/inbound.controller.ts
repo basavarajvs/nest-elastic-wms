@@ -1,8 +1,10 @@
+import { ApiTags } from '@nestjs/swagger';
 import { Controller, Post, Get, Body, Param, UseGuards, Req } from '@nestjs/common';
 import { GrnService } from '../grn.service';
 import { PutawayService } from '../putaway.service';
 import { QcService } from '../qc.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { LocationValidationGuard } from '../location-validation.guard';
 import { RfReceiveDto } from '../dtos/grn.dto';
 import { QcRfResultDto } from '../dtos/qc.dto';
 import { ConfirmPutawayDto } from '../dtos/putaway.dto';
@@ -10,6 +12,7 @@ import { RfSessionGuard } from '../../common/guards/rf-session.guard';
 import { RfAction } from '../../common/guards/rf-action.decorator';
 import { RfActionLightweightGuard } from '../../common/guards/rf-action-lightweight.guard';
 
+@ApiTags('WMS-RF')
 @Controller('/api/v1/wms/rf/inbound')
 @UseGuards(RfSessionGuard, RfActionLightweightGuard)
 export class InboundRfController {
@@ -68,6 +71,7 @@ export class InboundRfController {
   }
 
   @Post('/putaway/confirm')
+  @UseGuards(LocationValidationGuard)
   @RfAction('update')
   async confirmPutaway(@Req() req: any, @Body() dto: ConfirmPutawayDto) {
     return this.putawayService.confirmPutaway(

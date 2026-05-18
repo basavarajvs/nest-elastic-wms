@@ -1,3 +1,4 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsUUID, IsOptional, IsEnum } from 'class-validator';
 
 export enum LpnTypeDto {
@@ -9,14 +10,17 @@ export enum LpnTypeDto {
 }
 
 export class NestLpnDto {
+  @ApiProperty({ type: String, required: true })
   @IsUUID()
   childLpnId: string;
 
+  @ApiProperty({ type: String, required: true })
   @IsUUID()
   parentLpnId: string;
 }
 
 export class MoveLpnDto {
+  @ApiProperty({ type: String, required: true })
   @IsUUID()
   locationId: string;
 }

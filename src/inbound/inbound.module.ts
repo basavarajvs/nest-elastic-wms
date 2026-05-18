@@ -7,7 +7,6 @@ import { PutawayService } from './putaway.service';
 import { QcService } from './qc.service';
 import { PutawayGeneratorProcessor } from './putaway-generator.processor';
 import { PutawayReconciliationJob } from './putaway-reconciliation.job';
-import { LpnHierarchyValidator } from './lpn-hierarchy.validator';
 import { ZoneCapacityValidator } from './zone-capacity.validator';
 import { InboundWebController } from './web/inbound.controller';
 import { InboundRfController } from './rf/inbound.controller';
@@ -27,7 +26,6 @@ import { InboundRfController } from './rf/inbound.controller';
     QcService,
     PutawayGeneratorProcessor,
     PutawayReconciliationJob,
-    LpnHierarchyValidator,
     ZoneCapacityValidator,
   ],
   exports: [

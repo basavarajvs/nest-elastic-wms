@@ -109,6 +109,11 @@ export class WmsAbilityFactory {
       APPROVEADJUSTMENT: WmsAction.ApproveAdjustment,
       MANAGECYCLECOUNTSCHEDULE: WmsAction.ManageCycleCountSchedule,
       OVERRIDEAPPROVAL: WmsAction.OverrideApproval,
+      VALIDATE: WmsAction.Validate,
+      LOOKUP: WmsAction.Lookup,
+      TRIGGERSYNC: WmsAction.TriggerSync,
+      VIEWWEBHOOKLOGS: WmsAction.ViewWebhookLogs,
+      REGISTERDEVICE: WmsAction.RegisterDevice,
     };
     return map[actionStr.toUpperCase()] || null;
   }

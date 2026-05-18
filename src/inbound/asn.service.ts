@@ -71,12 +71,28 @@ export class AsnService {
       );
     }
     const updateData: any = { status: newStatus };
-    if (newStatus === 'ARRIVED') updateData.actualArrivalDate = new Date();
+    if (newStatus === 'ARRIVED') {
+      updateData.actualArrivalDate = new Date();
+    }
 
-    return (this.prisma as any).advanceShipNotice.update({
+    const updated = await (this.prisma as any).advanceShipNotice.update({
       where: { id: asnId },
       data: updateData,
+      include: { lines: true },
     });
+
+    if (newStatus === 'ARRIVED') {
+      this.eventEmitter.emit('asn.arrived', {
+        asnNumber: updated.asnNumber,
+        supplierName: updated.vendorId || '',
+        expectedDate: updated.expectedArrivalDate?.toISOString() || new Date().toISOString(),
+        itemCount: updated.lines?.length || 0,
+        dockAssignment: '',
+        tenantId: updated.tenantId,
+      });
+    }
+
+    return updated;
   }
 
   async previewReceive(asnId: string, tenantId: string): Promise<any> {

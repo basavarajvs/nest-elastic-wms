@@ -1,12 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class InventoryReconciliationService {
   private readonly logger = new Logger(InventoryReconciliationService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   @Cron(CronExpression.EVERY_DAY_AT_3AM)
   async runDailyReconciliation(): Promise<void> {
@@ -32,7 +36,7 @@ export class InventoryReconciliationService {
           it.lot_id,
           COALESCE(SUM(
             CASE
-              WHEN it.transaction_type IN ('RECEIPT','PUTAWAY','TRANSFER_IN','ADJUSTMENT_INCREASE','QC_PASS')
+              WHEN it.transaction_type IN ('RECEIPT','PUTAWAY','TRANSFER_IN','ADJUSTMENT_INCREASE','QC_PASS','SYSTEM_CORRECTION')
               THEN it.quantity
               ELSE -it.quantity
             END
@@ -50,6 +54,20 @@ export class InventoryReconciliationService {
 
     if (Array.isArray(drifts) && drifts.length > 0) {
       this.logger.warn(`Detected ${drifts.length} inventory drifts exceeding 0.1% variance`);
+
+      this.eventEmitter.emit('inventory.drift.detected', {
+        type: 'DAILY_RECONCILIATION',
+        drifts: drifts.map((d: any) => ({
+          productId: d.product_id,
+          locationId: d.location_id,
+          lotId: d.lot_id,
+          onHand: d.quantity_on_hand,
+          computed: d.computed_balance,
+        })),
+        totalDrifts: drifts.length,
+        timestamp: new Date(),
+      });
+
       for (const drift of drifts) {
         this.logger.warn(
           `Drift: product=${drift.product_id} onHand=${drift.quantity_on_hand} computed=${drift.computed_balance}`,

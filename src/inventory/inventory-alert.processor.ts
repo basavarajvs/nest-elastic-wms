@@ -1,14 +1,18 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
-import { Logger } from '@nestjs/common';
+import { Logger, Inject } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Processor('inventory-alerts')
 export class InventoryAlertProcessor extends WorkerHost {
   private readonly logger = new Logger(InventoryAlertProcessor.name);
 
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(EventEmitter2) private readonly eventEmitter: EventEmitter2,
+  ) {
     super();
   }
 
@@ -43,6 +47,16 @@ export class InventoryAlertProcessor extends WorkerHost {
         this.logger.warn(
           `[${item.tenant_id}] ${item.sku} (${item.name}): ${item.total_on_hand} on hand, reorder at ${item.reorder_point}`,
         );
+
+        this.eventEmitter.emit('inventory.low_stock', {
+          productCode: item.sku,
+          productId: item.product_id,
+          currentQty: Number(item.total_on_hand),
+          availableQty: Number(item.total_on_hand),
+          reorderPoint: Number(item.reorder_point),
+          locationCode: '',
+          tenantId: item.tenant_id,
+        });
       }
     }
   }

@@ -7,6 +7,10 @@ import {
 } from '@nestjs/common';
 import { PrismaClient } from '../../generated/prisma';
 import { TenantContextService } from '../common/context/tenant-context.service';
+import { trace, context as otelContext } from '@opentelemetry/api';
+import { getTracer, traceContextStorage } from '../observability/otel.config';
+
+const SLOW_QUERY_THRESHOLD_MS = 100;
 
 @Injectable()
 export class PrismaService
@@ -14,13 +18,34 @@ export class PrismaService
   implements OnModuleInit, OnModuleDestroy
 {
   private readonly logger = new Logger(PrismaService.name);
+  private readonly pgbouncerEnabled: boolean;
 
   constructor(private readonly tenantContext: TenantContextService) {
     super();
+    this.pgbouncerEnabled = process.env.PGBOUNCER_ENABLED === 'true';
+  }
+
+  private async setTenantContext(tenantId: string): Promise<void> {
+    if (this.pgbouncerEnabled) {
+      await this.$executeRawUnsafe(`SELECT set_config('app.tenant_id', $1, true)`, tenantId);
+    } else {
+      await this.$executeRawUnsafe(`SET LOCAL app.tenant_id = $1`, tenantId);
+    }
+  }
+
+  private async resetTenantContext(): Promise<void> {
+    if (this.pgbouncerEnabled) {
+      await this.$executeRawUnsafe(`SELECT set_config('app.tenant_id', '', true)`);
+    } else {
+      await this.$executeRawUnsafe(`RESET app.tenant_id`).catch(() => {});
+    }
   }
 
   async onModuleInit() {
     await this.$connect();
+    if (this.pgbouncerEnabled) {
+      this.logger.log('PgBouncer mode: wrapping all tenant queries in $transaction');
+    }
     if (process.env.NODE_ENV !== 'production') {
       this.logger.log('Database connected');
     }
@@ -30,56 +55,106 @@ export class PrismaService
       const model = params.model;
       const requiresIsolation = model ? this.hasTenantId(model) : false;
 
-      if (!requiresIsolation) {
-        return next(params);
-      }
+      const span = getTracer().startSpan('prisma.query', {
+        attributes: {
+          'db.system': 'postgresql',
+          'db.model': model || 'raw',
+          'db.operation': params.action || 'executeRaw',
+          'tenant_id': store?.tenantId || 'unknown',
+        },
+      });
 
-      if (store?.isSystemContext) {
-        return next(params);
-      }
+      const start = Date.now();
 
-      if (!store || !store.tenantId) {
-        if (!store && process.env.NODE_ENV !== 'test') {
-          throw new InternalServerErrorException(
-            'Tenant context required for this operation',
-          );
+      try {
+        if (!requiresIsolation) {
+          const result = await next(params);
+          return result;
         }
-        return next(params);
-      }
 
-      const tenantId = store.tenantId;
-
-      await this.$executeRawUnsafe(
-        `SET LOCAL app.tenant_id = '${tenantId}'`,
-      );
-
-      if (
-        params.action === 'findUnique' ||
-        params.action === 'findFirst' ||
-        params.action === 'findMany' ||
-        params.action === 'count' ||
-        params.action === 'aggregate'
-      ) {
-        params.args.where = { ...params.args.where, tenantId };
-      } else if (params.action === 'create') {
-        params.args.data = { ...params.args.data, tenantId };
-      } else if (params.action === 'createMany') {
-        const data = params.args.data as any[];
-        if (Array.isArray(data)) {
-          params.args.data = data.map((d: any) => ({ ...d, tenantId }));
+        if (store?.isSystemContext) {
+          const result = await next(params);
+          return result;
         }
-      } else if (
-        params.action === 'update' ||
-        params.action === 'updateMany' ||
-        params.action === 'upsert'
-      ) {
-        params.args.where = { ...params.args.where, tenantId };
-      } else if (params.action === 'delete' || params.action === 'deleteMany') {
-        params.args.where = { ...params.args.where, tenantId };
-      }
 
-      return next(params);
+        if (!store || !store.tenantId) {
+          if (!store && process.env.NODE_ENV !== 'test') {
+            throw new InternalServerErrorException(
+              'Tenant context required for this operation',
+            );
+          }
+          const result = await next(params);
+          return result;
+        }
+
+        const tenantId = store.tenantId;
+
+        if (
+          params.action === 'findUnique' ||
+          params.action === 'findFirst' ||
+          params.action === 'findMany' ||
+          params.action === 'count' ||
+          params.action === 'aggregate'
+        ) {
+          params.args.where = { ...params.args.where, tenantId };
+        } else if (params.action === 'create') {
+          params.args.data = { ...params.args.data, tenantId };
+        } else if (params.action === 'createMany') {
+          const data = params.args.data as any[];
+          if (Array.isArray(data)) {
+            params.args.data = data.map((d: any) => ({ ...d, tenantId }));
+          }
+        } else if (
+          params.action === 'update' ||
+          params.action === 'updateMany' ||
+          params.action === 'upsert'
+        ) {
+          params.args.where = { ...params.args.where, tenantId };
+        } else if (params.action === 'delete' || params.action === 'deleteMany') {
+          params.args.where = { ...params.args.where, tenantId };
+        }
+
+        if (this.pgbouncerEnabled) {
+          return this.$transaction(async (tx: any) => {
+            await tx.$executeRawUnsafe(
+              `SELECT set_config('app.tenant_id', $1, true)`,
+              tenantId,
+            );
+            const result = await next(params);
+            return result;
+          });
+        }
+
+        await this.setTenantContext(tenantId).catch(() => {
+          throw new InternalServerErrorException('Failed to set tenant context');
+        });
+
+        try {
+          const result = await next(params);
+          return result;
+        } finally {
+          await this.resetTenantContext();
+        }
+      } finally {
+        this.recordQuery(model, params.action, store?.tenantId, start, span);
+      }
     });
+  }
+
+  private recordQuery(
+    model: string,
+    action: string,
+    tenantId: string | undefined,
+    start: number,
+    span: any,
+  ): void {
+    const duration = Date.now() - start;
+    span.setAttribute('duration_ms', duration);
+    span.end();
+
+    if (duration > SLOW_QUERY_THRESHOLD_MS) {
+      this.logger.warn(`Slow query detected: ${model}.${action} (${duration}ms)`);
+    }
   }
 
   async onModuleDestroy() {
@@ -116,13 +191,20 @@ export class PrismaService
     fn: (prisma: PrismaService) => Promise<T>,
   ): Promise<T> {
     return this.$transaction(async (tx: PrismaClient) => {
-      await tx.$executeRawUnsafe(
-        `SET LOCAL app.tenant_id = '${tenantId}'`,
-      );
+      if (this.pgbouncerEnabled) {
+        await tx.$executeRawUnsafe(
+          `SELECT set_config('app.tenant_id', $1, true)`,
+          tenantId,
+        );
+      } else {
+        await tx.$executeRawUnsafe(`SET LOCAL app.tenant_id = $1`, tenantId);
+      }
       try {
         return await fn(tx as unknown as PrismaService);
       } finally {
-        await tx.$executeRawUnsafe(`RESET app.tenant_id`);
+        if (!this.pgbouncerEnabled) {
+          await tx.$executeRawUnsafe(`RESET app.tenant_id`).catch(() => {});
+        }
       }
     });
   }

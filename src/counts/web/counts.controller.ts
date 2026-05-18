@@ -1,9 +1,11 @@
+import { ApiTags } from '@nestjs/swagger';
 import { Controller, Get, Post, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
 import { CycleCountService } from '../cycle-count.service';
 import { ScheduleCountDto, SubmitCountLineDto } from '../dtos/count.dto';
 import { CheckAbility } from '../../common/decorators/check-ability.decorator';
 import { CaslGuard } from '../../common/guards/casl.guard';
 
+@ApiTags('WMS-WEB', 'Operations')
 @Controller('/api/v1/wms/web/cycle-counts')
 @UseGuards(CaslGuard)
 export class CountWebController {

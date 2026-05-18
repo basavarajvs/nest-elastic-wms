@@ -27,6 +27,11 @@ export enum WmsAction {
   ApproveAdjustment = 'approveAdjustment',
   ManageCycleCountSchedule = 'manageCycleCountSchedule',
   OverrideApproval = 'overrideApproval',
+  Validate = 'validate',
+  Lookup = 'lookup',
+  TriggerSync = 'triggerSync',
+  ViewWebhookLogs = 'viewWebhookLogs',
+  RegisterDevice = 'registerDevice',
 }
 
 export type WmsSubjects =
@@ -65,10 +70,19 @@ export type WmsSubjects =
   | 'OutboundShipment'
   | 'InventoryTransfer'
   | 'InventoryTransferLine'
-  | 'CycleCount'
   | 'CycleCountLine'
   | 'AdjustmentApproval'
   | 'ApprovalThresholdConfig'
+  | 'SystemSetting'
+  | 'WmsStateMachine'
+  | 'WmsRule'
+  | 'WmsBpmnProcess'
+  | 'WmsExecutionInstance'
+  | 'Integration'
+  | 'Barcode'
+  | 'ExternalEntityMapping'
+  | 'IntegrationSyncLog'
+  | 'SyncWebhookLog'
   | 'all';
 
 export type WmsAbility = MongoAbility<[WmsAction, WmsSubjects]>;

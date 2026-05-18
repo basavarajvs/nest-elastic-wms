@@ -79,7 +79,7 @@ export class BarcodeService {
       categoryCode: product.category?.categoryCode,
       barcodes: [barcode.barcodeValue],
       // Challenge 5: conversion info for pallet/case scans
-      scannedUomCode: barcode.childUomCode || null,
+      scannedAs: barcode.childUomCode || null,
       scannedQuantity: barcode.quantityPerScan || 1,
       conversionFactor: barcode.childUomCode ? (barcode.quantityPerScan || 1) : 1,
     };

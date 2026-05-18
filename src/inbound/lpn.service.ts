@@ -59,7 +59,6 @@ export class LpnService {
         );
       }
 
-      // Circular reference check + depth validation via recursive CTE
       const cycleCheck: any[] = await tx.$queryRawUnsafe(`
         WITH RECURSIVE lpn_tree AS (
           SELECT id, parent_lpn_id, 1 AS depth

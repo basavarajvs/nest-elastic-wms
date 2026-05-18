@@ -1,3 +1,4 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsUUID, IsOptional, IsEnum } from 'class-validator';
 
 export enum HoldTypeDto {
@@ -11,29 +12,36 @@ export enum HoldTypeDto {
 }
 
 export class CreateHoldDto {
+  @ApiProperty({ type: String, required: true })
   @IsUUID()
   facilityId: string;
 
   @IsOptional()
+  @ApiProperty({ type: String, required: false })
   @IsUUID()
   productId?: string;
 
   @IsOptional()
+  @ApiProperty({ type: String, required: false })
   @IsUUID()
   locationId?: string;
 
   @IsOptional()
+  @ApiProperty({ type: String, required: false })
   @IsUUID()
   lotId?: string;
 
+  @ApiProperty({ required: true })
   @IsEnum(HoldTypeDto)
   holdType: HoldTypeDto;
 
   @IsOptional()
+  @ApiProperty({ type: String, required: false })
   @IsString()
   reason?: string;
 
   @IsOptional()
+  @ApiProperty({ type: String, required: false })
   @IsString()
   expiresAt?: string;
 }

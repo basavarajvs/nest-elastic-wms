@@ -1,3 +1,4 @@
+import { ApiTags } from '@nestjs/swagger';
 import { Controller, Post, Body, Get, Param, UseGuards, Req } from '@nestjs/common';
 import { CycleCountService } from '../cycle-count.service';
 import { SubmitCountLineDto } from '../dtos/count.dto';
@@ -5,6 +6,7 @@ import { RfSessionGuard } from '../../common/guards/rf-session.guard';
 import { RfAction } from '../../common/guards/rf-action.decorator';
 import { RfActionLightweightGuard } from '../../common/guards/rf-action-lightweight.guard';
 
+@ApiTags('WMS-RF')
 @Controller('/api/v1/wms/rf/cycle-counts')
 @UseGuards(RfSessionGuard, RfActionLightweightGuard)
 export class CountRfController {

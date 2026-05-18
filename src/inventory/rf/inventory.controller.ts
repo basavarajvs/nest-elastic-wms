@@ -1,13 +1,16 @@
+import { ApiTags } from '@nestjs/swagger';
 import { Controller, Post, Body, Get, Param, Query, UseGuards, Req } from '@nestjs/common';
 import { InventoryOnHandService } from '../inventory-onhand.service';
 import { InventoryTransactionService } from '../inventory-transaction.service';
 import { InventoryHoldService } from '../inventory-hold.service';
 import { PrismaService } from '../../prisma/prisma.service';
+import { HoldOverrideGuard, HoldOverride } from '../../common/guards/hold-override.guard';
 import { CreateTransactionDto } from '../dtos/transaction.dto';
 import { RfSessionGuard } from '../../common/guards/rf-session.guard';
 import { RfAction } from '../../common/guards/rf-action.decorator';
 import { RfActionLightweightGuard } from '../../common/guards/rf-action-lightweight.guard';
 
+@ApiTags('WMS-RF')
 @Controller('/api/v1/wms/rf/inventory')
 @UseGuards(RfSessionGuard, RfActionLightweightGuard)
 export class InventoryRfController {
@@ -43,6 +46,8 @@ export class InventoryRfController {
   }
 
   @Post('/transaction/pick')
+  @UseGuards(HoldOverrideGuard)
+  @HoldOverride()
   @RfAction('create')
   async pick(@Req() req: any, @Body() dto: CreateTransactionDto) {
     return this.txnService.executeTransaction(dto, req.tenantContext.getTenantId());

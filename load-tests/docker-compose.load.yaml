@@ -1,0 +1,38 @@
+# ── Challenge 2: local-load-agent pattern ──
+# Uses network_mode: host to bypass Docker NAT overhead
+# Traffic control (tc) simulates warehouse Wi-Fi latency (20-100ms jitter)
+#
+# Usage:
+#   # Install tc jitter on loopback (simulate warehouse Wi-Fi):
+#   sudo tc qdisc add dev lo root netem delay 20ms 40ms distribution normal
+#
+#   # Run k6 load test:
+#   docker compose -f load-tests/docker-compose.load.yaml run --rm k6
+#
+#   # Remove traffic control after testing:
+#   sudo tc qdisc del dev lo root
+#
+#   # Parse results: http_req_duration vs http_req_blocked
+#   # http_req_blocked > 5ms = network/cloud throttling, not app bottleneck
+#   jq '.metrics.http_req_blocked.values["p(95)"]' load-results.json
+
+version: '3.8'
+
+services:
+  k6:
+    image: grafana/k6:latest
+    network_mode: host
+    environment:
+      - TARGET=http://localhost:3001
+      - JWT_TOKEN=${JWT_TOKEN:-test-token}
+      - DURATION=${LOAD_TEST_DURATION:-5m}
+    volumes:
+      - ./:/load-tests
+      - ./load-results:/load-results
+    working_dir: /load-tests
+    command: >
+      run rf-barcode-spike.js
+      --out json=/load-results/load-results.json
+      --out csv=/load-results/load-results.csv
+    profiles:
+      - load-test

@@ -52,4 +52,26 @@ export class ShippingService {
     if (!shipment) throw new BadRequestException('Shipment not found');
     return { shipmentNumber: shipment.shipmentNumber, labelUrl: shipment.labelUrl || 'PENDING' };
   }
+
+  async printGenericLabel(shipmentId: string, tenantId: string): Promise<any> {
+    const shipment = await (this.prisma as any).outboundShipment.findFirst({
+      where: { id: shipmentId, tenantId },
+    });
+    if (!shipment) throw new BadRequestException('Shipment not found');
+
+    await (this.prisma as any).outboundShipment.update({
+      where: { id: shipmentId },
+      data: {
+        labelUrl: 'GENERIC_ZPL',
+        metadata: {
+          labelType: 'GENERIC_ZPL',
+          printedBy: 'RF_OPERATOR',
+          printedAt: new Date().toISOString(),
+        },
+      },
+    });
+
+    this.logger.log(`Generic label printed for shipment ${shipmentId}`);
+    return { shipmentNumber: shipment.shipmentNumber, labelType: 'GENERIC_ZPL' };
+  }
 }

@@ -1,3 +1,4 @@
+import { ApiTags } from '@nestjs/swagger';
 import {
   Controller,
   Get,
@@ -13,6 +14,7 @@ import {
   StorageLocationService,
   Projection,
 } from './storage-location.service';
+import { LocationCodeRefactorService } from './location-code-refactor.service';
 import { CreateLocationDto } from './dtos/create-location.dto';
 import { UpdateLocationDto } from './dtos/update-location.dto';
 import { LocationQueryDto } from './dtos/location-query.dto';
@@ -23,9 +25,13 @@ import { CaslGuard } from '../common/guards/casl.guard';
 import { RfSessionGuard } from '../common/guards/rf-session.guard';
 import { RfAction } from '../common/guards/rf-action.decorator';
 
+@ApiTags('Master-Data', 'WMS-WEB')
 @Controller()
 export class StorageLocationController {
-  constructor(private readonly locationService: StorageLocationService) {}
+  constructor(
+    private readonly locationService: StorageLocationService,
+    private readonly codeRefactorService: LocationCodeRefactorService,
+  ) {}
 
   // ── WEB Routes ──
   @Get('web')
@@ -82,6 +88,24 @@ export class StorageLocationController {
       id,
       req.tenantContext.getTenantId(),
     );
+  }
+
+  @Post('web/code-migrate')
+  @UseGuards(CaslGuard)
+  @CheckAbility({ action: 'update', subject: 'StorageLocation' })
+  async migrateCodes(
+    @Req() req: any,
+    @Body('facilityId') facilityId: string,
+    @Body('oldPrefix') oldPrefix: string,
+    @Body('newPrefix') newPrefix: string,
+  ) {
+    const count = await this.codeRefactorService.migrateCode(
+      req.tenantContext.getTenantId(),
+      facilityId,
+      oldPrefix,
+      newPrefix,
+    );
+    return { migratedCount: count, oldPrefix, newPrefix };
   }
 
   // ── RF Routes ──

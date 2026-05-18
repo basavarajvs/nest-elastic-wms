@@ -6,10 +6,12 @@ import { InventoryHoldService } from './inventory-hold.service';
 import { InventoryAdjustmentService } from './inventory-adjustment.service';
 import { InventoryPolicyService } from './inventory-policy.service';
 import { InventoryReconciliationService } from './inventory-reconciliation.service';
+import { InventoryReconciliationProcessor } from './inventory-reconciliation.processor';
 import { InventoryAlertProcessor } from './inventory-alert.processor';
 import { InventorySeederService } from './inventory-seeder.service';
 import { InventoryWebController } from './web/inventory.controller';
 import { InventoryRfController } from './rf/inventory.controller';
+import { HoldOverrideGuard } from '../common/guards/hold-override.guard';
 
 @Module({
   imports: [
@@ -26,8 +28,10 @@ import { InventoryRfController } from './rf/inventory.controller';
     InventoryAdjustmentService,
     InventoryPolicyService,
     InventoryReconciliationService,
+    InventoryReconciliationProcessor,
     InventoryAlertProcessor,
     InventorySeederService,
+    HoldOverrideGuard,
   ],
   exports: [
     InventoryTransactionService,

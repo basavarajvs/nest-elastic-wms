@@ -27,7 +27,7 @@ export function validatePermissionRegistry(): void {
   for (const subject of definedSubjects) {
     if (subject === 'all') continue;
     if (!ALL_WMS_SUBJECTS.includes(subject as any)) {
-      logger.warn(
+      throw new Error(
         `Subject "${subject}" referenced in role definitions but not declared in ALL_WMS_SUBJECTS`,
       );
     }
@@ -36,7 +36,7 @@ export function validatePermissionRegistry(): void {
   // Check for actions not in ALL_WMS_ACTIONS
   for (const action of definedActions) {
     if (!ALL_WMS_ACTIONS.includes(action as any)) {
-      logger.warn(
+      throw new Error(
         `Action "${action}" referenced in role definitions but not declared in ALL_WMS_ACTIONS`,
       );
     }

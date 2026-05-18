@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, Req, Inject } from '@nestjs/common';
 import { InventoryOnHandService } from '../inventory-onhand.service';
 import { InventoryTransactionService } from '../inventory-transaction.service';
 import { InventoryAdjustmentService } from '../inventory-adjustment.service';
@@ -7,11 +8,12 @@ import { InventoryPolicyService } from '../inventory-policy.service';
 import { CreateAdjustmentDto } from '../dtos/adjustment.dto';
 import { UpsertPolicyDto } from '../dtos/policy.dto';
 import { StockFilterDto } from '../dtos/stock-filter.dto';
-import { QuotaCheck } from '../../common/decorators/quota-check.decorator';
 import { CheckAbility } from '../../common/decorators/check-ability.decorator';
-import { QuotaGuard } from '../../common/guards/quota.guard';
 import { CaslGuard } from '../../common/guards/casl.guard';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 
+@ApiTags('WMS-WEB', 'Operations')
 @Controller('/api/v1/wms/web/inventory')
 @UseGuards(CaslGuard)
 export class InventoryWebController {
@@ -21,7 +23,19 @@ export class InventoryWebController {
     private readonly adjService: InventoryAdjustmentService,
     private readonly holdService: InventoryHoldService,
     private readonly policyService: InventoryPolicyService,
+    @InjectQueue('inventory-alerts') private readonly alertQueue: Queue,
   ) {}
+
+  @Post('/alerts/trigger')
+  @CheckAbility({ action: 'manage', subject: 'InventoryPolicy' })
+  async triggerAlerts(@Req() req: any) {
+    const job = await this.alertQueue.add('check-low-stock', {
+      tenantId: req.tenantContext.getTenantId(),
+      triggeredBy: req.user?.userId,
+      timestamp: new Date(),
+    });
+    return { jobId: job.id, message: 'Alert check enqueued' };
+  }
 
   @Get('/stock')
   @CheckAbility({ action: 'read', subject: 'InventoryOnHand' })
@@ -35,8 +49,6 @@ export class InventoryWebController {
   }
 
   @Post('/adjustments')
-  @UseGuards(QuotaGuard)
-  @QuotaCheck('inventory_adjustments')
   @CheckAbility({ action: 'create', subject: 'InventoryAdjustment' })
   async createAdjustment(@Req() req: any, @Body() dto: CreateAdjustmentDto) {
     return this.adjService.createDraft(dto, req.tenantContext.getTenantId(), req.user?.userId);

@@ -88,6 +88,22 @@ export class PackingService {
       });
       if (!session) throw new BadRequestException('Session not found');
 
+      // Collect order-line level data from sealed containers
+      const orderLineContainers: Record<string, { containerCodes: string[]; qtyShipped: number }> = {};
+      for (const carton of session.cartons) {
+        const pickedLpns = (carton.pickedLpns as any[]) || [];
+        for (const lpn of pickedLpns) {
+          const lineId = lpn.orderLineId || 'unknown';
+          if (!orderLineContainers[lineId]) {
+            orderLineContainers[lineId] = { containerCodes: [], qtyShipped: 0 };
+          }
+          if (!orderLineContainers[lineId].containerCodes.includes(carton.containerCode)) {
+            orderLineContainers[lineId].containerCodes.push(carton.containerCode);
+          }
+          orderLineContainers[lineId].qtyShipped += Number(lpn.quantity || 0);
+        }
+      }
+
       await tx.packingSession.update({
         where: { id: sessionId },
         data: { status: 'COMPLETED', endAt: new Date() },
@@ -104,12 +120,13 @@ export class PackingService {
             shipmentNumber,
             status: 'CREATED',
             containers: [carton.containerCode],
+            orderLineShipments: orderLineContainers,
           },
         });
       }
 
       this.eventEmitter.emit('packing.session_closed', { sessionId, shipments: session.cartons.length, tenantId });
-      return { status: 'COMPLETED', shipmentsGenerated: session.cartons.length };
+      return { status: 'COMPLETED', shipmentsGenerated: session.cartons.length, orderLines: Object.keys(orderLineContainers).length };
     });
   }
 }

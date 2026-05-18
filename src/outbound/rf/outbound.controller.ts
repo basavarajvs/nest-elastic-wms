@@ -1,3 +1,4 @@
+import { ApiTags } from '@nestjs/swagger';
 import { Controller, Get, Post, Body, Param, UseGuards, Req } from '@nestjs/common';
 import { PickingService } from '../picking.service';
 import { PackingService } from '../packing.service';
@@ -9,6 +10,7 @@ import { RfSessionGuard } from '../../common/guards/rf-session.guard';
 import { RfAction } from '../../common/guards/rf-action.decorator';
 import { RfActionLightweightGuard } from '../../common/guards/rf-action-lightweight.guard';
 
+@ApiTags('WMS-RF')
 @Controller('/api/v1/wms/rf/outbound')
 @UseGuards(RfSessionGuard, RfActionLightweightGuard)
 export class OutboundRfController {
@@ -83,5 +85,11 @@ export class OutboundRfController {
   @RfAction('update')
   async dispatch(@Req() req: any, @Body('loadId') loadId: string) {
     return this.shippingService.confirmDispatch(loadId, req.tenantContext.getTenantId());
+  }
+
+  @Post('/ship/print-generic-label')
+  @RfAction('update')
+  async printGenericLabel(@Req() req: any, @Body('shipmentId') shipmentId: string) {
+    return this.shippingService.printGenericLabel(shipmentId, req.tenantContext.getTenantId());
   }
 }

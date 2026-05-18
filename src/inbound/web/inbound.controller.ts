@@ -1,3 +1,4 @@
+import { ApiTags } from '@nestjs/swagger';
 import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
 import { AsnService } from '../asn.service';
 import { GrnService } from '../grn.service';
@@ -9,6 +10,7 @@ import { QcInspectDto, QcDispositionDto } from '../dtos/qc.dto';
 import { CheckAbility } from '../../common/decorators/check-ability.decorator';
 import { CaslGuard } from '../../common/guards/casl.guard';
 
+@ApiTags('WMS-WEB', 'Operations')
 @Controller('/api/v1/wms/web/inbound')
 @UseGuards(CaslGuard)
 export class InboundWebController {

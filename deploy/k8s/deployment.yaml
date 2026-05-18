@@ -1,0 +1,142 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wms-app
+  namespace: wms
+  labels:
+    app: wms-app
+    tier: backend
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: wms-app
+  template:
+    metadata:
+      labels:
+        app: wms-app
+        tier: backend
+    spec:
+      terminationGracePeriodSeconds: 30
+      initContainers:
+        - name: migration-runner
+          image: ghcr.io/myorg/wms-app:latest
+          imagePullPolicy: Always
+          command: ["sh", "/app/scripts/migrate-deploy.sh"]
+          envFrom:
+            - secretRef:
+                name: wms-secrets
+            - configMapRef:
+                name: wms-config
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      containers:
+        - name: wms-app
+          image: ghcr.io/myorg/wms-app:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3001
+              protocol: TCP
+          envFrom:
+            - secretRef:
+                name: wms-secrets
+            - configMapRef:
+                name: wms-config
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 40
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 3001
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 2
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            runAsGroup: 1001
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+      securityContext:
+        fsGroup: 1001
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wms-app
+  namespace: wms
+spec:
+  selector:
+    app: wms-app
+  ports:
+    - name: http
+      port: 3001
+      targetPort: 3001
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wms-config
+  namespace: wms
+data:
+  NODE_ENV: "production"
+  API_PREFIX: "api/v1/wms"
+  LOG_LEVEL: "info"
+  PORT: "3001"
+  DEPLOYMENT_MODE: "rolling"
+  MIGRATION_LOCK_TIMEOUT_MS: "300000"
+  PGBOUNCER_ENABLED: "false"
+  DB_POOL_LIMIT: "20"
+  SHUTDOWN_TIMEOUT_MS: "15000"
+  HEAP_WARNING_THRESHOLD_MB: "1200"
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: wms-app
+  namespace: wms
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+    - host: wms.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: wms-app
+                port:
+                  number: 3001

@@ -1,9 +1,11 @@
+import { ApiTags } from '@nestjs/swagger';
 import { Controller, Get, Post, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
 import { InventoryTransferService } from '../inventory-transfer.service';
 import { CreateTransferDto } from '../dtos/transfer.dto';
 import { CheckAbility } from '../../common/decorators/check-ability.decorator';
 import { CaslGuard } from '../../common/guards/casl.guard';
 
+@ApiTags('WMS-WEB', 'Operations')
 @Controller('/api/v1/wms/web/transfers')
 @UseGuards(CaslGuard)
 export class TransferWebController {

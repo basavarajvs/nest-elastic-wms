@@ -1,3 +1,4 @@
+import { ApiTags } from '@nestjs/swagger';
 import {
   Controller,
   Get,
@@ -9,18 +10,19 @@ import {
   Query,
   UseGuards,
   Req,
+  Res,
   UploadedFile,
 } from '@nestjs/common';
+import { FastifyReply } from 'fastify';
 import { ProductService, ProductProjection } from '../product.service';
 import { ProductImportService } from '../product-import.service';
 import { CreateProductDto } from '../dtos/create-product.dto';
 import { UpdateProductDto } from '../dtos/update-product.dto';
 import { ProductFilterDto } from '../dtos/product-filter.dto';
-import { QuotaCheck } from '../../common/decorators/quota-check.decorator';
 import { CheckAbility } from '../../common/decorators/check-ability.decorator';
-import { QuotaGuard } from '../../common/guards/quota.guard';
 import { CaslGuard } from '../../common/guards/casl.guard';
 
+@ApiTags('WMS-WEB', 'Master-Data')
 @Controller('web/products')
 @UseGuards(CaslGuard)
 export class ProductsWebController {
@@ -30,8 +32,6 @@ export class ProductsWebController {
   ) {}
 
   @Post()
-  @UseGuards(QuotaGuard)
-  @QuotaCheck('products')
   @CheckAbility({ action: 'create', subject: 'Product' })
   async create(@Req() req: any, @Body() dto: CreateProductDto) {
     return this.productService.create(dto, req.tenantContext.getTenantId());
@@ -57,11 +57,17 @@ export class ProductsWebController {
 
   @Get('import/:jobId/errors.csv')
   @CheckAbility({ action: 'read', subject: 'Product' })
-  async downloadErrorCsv(@Req() req: any, @Param('jobId') jobId: string) {
+  async downloadErrorCsv(
+    @Req() req: any,
+    @Param('jobId') jobId: string,
+    @Res({ passthrough: true }) res: any,
+  ) {
     const csv = await this.importService.generateErrorCsv(
       jobId,
       req.tenantContext.getTenantId(),
     );
+    res.header('Content-Type', 'text/csv; charset=utf-8');
+    res.header('Content-Disposition', `attachment; filename="import-errors-${jobId}.csv"`);
     return csv;
   }
 

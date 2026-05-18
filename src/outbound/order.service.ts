@@ -1,6 +1,6 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
 import { CreateOrderDto } from './dtos/order.dto';
 
 const LINE_STATUS_TO_HEADER: Record<string, string> = {
@@ -110,11 +110,57 @@ export class OrderService {
     return order;
   }
 
+  // ── Event listeners ──
+  @OnEvent('allocation.soft_done')
+  async onAllocationSoftDone(payload: { orderId: string; tenantId: string }) {
+    try {
+      await this.syncStatusFromLines(payload.orderId, payload.tenantId);
+    } catch (err: any) {
+      this.logger.error(`syncStatusFromLines failed for ${payload.orderId}: ${err.message}`);
+    }
+  }
+
+  @OnEvent('allocation.hard_locked')
+  async onAllocationHardLocked(payload: { orderId: string; tenantId: string }) {
+    try {
+      await this.syncStatusFromLines(payload.orderId, payload.tenantId);
+    } catch (err: any) {
+      this.logger.error(`syncStatusFromLines failed for ${payload.orderId}: ${err.message}`);
+    }
+  }
+
+  @OnEvent('picking.completed')
+  async onPickingCompleted(payload: { orderLineId: string; tenantId: string }) {
+    try {
+      const line = await (this.prisma as any).salesOrderLine.findFirst({
+        where: { id: payload.orderLineId, tenantId: payload.tenantId },
+        select: { salesOrderId: true },
+      });
+      if (line) {
+        await this.syncStatusFromLines(line.salesOrderId, payload.tenantId);
+      }
+    } catch (err: any) {
+      this.logger.error(`syncStatusFromLines on picking completed failed: ${err.message}`);
+    }
+  }
+
   private async updateHeaderStatus(orderId: string, newStatus: string): Promise<any> {
-    return (this.prisma as any).salesOrder.update({
+    const order = await (this.prisma as any).salesOrder.update({
       where: { id: orderId },
       data: { status: newStatus },
     });
+
+    this.eventEmitter.emit('order.status_changed', {
+      orderId: order.id,
+      orderNumber: order.orderNumber || order.id,
+      clientCode: order.clientCode || '',
+      status: order.status,
+      itemsCount: 0,
+      totalValue: order.totalValue || 0,
+      tenantId: order.tenantId,
+    });
+
+    return order;
   }
 
   async list(tenantId: string, filters: {

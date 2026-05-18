@@ -39,6 +39,14 @@ export class AllocationService {
           AND ioh.facility_id = $2::uuid
           AND ioh.product_id = $3::uuid
           AND (ioh.quantity_on_hand - ioh.quantity_allocated - ioh.quantity_reserved) > 0
+          AND NOT EXISTS (
+            SELECT 1 FROM multitenant.inventory_transfer_lines itl
+            JOIN multitenant.inventory_transfers it ON it.id = itl.transfer_id
+            WHERE it.tenant_id = ioh.tenant_id
+              AND itl.product_id = ioh.product_id
+              AND (itl.location_id = ioh.location_id OR it.to_location_id = ioh.location_id)
+              AND it.status IN ('DISPATCHED', 'IN_TRANSIT')
+          )
         ORDER BY ioh.created_at ASC
       `, tenantId, order.facilityId, line.productId);
 

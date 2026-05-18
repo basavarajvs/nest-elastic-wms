@@ -10,16 +10,28 @@ import { Reflector } from '@nestjs/core';
 import Redis from 'ioredis';
 import { REDIS_CLIENT } from '../cache/redis.constants';
 import { RF_ACTION_KEY } from './rf-action.decorator';
+import { WMS_ROLE_DEFINITIONS } from '../../casl/permission-registry';
 
 const CACHE_TTL = 60; // 60 seconds
 
-const ROLE_ACTION_MAP: Record<string, string[]> = {
-  WAREHOUSE_ADMIN: ['manage', 'create', 'read', 'update', 'delete', 'receive', 'pick', 'pack', 'ship', 'adjust', 'count', 'approve'],
-  WAREHOUSE_SUPERVISOR: ['read', 'approve', 'adjust', 'count', 'receive', 'pick', 'pack', 'ship'],
-  WAREHOUSE_OPERATOR: ['read', 'receive', 'pick', 'pack', 'ship', 'adjust'],
-  INVENTORY_CLERK: ['read', 'count', 'adjust'],
-  TENANT_ADMIN: ['manage', 'create', 'read', 'update', 'delete', 'receive', 'pick', 'pack', 'ship', 'adjust', 'count', 'approve'],
-};
+// Derived from WMS_ROLE_DEFINITIONS at module load time
+function deriveRoleActionMap(): Record<string, string[]> {
+  const map: Record<string, string[]> = {};
+  for (const roleDef of WMS_ROLE_DEFINITIONS) {
+    const actions = new Set<string>();
+    for (const perm of roleDef.permissions) {
+      if (perm.action === 'manage') {
+        // 'manage' implies all; keep the literal for cache
+      }
+      actions.add(perm.action);
+    }
+    map[roleDef.roleCode] = [...actions];
+  }
+  map['TENANT_ADMIN'] = ['manage', 'create', 'read', 'update', 'delete', 'receive', 'pick', 'pack', 'ship', 'adjust', 'count', 'approve'];
+  return map;
+}
+
+const ROLE_ACTION_MAP = deriveRoleActionMap();
 
 @Injectable()
 export class RfActionLightweightGuard implements CanActivate {

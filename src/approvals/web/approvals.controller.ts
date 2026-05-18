@@ -1,9 +1,11 @@
+import { ApiTags } from '@nestjs/swagger';
 import { Controller, Get, Post, Body, Param, UseGuards, Req } from '@nestjs/common';
 import { AdjustmentApprovalService } from '../adjustment-approval.service';
 import { ApproveApprovalDto, RejectApprovalDto } from '../dtos/approval.dto';
 import { CheckAbility } from '../../common/decorators/check-ability.decorator';
 import { CaslGuard } from '../../common/guards/casl.guard';
 
+@ApiTags('WMS-WEB', 'Operations')
 @Controller('/api/v1/wms/web/approvals')
 @UseGuards(CaslGuard)
 export class ApprovalWebController {

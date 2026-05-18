@@ -3,6 +3,7 @@ import {
   BadRequestException,
   NotFoundException,
   Logger,
+  Inject,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto } from './dtos/create-product.dto';
@@ -11,6 +12,8 @@ import { ProductFilterDto } from './dtos/product-filter.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { BarcodeService } from './barcode.service';
 import { AttributeService } from './attribute.service';
+import Redis from 'ioredis';
+import { REDIS_CLIENT } from '../common/cache/redis.constants';
 
 export enum ProductProjection {
   WEB = 'WEB',
@@ -26,6 +29,7 @@ export class ProductService {
     private readonly barcodeService: BarcodeService,
     private readonly attributeService: AttributeService,
     private readonly eventEmitter: EventEmitter2,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
   async create(dto: CreateProductDto, tenantId: string) {
@@ -234,6 +238,10 @@ export class ProductService {
     });
     if (!product) throw new NotFoundException('Product not found');
 
+    if (dto.categoryId && dto.categoryId !== product.categoryId) {
+      await this.validateCategoryCycle(id, dto.categoryId, tenantId);
+    }
+
     const updateData: Record<string, any> = {};
     if (dto.name !== undefined) updateData.name = dto.name;
     if (dto.description !== undefined) updateData.description = dto.description;
@@ -259,6 +267,7 @@ export class ProductService {
             if (b.isPrimary !== undefined) bcUpdate.isPrimary = b.isPrimary;
             if (b.isActive !== undefined) bcUpdate.isActive = b.isActive;
             if (b.quantityPerScan !== undefined) bcUpdate.quantityPerScan = b.quantityPerScan;
+            if (b.childUomCode !== undefined) bcUpdate.childUomCode = b.childUomCode;
             if (Object.keys(bcUpdate).length > 0) {
               await (this.prisma as any).productBarcode.updateMany({
                 where: { id: existingBarcode.id, tenantId },
@@ -320,6 +329,10 @@ export class ProductService {
 
   // Challenge 6: CategoryTreeBuilder — single query + Map grouping
   async getCategoryTree(tenantId: string) {
+    const cacheKey = `prod:category:tree:${tenantId}`;
+    const cached = await this.redis.get(cacheKey);
+    if (cached) return JSON.parse(cached);
+
     const allCategories = await (this.prisma as any).productCategory.findMany({
       where: { tenantId, status: 'ACTIVE' },
       orderBy: { categoryCode: 'asc' },
@@ -343,6 +356,7 @@ export class ProductService {
       }
     }
 
+    await this.redis.setex(cacheKey, 300, JSON.stringify(roots));
     return roots;
   }
 

@@ -1,9 +1,11 @@
+import { ApiTags } from '@nestjs/swagger';
 import { Controller, Get, Param, UseGuards, Req } from '@nestjs/common';
 import { ProductService, ProductProjection } from '../product.service';
 import { RfSessionGuard } from '../../common/guards/rf-session.guard';
 import { RfAction } from '../../common/guards/rf-action.decorator';
 import { RfActionLightweightGuard } from '../../common/guards/rf-action-lightweight.guard';
 
+@ApiTags('WMS-RF')
 @Controller('rf/products')
 @UseGuards(RfSessionGuard, RfActionLightweightGuard)
 export class ProductsRfController {

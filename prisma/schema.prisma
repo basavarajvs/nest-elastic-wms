@@ -293,6 +293,7 @@ enum TransactionType {
   QC_FAIL              @map("QC_FAIL")
   REWORK               @map("REWORK")
   SCRAPP               @map("SCRAPP")
+  SYSTEM_CORRECTION    @map("SYSTEM_CORRECTION")
 
   @@schema("multitenant")
 }
@@ -1036,6 +1037,101 @@ model OutboundShipment {
   @@map("outbound_shipments")
 }
 
+// ── Integration Gateway Enums ──
+enum ExternalPlatform {
+  SHOPIFY    @map("SHOPIFY")
+  WOOCOMMERCE @map("WOOCOMMERCE")
+  CUSTOM_ERP @map("CUSTOM_ERP")
+  GENERIC_API @map("GENERIC_API")
+
+  @@schema("multitenant")
+}
+
+enum SyncDirection {
+  INBOUND       @map("INBOUND")
+  OUTBOUND      @map("OUTBOUND")
+  BIDIRECTIONAL @map("BIDIRECTIONAL")
+
+  @@schema("multitenant")
+}
+
+enum SyncStatus {
+  PENDING    @map("PENDING")
+  PROCESSING @map("PROCESSING")
+  COMPLETED  @map("COMPLETED")
+  FAILED     @map("FAILED")
+  PARTIAL    @map("PARTIAL")
+
+  @@schema("multitenant")
+}
+
+enum BarcodeContext {
+  PRODUCT  @map("PRODUCT")
+  LOCATION @map("LOCATION")
+  LPN      @map("LPN")
+  ORDER    @map("ORDER")
+  TASK     @map("TASK")
+
+  @@schema("multitenant")
+}
+
+model ExternalEntityMapping {
+  id            String         @id @default(uuid()) @db.Uuid
+  tenantId      String         @map("tenant_id") @db.Uuid
+  platform      ExternalPlatform
+  externalId    String         @map("external_id") @db.VarChar(255)
+  entityType    String         @map("entity_type") @db.VarChar(50)
+  wmsEntityId   String         @map("wms_entity_id") @db.Uuid
+  wmsEntityType String         @map("wms_entity_type") @db.VarChar(50)
+  syncDirection SyncDirection  @default(BIDIRECTIONAL) @map("sync_direction")
+  historicalSkus String[]      @map("historical_skus") @db.VarChar(100)
+  lastSyncedAt  DateTime       @default(now()) @map("last_synced_at") @db.Timestamptz
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, platform, externalId, entityType], name: "eem_external_uq")
+  @@index([tenantId, platform, entityType], name: "idx_eem_platform_entity")
+  @@index([tenantId, wmsEntityId, wmsEntityType], name: "idx_eem_wms_entity")
+  @@schema("multitenant")
+  @@map("external_entity_mappings")
+}
+
+model IntegrationSyncLog {
+  id               String     @id @default(uuid()) @db.Uuid
+  tenantId         String     @map("tenant_id") @db.Uuid
+  platform         ExternalPlatform
+  syncType         String     @map("sync_type") @db.VarChar(50)
+  status           SyncStatus @default(PENDING) @map("status")
+  recordsProcessed Int        @default(0) @map("records_processed")
+  recordsSucceeded Int        @default(0) @map("records_succeeded")
+  recordsFailed    Int        @default(0) @map("records_failed")
+  errorSummary     String?    @map("error_summary") @db.Text
+  startedAt        DateTime   @default(now()) @map("started_at") @db.Timestamptz
+  completedAt      DateTime?  @map("completed_at") @db.Timestamptz
+  createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([tenantId, platform, status, startedAt(sort: Desc)], name: "idx_isl_status_time")
+  @@schema("multitenant")
+  @@map("integration_sync_logs")
+}
+
+model SyncWebhookLog {
+  id            String          @id @default(uuid()) @db.Uuid
+  tenantId      String          @map("tenant_id") @db.Uuid
+  platform      ExternalPlatform
+  eventType     String          @map("event_type") @db.VarChar(100)
+  externalRefId String?         @map("external_ref_id") @db.VarChar(255)
+  payloadHash   String          @map("payload_hash") @db.VarChar(64)
+  processed     Boolean         @default(false) @map("processed")
+  processedAt   DateTime?       @map("processed_at") @db.Timestamptz
+  receivedAt    DateTime        @default(now()) @map("received_at") @db.Timestamptz
+
+  @@unique([tenantId, platform, payloadHash], name: "swl_dedup_uq")
+  @@index([tenantId, platform, receivedAt(sort: Desc)], name: "idx_swl_received")
+  @@schema("multitenant")
+  @@map("sync_webhook_logs")
+}
+
 // ── Transfers / Cycle Counts / Approvals Enums ──
 enum TransferType {
   INTRA_FACILITY   @map("INTRA_FACILITY")
@@ -1265,6 +1361,23 @@ model CountSchedulerMetric {
   @@map("count_scheduler_metrics")
 }
 
+// ── System Settings (tenant configuration key-value store) ──
+model SystemSetting {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  settingKey String   @map("setting_key") @db.VarChar(100)
+  value      Json     @db.Json
+  description String? @db.VarChar(500)
+  updatedBy  String?  @map("updated_by") @db.VarChar(100)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@unique([tenantId, settingKey], name: "uq_tenant_setting_key")
+  @@index([tenantId], name: "idx_ss_tenant")
+  @@schema("multitenant")
+  @@map("system_settings")
+}
+
 // ── System Settings History (migration-safe audit) ──
 model SystemSettingHistory {
   id          String   @id @default(uuid()) @db.Uuid
@@ -1278,4 +1391,174 @@ model SystemSettingHistory {
   @@index([tenantId, settingKey, changedAt], name: "idx_ssh_key_time")
   @@schema("multitenant")
   @@map("system_setting_histories")
+}
+
+// ── Supervisor PIN for location override validation ──
+model SupervisorPin {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  pinHash   String   @map("pin_hash") @db.VarChar(64)
+  isActive  Boolean  @default(true) @map("is_active")
+  expiresAt DateTime? @map("expires_at") @db.Timestamptz
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@unique([tenantId, userId], name: "uq_supervisor_pin_user")
+  @@index([userId, isActive], name: "idx_sp_user_active")
+  @@schema("multitenant")
+  @@map("supervisor_pins")
+}
+
+// ── RF Session DB persistence (fallback for Redis GC/restart) ──
+model DbRfSession {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  workflowId String   @map("workflow_id") @db.VarChar(200)
+  workflow   String   @db.VarChar(50)
+  payload    Json     @db.Json
+  state      Json     @db.Json
+  status     String   @default("started") @db.VarChar(20)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  completedAt DateTime? @map("completed_at") @db.Timestamptz
+
+  @@index([tenantId, userId], name: "idx_dbrfs_user")
+  @@index([workflowId, status], name: "idx_dbrfs_workflow")
+  @@schema("multitenant")
+  @@map("db_rf_sessions")
+}
+
+// ═══════════════════════════════════════════════════════════
+// Customization Engine — Prompt 18
+// ═══════════════════════════════════════════════════════════
+enum EngineType {
+  XSTATE_MACHINE
+  JDM_RULE
+  BPMN_PROCESS
+
+  @@schema("multitenant")
+}
+
+enum ExecutionStatus {
+  RUNNING
+  COMPLETED
+  ERROR
+  SUSPENDED
+  CANCELLED
+
+  @@schema("multitenant")
+}
+
+model WmsStateMachine {
+  id             String   @id @default(uuid()) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  entityType     String   @db.VarChar(50)
+  machineKey     String   @map("machine_key") @db.VarChar(100)
+  version        Int      @default(1)
+  definitionJson Json     @map("definition_json") @db.Json
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, machineKey, version], name: "uq_wsm_tenant_key_version")
+  @@index([tenantId, entityType, isActive], name: "idx_wsm_entity_active")
+  @@schema("multitenant")
+  @@map("wms_state_machines")
+}
+
+model WmsRule {
+  id             String   @id @default(uuid()) @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  ruleKey        String   @map("rule_key") @db.VarChar(100)
+  ruleType       String   @map("rule_type") @db.VarChar(50)
+  version        Int      @default(1)
+  definitionJson Json     @map("definition_json") @db.Json
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, ruleKey, version], name: "uq_wr_tenant_key_version")
+  @@index([tenantId, ruleType, isActive], name: "idx_wr_type_active")
+  @@schema("multitenant")
+  @@map("wms_rules")
+}
+
+model WmsBpmnProcess {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @map("tenant_id") @db.Uuid
+  processKey  String   @map("process_key") @db.VarChar(100)
+  version     Int      @default(1)
+  bpmnXml     String   @map("bpmn_xml") @db.Text
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, processKey, version], name: "uq_wbp_tenant_key_version")
+  @@index([tenantId, isActive], name: "idx_wbp_tenant_active")
+  @@schema("multitenant")
+  @@map("wms_bpmn_processes")
+}
+
+enum ReportType {
+  STOCK_ON_HAND
+  MOVEMENT_HISTORY
+  VELOCITY_ABC
+  AGING_ANALYSIS
+  DAILY_KPI
+  LOCATION_UTILIZATION
+
+  @@schema("multitenant")
+}
+
+enum ReportStatus {
+  PENDING
+  GENERATING
+  COMPLETED
+  FAILED
+  EXPIRED
+
+  @@schema("multitenant")
+}
+
+model WmsReportJob {
+  id              String       @id @default(uuid()) @db.Uuid
+  tenantId        String       @map("tenant_id") @db.Uuid
+  reportType      ReportType   @map("report_type")
+  status          ReportStatus @default(PENDING) @map("status")
+  parameters      Json         @map("parameters") @db.Json
+  rowCount        Int?         @default(0) @map("row_count")
+  fileSizeBytes   Int?         @map("file_size_bytes")
+  downloadUrl     String?      @map("download_url") @db.VarChar(500)
+  expiresAt       DateTime?    @map("expires_at") @db.Timestamptz
+  errorMessage    String?      @map("error_message") @db.Text
+  createdByUserId String?      @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  completedAt     DateTime?    @map("completed_at") @db.Timestamptz
+
+  @@index([tenantId, status, createdAt(sort: Desc)], name: "idx_wrj_tenant_status_time")
+  @@schema("multitenant")
+  @@map("wms_report_jobs")
+}
+
+model WmsExecutionInstance {
+  id               String          @id @default(uuid()) @db.Uuid
+  tenantId         String          @map("tenant_id") @db.Uuid
+  entityType       String          @map("entity_type") @db.VarChar(50)
+  entityId         String          @map("entity_id") @db.VarChar(100)
+  engineType       EngineType      @map("engine_type")
+  engineKey        String          @map("engine_key") @db.VarChar(100)
+  engineVersion    Int             @default(1) @map("engine_version")
+  currentState     String?         @map("current_state") @db.VarChar(200)
+  contextJson      Json?           @map("context_json") @db.Json
+  status           ExecutionStatus @default(RUNNING)
+  startedByUserId  String?         @map("started_by_user_id") @db.Uuid
+  startedAt        DateTime        @default(now()) @map("started_at") @db.Timestamptz
+  completedAt      DateTime?       @map("completed_at") @db.Timestamptz
+  errorDetails     String?         @map("error_details") @db.Text
+
+  @@index([tenantId, entityType, entityId], name: "idx_wei_entity")
+  @@index([tenantId, status, startedAt(sort: Desc)], name: "idx_wei_status_time")
+  @@schema("multitenant")
+  @@map("wms_execution_instances")
 }
