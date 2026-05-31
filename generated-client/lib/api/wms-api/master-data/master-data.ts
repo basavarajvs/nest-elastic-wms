@@ -20,10 +20,14 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  CreateFacilityDto,
   CreateLocationDto,
+  CreateZoneDto,
   StorageLocationControllerFindByCodeRfParams,
   StorageLocationControllerFindByCodeWebParams,
+  UpdateFacilityDto,
   UpdateLocationDto,
+  UpdateZoneDto,
   WarehouseZoneControllerFindAllRfParams,
   WarehouseZoneControllerFindAllWebParams
 } from '../../../types/wms-api';
@@ -678,7 +682,89 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getStorageLocationControllerFindByCodeRfMutationOptions(options));
     }
-    export type WarehouseFacilityController_findAllWebResponse200 = {
+    export type WarehouseFacilityController_createResponse201 = {
+  data: void
+  status: 201
+}
+
+export type WarehouseFacilityController_createResponseSuccess = (WarehouseFacilityController_createResponse201) & {
+  headers: Headers;
+};
+;
+
+export type WarehouseFacilityController_createResponse = (WarehouseFacilityController_createResponseSuccess)
+
+export const getWarehouseFacilityControllerCreateUrl = () => {
+
+
+
+
+  return `/api/v1/wms/web/facilities`
+}
+
+export const WarehouseFacilityController_create = async (createFacilityDto: CreateFacilityDto, options?: RequestInit): Promise<WarehouseFacilityController_createResponse> => {
+
+  return customInstance<WarehouseFacilityController_createResponse>(getWarehouseFacilityControllerCreateUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createFacilityDto)
+  }
+);}
+
+
+
+
+
+export const getWarehouseFacilityControllerCreateQueryKey = (createFacilityDto?: CreateFacilityDto,) => {
+    return [
+    'POST', `/api/v1/wms/web/facilities`, createFacilityDto
+    ] as const;
+    }
+
+
+export const getWarehouseFacilityControllerCreateQueryOptions = <TData = Awaited<ReturnType<typeof WarehouseFacilityController_create>>, TError = unknown>(createFacilityDto: CreateFacilityDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof WarehouseFacilityController_create>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getWarehouseFacilityControllerCreateQueryKey(createFacilityDto);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof WarehouseFacilityController_create>>> = ({ signal }) => WarehouseFacilityController_create(createFacilityDto, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof WarehouseFacilityController_create>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type WarehouseFacilityControllerCreateQueryResult = NonNullable<Awaited<ReturnType<typeof WarehouseFacilityController_create>>>
+export type WarehouseFacilityControllerCreateQueryError = unknown
+
+
+
+export function useWarehouseFacilityControllerCreate<TData = Awaited<ReturnType<typeof WarehouseFacilityController_create>>, TError = unknown>(
+ createFacilityDto: CreateFacilityDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof WarehouseFacilityController_create>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getWarehouseFacilityControllerCreateQueryOptions(createFacilityDto,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+export type WarehouseFacilityController_findAllWebResponse200 = {
   data: void
   status: 200
 }
@@ -753,7 +839,250 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getWarehouseFacilityControllerFindAllWebMutationOptions(options));
     }
-    export type WarehouseFacilityController_findAllRfResponse200 = {
+    export type WarehouseFacilityController_findByIdResponse200 = {
+  data: void
+  status: 200
+}
+
+export type WarehouseFacilityController_findByIdResponseSuccess = (WarehouseFacilityController_findByIdResponse200) & {
+  headers: Headers;
+};
+;
+
+export type WarehouseFacilityController_findByIdResponse = (WarehouseFacilityController_findByIdResponseSuccess)
+
+export const getWarehouseFacilityControllerFindByIdUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/wms/web/facilities/${id}`
+}
+
+export const WarehouseFacilityController_findById = async (id: string, options?: RequestInit): Promise<WarehouseFacilityController_findByIdResponse> => {
+
+  return customInstance<WarehouseFacilityController_findByIdResponse>(getWarehouseFacilityControllerFindByIdUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+export const getWarehouseFacilityControllerFindByIdMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof WarehouseFacilityController_findById>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof WarehouseFacilityController_findById>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['warehouseFacilityControllerFindById'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof WarehouseFacilityController_findById>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  WarehouseFacilityController_findById(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type WarehouseFacilityControllerFindByIdMutationResult = NonNullable<Awaited<ReturnType<typeof WarehouseFacilityController_findById>>>
+
+    export type WarehouseFacilityControllerFindByIdMutationError = unknown
+
+    export const useWarehouseFacilityControllerFindById = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof WarehouseFacilityController_findById>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof WarehouseFacilityController_findById>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getWarehouseFacilityControllerFindByIdMutationOptions(options));
+    }
+    export type WarehouseFacilityController_updateResponse200 = {
+  data: void
+  status: 200
+}
+
+export type WarehouseFacilityController_updateResponseSuccess = (WarehouseFacilityController_updateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type WarehouseFacilityController_updateResponse = (WarehouseFacilityController_updateResponseSuccess)
+
+export const getWarehouseFacilityControllerUpdateUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/wms/web/facilities/${id}`
+}
+
+export const WarehouseFacilityController_update = async (id: string,
+    updateFacilityDto: UpdateFacilityDto, options?: RequestInit): Promise<WarehouseFacilityController_updateResponse> => {
+
+  return customInstance<WarehouseFacilityController_updateResponse>(getWarehouseFacilityControllerUpdateUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateFacilityDto)
+  }
+);}
+
+
+
+
+
+export const getWarehouseFacilityControllerUpdateQueryKey = (id: string,
+    updateFacilityDto?: UpdateFacilityDto,) => {
+    return [
+    'PATCH', `/api/v1/wms/web/facilities/${id}`, updateFacilityDto
+    ] as const;
+    }
+
+
+export const getWarehouseFacilityControllerUpdateQueryOptions = <TData = Awaited<ReturnType<typeof WarehouseFacilityController_update>>, TError = unknown>(id: string,
+    updateFacilityDto: UpdateFacilityDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof WarehouseFacilityController_update>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getWarehouseFacilityControllerUpdateQueryKey(id,updateFacilityDto);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof WarehouseFacilityController_update>>> = ({ signal }) => WarehouseFacilityController_update(id,updateFacilityDto, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof WarehouseFacilityController_update>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type WarehouseFacilityControllerUpdateQueryResult = NonNullable<Awaited<ReturnType<typeof WarehouseFacilityController_update>>>
+export type WarehouseFacilityControllerUpdateQueryError = unknown
+
+
+
+export function useWarehouseFacilityControllerUpdate<TData = Awaited<ReturnType<typeof WarehouseFacilityController_update>>, TError = unknown>(
+ id: string,
+    updateFacilityDto: UpdateFacilityDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof WarehouseFacilityController_update>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getWarehouseFacilityControllerUpdateQueryOptions(id,updateFacilityDto,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+export type WarehouseFacilityController_deleteResponse200 = {
+  data: void
+  status: 200
+}
+
+export type WarehouseFacilityController_deleteResponseSuccess = (WarehouseFacilityController_deleteResponse200) & {
+  headers: Headers;
+};
+;
+
+export type WarehouseFacilityController_deleteResponse = (WarehouseFacilityController_deleteResponseSuccess)
+
+export const getWarehouseFacilityControllerDeleteUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/wms/web/facilities/${id}`
+}
+
+export const WarehouseFacilityController_delete = async (id: string, options?: RequestInit): Promise<WarehouseFacilityController_deleteResponse> => {
+
+  return customInstance<WarehouseFacilityController_deleteResponse>(getWarehouseFacilityControllerDeleteUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getWarehouseFacilityControllerDeleteQueryKey = (id: string,) => {
+    return [
+    'DELETE', `/api/v1/wms/web/facilities/${id}`
+    ] as const;
+    }
+
+
+export const getWarehouseFacilityControllerDeleteQueryOptions = <TData = Awaited<ReturnType<typeof WarehouseFacilityController_delete>>, TError = unknown>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof WarehouseFacilityController_delete>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getWarehouseFacilityControllerDeleteQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof WarehouseFacilityController_delete>>> = ({ signal }) => WarehouseFacilityController_delete(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof WarehouseFacilityController_delete>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type WarehouseFacilityControllerDeleteQueryResult = NonNullable<Awaited<ReturnType<typeof WarehouseFacilityController_delete>>>
+export type WarehouseFacilityControllerDeleteQueryError = unknown
+
+
+
+export function useWarehouseFacilityControllerDelete<TData = Awaited<ReturnType<typeof WarehouseFacilityController_delete>>, TError = unknown>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof WarehouseFacilityController_delete>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getWarehouseFacilityControllerDeleteQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+export type WarehouseFacilityController_findAllRfResponse200 = {
   data: void
   status: 200
 }
@@ -828,7 +1157,89 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getWarehouseFacilityControllerFindAllRfMutationOptions(options));
     }
-    export type WarehouseZoneController_findAllWebResponse200 = {
+    export type WarehouseZoneController_createResponse201 = {
+  data: void
+  status: 201
+}
+
+export type WarehouseZoneController_createResponseSuccess = (WarehouseZoneController_createResponse201) & {
+  headers: Headers;
+};
+;
+
+export type WarehouseZoneController_createResponse = (WarehouseZoneController_createResponseSuccess)
+
+export const getWarehouseZoneControllerCreateUrl = () => {
+
+
+
+
+  return `/api/v1/wms/web/zones`
+}
+
+export const WarehouseZoneController_create = async (createZoneDto: CreateZoneDto, options?: RequestInit): Promise<WarehouseZoneController_createResponse> => {
+
+  return customInstance<WarehouseZoneController_createResponse>(getWarehouseZoneControllerCreateUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createZoneDto)
+  }
+);}
+
+
+
+
+
+export const getWarehouseZoneControllerCreateQueryKey = (createZoneDto?: CreateZoneDto,) => {
+    return [
+    'POST', `/api/v1/wms/web/zones`, createZoneDto
+    ] as const;
+    }
+
+
+export const getWarehouseZoneControllerCreateQueryOptions = <TData = Awaited<ReturnType<typeof WarehouseZoneController_create>>, TError = unknown>(createZoneDto: CreateZoneDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof WarehouseZoneController_create>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getWarehouseZoneControllerCreateQueryKey(createZoneDto);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof WarehouseZoneController_create>>> = ({ signal }) => WarehouseZoneController_create(createZoneDto, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof WarehouseZoneController_create>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type WarehouseZoneControllerCreateQueryResult = NonNullable<Awaited<ReturnType<typeof WarehouseZoneController_create>>>
+export type WarehouseZoneControllerCreateQueryError = unknown
+
+
+
+export function useWarehouseZoneControllerCreate<TData = Awaited<ReturnType<typeof WarehouseZoneController_create>>, TError = unknown>(
+ createZoneDto: CreateZoneDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof WarehouseZoneController_create>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getWarehouseZoneControllerCreateQueryOptions(createZoneDto,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+export type WarehouseZoneController_findAllWebResponse200 = {
   data: void
   status: 200
 }
@@ -910,7 +1321,250 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getWarehouseZoneControllerFindAllWebMutationOptions(options));
     }
-    export type WarehouseZoneController_findAllRfResponse200 = {
+    export type WarehouseZoneController_findByIdResponse200 = {
+  data: void
+  status: 200
+}
+
+export type WarehouseZoneController_findByIdResponseSuccess = (WarehouseZoneController_findByIdResponse200) & {
+  headers: Headers;
+};
+;
+
+export type WarehouseZoneController_findByIdResponse = (WarehouseZoneController_findByIdResponseSuccess)
+
+export const getWarehouseZoneControllerFindByIdUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/wms/web/zones/${id}`
+}
+
+export const WarehouseZoneController_findById = async (id: string, options?: RequestInit): Promise<WarehouseZoneController_findByIdResponse> => {
+
+  return customInstance<WarehouseZoneController_findByIdResponse>(getWarehouseZoneControllerFindByIdUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+export const getWarehouseZoneControllerFindByIdMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof WarehouseZoneController_findById>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof WarehouseZoneController_findById>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['warehouseZoneControllerFindById'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof WarehouseZoneController_findById>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  WarehouseZoneController_findById(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type WarehouseZoneControllerFindByIdMutationResult = NonNullable<Awaited<ReturnType<typeof WarehouseZoneController_findById>>>
+
+    export type WarehouseZoneControllerFindByIdMutationError = unknown
+
+    export const useWarehouseZoneControllerFindById = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof WarehouseZoneController_findById>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof WarehouseZoneController_findById>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getWarehouseZoneControllerFindByIdMutationOptions(options));
+    }
+    export type WarehouseZoneController_updateResponse200 = {
+  data: void
+  status: 200
+}
+
+export type WarehouseZoneController_updateResponseSuccess = (WarehouseZoneController_updateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type WarehouseZoneController_updateResponse = (WarehouseZoneController_updateResponseSuccess)
+
+export const getWarehouseZoneControllerUpdateUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/wms/web/zones/${id}`
+}
+
+export const WarehouseZoneController_update = async (id: string,
+    updateZoneDto: UpdateZoneDto, options?: RequestInit): Promise<WarehouseZoneController_updateResponse> => {
+
+  return customInstance<WarehouseZoneController_updateResponse>(getWarehouseZoneControllerUpdateUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateZoneDto)
+  }
+);}
+
+
+
+
+
+export const getWarehouseZoneControllerUpdateQueryKey = (id: string,
+    updateZoneDto?: UpdateZoneDto,) => {
+    return [
+    'PATCH', `/api/v1/wms/web/zones/${id}`, updateZoneDto
+    ] as const;
+    }
+
+
+export const getWarehouseZoneControllerUpdateQueryOptions = <TData = Awaited<ReturnType<typeof WarehouseZoneController_update>>, TError = unknown>(id: string,
+    updateZoneDto: UpdateZoneDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof WarehouseZoneController_update>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getWarehouseZoneControllerUpdateQueryKey(id,updateZoneDto);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof WarehouseZoneController_update>>> = ({ signal }) => WarehouseZoneController_update(id,updateZoneDto, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof WarehouseZoneController_update>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type WarehouseZoneControllerUpdateQueryResult = NonNullable<Awaited<ReturnType<typeof WarehouseZoneController_update>>>
+export type WarehouseZoneControllerUpdateQueryError = unknown
+
+
+
+export function useWarehouseZoneControllerUpdate<TData = Awaited<ReturnType<typeof WarehouseZoneController_update>>, TError = unknown>(
+ id: string,
+    updateZoneDto: UpdateZoneDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof WarehouseZoneController_update>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getWarehouseZoneControllerUpdateQueryOptions(id,updateZoneDto,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+export type WarehouseZoneController_deleteResponse200 = {
+  data: void
+  status: 200
+}
+
+export type WarehouseZoneController_deleteResponseSuccess = (WarehouseZoneController_deleteResponse200) & {
+  headers: Headers;
+};
+;
+
+export type WarehouseZoneController_deleteResponse = (WarehouseZoneController_deleteResponseSuccess)
+
+export const getWarehouseZoneControllerDeleteUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/wms/web/zones/${id}`
+}
+
+export const WarehouseZoneController_delete = async (id: string, options?: RequestInit): Promise<WarehouseZoneController_deleteResponse> => {
+
+  return customInstance<WarehouseZoneController_deleteResponse>(getWarehouseZoneControllerDeleteUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getWarehouseZoneControllerDeleteQueryKey = (id: string,) => {
+    return [
+    'DELETE', `/api/v1/wms/web/zones/${id}`
+    ] as const;
+    }
+
+
+export const getWarehouseZoneControllerDeleteQueryOptions = <TData = Awaited<ReturnType<typeof WarehouseZoneController_delete>>, TError = unknown>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof WarehouseZoneController_delete>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getWarehouseZoneControllerDeleteQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof WarehouseZoneController_delete>>> = ({ signal }) => WarehouseZoneController_delete(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof WarehouseZoneController_delete>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type WarehouseZoneControllerDeleteQueryResult = NonNullable<Awaited<ReturnType<typeof WarehouseZoneController_delete>>>
+export type WarehouseZoneControllerDeleteQueryError = unknown
+
+
+
+export function useWarehouseZoneControllerDelete<TData = Awaited<ReturnType<typeof WarehouseZoneController_delete>>, TError = unknown>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof WarehouseZoneController_delete>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getWarehouseZoneControllerDeleteQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+export type WarehouseZoneController_findAllRfResponse200 = {
   data: void
   status: 200
 }

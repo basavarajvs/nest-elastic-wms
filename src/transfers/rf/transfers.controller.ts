@@ -7,7 +7,7 @@ import { RfAction } from '../../common/guards/rf-action.decorator';
 import { RfActionLightweightGuard } from '../../common/guards/rf-action-lightweight.guard';
 
 @ApiTags('WMS-RF')
-@Controller('/api/v1/wms/rf/transfers')
+@Controller('rf/transfers')
 @UseGuards(RfSessionGuard, RfActionLightweightGuard)
 export class TransferRfController {
   constructor(private readonly transferService: InventoryTransferService) {}

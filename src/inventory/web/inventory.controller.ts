@@ -8,13 +8,14 @@ import { InventoryPolicyService } from '../inventory-policy.service';
 import { CreateAdjustmentDto } from '../dtos/adjustment.dto';
 import { UpsertPolicyDto } from '../dtos/policy.dto';
 import { StockFilterDto } from '../dtos/stock-filter.dto';
+import { CreateHoldDto, ReleaseHoldDto } from '../dtos/hold.dto';
 import { CheckAbility } from '../../common/decorators/check-ability.decorator';
 import { CaslGuard } from '../../common/guards/casl.guard';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 
 @ApiTags('WMS-WEB', 'Operations')
-@Controller('/api/v1/wms/web/inventory')
+@Controller('web/inventory')
 @UseGuards(CaslGuard)
 export class InventoryWebController {
   constructor(
@@ -88,6 +89,18 @@ export class InventoryWebController {
     @Query('limit') limit: number,
   ) {
     return this.holdService.listHolds(req.tenantContext.getTenantId(), { status, facilityId, page, limit });
+  }
+
+  @Post('/holds')
+  @CheckAbility({ action: 'create', subject: 'InventoryHold' })
+  async createHold(@Req() req: any, @Body() dto: CreateHoldDto) {
+    return this.holdService.createHold(dto, req.tenantContext.getTenantId(), req.user?.userId);
+  }
+
+  @Post('/holds/:id/release')
+  @CheckAbility({ action: 'update', subject: 'InventoryHold' })
+  async releaseHold(@Req() req: any, @Param('id') id: string, @Body() dto: ReleaseHoldDto) {
+    return this.holdService.releaseHold(id, dto, req.tenantContext.getTenantId(), req.user?.userId);
   }
 
   @Post('/policies')

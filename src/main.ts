@@ -8,12 +8,14 @@ import { ValidationPipe, BadRequestException } from '@nestjs/common';
 import { ValidationError } from 'class-validator';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import helmet from 'fastify-helmet';
+import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
+import Redis from 'ioredis';
 import { initOpenTelemetry } from './observability/otel.config';
 import { ShutdownService } from './lifecycle/shutdown.service';
 import { LogLevelService } from './observability/log-level.service';
 import { ConnectionPoolWarmerService } from './cluster/connection-pool-warmer.service';
+import { TenantContextService } from './common/context/tenant-context.service';
 
 async function bootstrap() {
   if (process.env.OTLP_ENDPOINT) {
@@ -28,10 +30,6 @@ async function bootstrap() {
         : { level: process.env.LOG_LEVEL || 'info' },
       bodyLimit: 1048576,
       requestIdHeader: 'x-request-id',
-      // ── Challenge 4: Graceful stale connection rejection during drain ──
-      keepAliveTimeout: 5000,       // 5s — reject idle keep-alive connections cleanly
-      headersTimeout: 6000,         // 6s — reject incomplete headers before keepAlive fires
-      maxRequestsPerSocket: 100,    // Reset connection every 100 requests
     }),
   );
 
@@ -50,21 +48,61 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
       transform: true,
       exceptionFactory: (errors: ValidationError[]) => {
-        const flatErrors = errors.map((e) => ({
-          field: e.property,
-          constraints: Object.values(e.constraints || {}),
-        }));
+        const flattenErrors = (errs: ValidationError[], parentProp = ''): any[] =>
+          errs.flatMap((e) => {
+            const prop = parentProp ? `${parentProp}.${e.property}` : e.property;
+            const direct = e.constraints ? Object.values(e.constraints) : [];
+            const children = e.children ? flattenErrors(e.children, prop) : [];
+            return direct.length > 0 ? [{ field: prop, constraints: direct }] : children;
+          });
         return new BadRequestException({
           statusCode: 400,
           error: 'VALIDATION_ERROR',
           message: 'Validation failed',
-          details: flatErrors,
+          details: flattenErrors(errors),
         });
       },
     }),
   );
 
   const fastifyInstance = app.getHttpAdapter().getInstance();
+  const tenantContextService = app.get(TenantContextService);
+
+  // ── Tenant Resolution (Fastify preHandler — runs before all route handlers) ──
+  fastifyInstance.addHook('preHandler', async (req: any) => {
+    req.tenantContext = tenantContextService;
+
+    const authHeader = req.headers?.authorization as string | undefined;
+    let jwtTenantId: string | undefined;
+    let jwtTenantCode: string | undefined;
+    if (authHeader?.startsWith('Bearer ')) {
+      try {
+        const payloadBase64 = authHeader.slice(7).split('.')[1];
+        const payload = JSON.parse(Buffer.from(payloadBase64, 'base64url').toString('utf-8'));
+        jwtTenantId = payload.tenantId;
+        jwtTenantCode = payload.tenantCode;
+      } catch { /* ignore malformed tokens */ }
+    }
+
+    const tenantId =
+      req.user?.tenantId || jwtTenantId || (req.headers['x-tenant-id'] as string);
+    const tenantCode =
+      req.user?.tenantCode || jwtTenantCode || '';
+
+    if (tenantId) {
+      tenantContextService.set({
+        tenantId,
+        tenantCode,
+        tenantStatus: 'active',
+        isSystemContext: false,
+      });
+    }
+  });
+
+  // ── Challenge 4: Graceful stale connection rejection during drain ──
+  fastifyInstance.server.keepAliveTimeout = 5000;
+  fastifyInstance.server.headersTimeout = 6000;
+  fastifyInstance.server.maxRequestsPerSocket = 100;
 
   // ── Global CSP (strict — API routes) ──
   await app.register(helmet, {
@@ -107,12 +145,15 @@ async function bootstrap() {
   const rateLimitGlobalLimit = configService.get<number>('RATE_LIMIT_GLOBAL_LIMIT') || 100;
   const redisHost = configService.get<string>('REDIS_HOST') || 'localhost';
   const redisPort = configService.get<number>('REDIS_PORT') || 6379;
+  const redisPassword = configService.get<string>('REDIS_PASSWORD') || undefined;
+
+  const rateLimitRedis = new Redis({ host: redisHost, port: redisPort, password: redisPassword, enableReadyCheck: false, maxRetriesPerRequest: 3 });
 
   await app.register(rateLimit, {
     global: false,
     max: rateLimitGlobalLimit,
     timeWindow: rateLimitGlobalTtl,
-    redis: { host: redisHost, port: redisPort },
+    redis: rateLimitRedis as any,
     errorResponseBuilder: (_req: any, context: any) => ({
       statusCode: 429,
       error: 'Too Many Requests',
@@ -212,7 +253,6 @@ async function bootstrap() {
   shutdownService.setFastify(fastifyInstance);
 
   const logLevelService = app.get(LogLevelService);
-  logLevelService.setPinoInstance((fastifyInstance as any).logger);
 
   // Cluster init: warm connection pool
   const poolWarmer = app.get(ConnectionPoolWarmerService);
@@ -221,6 +261,8 @@ async function bootstrap() {
   const port = configService.get<number>('PORT') || 3001;
 
   await app.listen(port, '0.0.0.0');
+
+  logLevelService.setPinoInstance((fastifyInstance as any).log);
   console.log(`WMS Application is running on: http://localhost:${port}`);
   console.log(`Web API: http://localhost:${port}/${apiPrefix}/web`);
   console.log(`RF API: http://localhost:${port}/${apiPrefix}/rf`);

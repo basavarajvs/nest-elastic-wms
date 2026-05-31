@@ -2,8 +2,7 @@ import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { QuotaInitService } from './quota-init.service';
-
-export const QUOTA_SYNC_QUEUE = 'quota-sync-retry';
+import { QUOTA_SYNC_QUEUE } from './quota-sync.constants';
 
 @Processor(QUOTA_SYNC_QUEUE)
 export class QuotaSyncRetryProcessor extends WorkerHost {

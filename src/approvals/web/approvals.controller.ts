@@ -6,7 +6,7 @@ import { CheckAbility } from '../../common/decorators/check-ability.decorator';
 import { CaslGuard } from '../../common/guards/casl.guard';
 
 @ApiTags('WMS-WEB', 'Operations')
-@Controller('/api/v1/wms/web/approvals')
+@Controller('web/approvals')
 @UseGuards(CaslGuard)
 export class ApprovalWebController {
   constructor(private readonly approvalService: AdjustmentApprovalService) {}

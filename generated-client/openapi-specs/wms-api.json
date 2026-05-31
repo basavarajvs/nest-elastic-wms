@@ -206,9 +206,110 @@
       }
     },
     "/api/v1/wms/web/facilities": {
+      "post": {
+        "operationId": "WarehouseFacilityController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFacilityDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Master-Data",
+          "WMS-WEB"
+        ]
+      },
       "get": {
         "operationId": "WarehouseFacilityController_findAllWeb",
         "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Master-Data",
+          "WMS-WEB"
+        ]
+      }
+    },
+    "/api/v1/wms/web/facilities/{id}": {
+      "get": {
+        "operationId": "WarehouseFacilityController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Master-Data",
+          "WMS-WEB"
+        ]
+      },
+      "patch": {
+        "operationId": "WarehouseFacilityController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFacilityDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Master-Data",
+          "WMS-WEB"
+        ]
+      },
+      "delete": {
+        "operationId": "WarehouseFacilityController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": ""
@@ -236,6 +337,29 @@
       }
     },
     "/api/v1/wms/web/zones": {
+      "post": {
+        "operationId": "WarehouseZoneController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateZoneDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Master-Data",
+          "WMS-WEB"
+        ]
+      },
       "get": {
         "operationId": "WarehouseZoneController_findAllWeb",
         "parameters": [
@@ -243,6 +367,84 @@
             "name": "facilityId",
             "required": true,
             "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Master-Data",
+          "WMS-WEB"
+        ]
+      }
+    },
+    "/api/v1/wms/web/zones/{id}": {
+      "get": {
+        "operationId": "WarehouseZoneController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Master-Data",
+          "WMS-WEB"
+        ]
+      },
+      "patch": {
+        "operationId": "WarehouseZoneController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateZoneDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Master-Data",
+          "WMS-WEB"
+        ]
+      },
+      "delete": {
+        "operationId": "WarehouseZoneController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
             "schema": {
               "type": "string"
             }
@@ -491,7 +693,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/notifications/logs": {
+    "/api/v1/wms/web/notifications/logs": {
       "get": {
         "operationId": "NotificationAdminController_getLogs",
         "parameters": [
@@ -514,7 +716,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/notifications/test": {
+    "/api/v1/wms/web/notifications/test": {
       "post": {
         "operationId": "NotificationAdminController_sendTest",
         "parameters": [],
@@ -528,7 +730,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/notifications/compliance-overrides": {
+    "/api/v1/wms/web/notifications/compliance-overrides": {
       "get": {
         "operationId": "NotificationAdminController_getComplianceOverrides",
         "parameters": [
@@ -551,7 +753,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/notifications/preferences": {
+    "/api/v1/wms/web/notifications/preferences": {
       "get": {
         "operationId": "NotificationAdminController_getPreferencesProxy",
         "parameters": [
@@ -582,7 +784,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/notifications/poll": {
+    "/api/v1/wms/rf/notifications/poll": {
       "post": {
         "operationId": "NotificationRfController_poll",
         "parameters": [
@@ -605,7 +807,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/reports/request": {
+    "/api/v1/wms/web/reports/request": {
       "post": {
         "operationId": "ReportsController_requestReport",
         "parameters": [],
@@ -630,7 +832,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/reports/status/{jobId}": {
+    "/api/v1/wms/web/reports/status/{jobId}": {
       "get": {
         "operationId": "ReportsController_getStatus",
         "parameters": [
@@ -654,7 +856,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/reports/download/{jobId}": {
+    "/api/v1/wms/web/reports/download/{jobId}": {
       "get": {
         "operationId": "ReportsController_downloadCompleted",
         "parameters": [
@@ -678,7 +880,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/reports/download": {
+    "/api/v1/wms/web/reports/download": {
       "get": {
         "operationId": "ReportsController_downloadLive",
         "parameters": [
@@ -766,7 +968,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/reports/templates/{reportType}": {
+    "/api/v1/wms/web/reports/templates/{reportType}": {
       "get": {
         "operationId": "ReportsController_getTemplate",
         "parameters": [
@@ -790,7 +992,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/webhooks/shopify/{tenantCode}": {
+    "/api/v1/wms/webhooks/shopify/{tenantCode}": {
       "post": {
         "description": "Receives Shopify order/product webhooks with HMAC verification, SHA256 dedup, and PendingOrderBuffer for out-of-order events",
         "operationId": "WebhooksController_shopifyWebhook",
@@ -825,7 +1027,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/webhooks/woocommerce/{tenantCode}": {
+    "/api/v1/wms/webhooks/woocommerce/{tenantCode}": {
       "post": {
         "description": "Receives WooCommerce order/product webhooks with HMAC verification and SHA256 dedup",
         "operationId": "WebhooksController_wooCommerceWebhook",
@@ -860,7 +1062,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/scanner/session/login": {
+    "/api/v1/wms/scanner/session/login": {
       "post": {
         "operationId": "ScannerController_login",
         "parameters": [],
@@ -874,7 +1076,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/scanner/validate": {
+    "/api/v1/wms/scanner/validate": {
       "post": {
         "operationId": "ScannerController_validateBarcode",
         "parameters": [],
@@ -888,7 +1090,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/scanner/lookup/product": {
+    "/api/v1/wms/scanner/lookup/product": {
       "post": {
         "operationId": "ScannerController_lookupProduct",
         "parameters": [],
@@ -902,7 +1104,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/scanner/lookup/location": {
+    "/api/v1/wms/scanner/lookup/location": {
       "post": {
         "operationId": "ScannerController_lookupLocation",
         "parameters": [],
@@ -916,7 +1118,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/scanner/telemetry": {
+    "/api/v1/wms/scanner/telemetry": {
       "post": {
         "operationId": "ScannerController_telemetry",
         "parameters": [],
@@ -1189,7 +1391,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/inventory/alerts/trigger": {
+    "/api/v1/wms/web/inventory/alerts/trigger": {
       "post": {
         "operationId": "InventoryWebController_triggerAlerts",
         "parameters": [],
@@ -1204,7 +1406,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/inventory/stock": {
+    "/api/v1/wms/web/inventory/stock": {
       "get": {
         "operationId": "InventoryWebController_getStock",
         "parameters": [
@@ -1276,7 +1478,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/inventory/low-stock": {
+    "/api/v1/wms/web/inventory/low-stock": {
       "get": {
         "operationId": "InventoryWebController_getLowStock",
         "parameters": [
@@ -1300,7 +1502,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/inventory/adjustments": {
+    "/api/v1/wms/web/inventory/adjustments": {
       "post": {
         "operationId": "InventoryWebController_createAdjustment",
         "parameters": [],
@@ -1371,7 +1573,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/inventory/adjustments/{id}/submit": {
+    "/api/v1/wms/web/inventory/adjustments/{id}/submit": {
       "patch": {
         "operationId": "InventoryWebController_submitAdjustment",
         "parameters": [
@@ -1395,7 +1597,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/inventory/adjustments/{id}/approve": {
+    "/api/v1/wms/web/inventory/adjustments/{id}/approve": {
       "patch": {
         "operationId": "InventoryWebController_approveAdjustment",
         "parameters": [
@@ -1419,7 +1621,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/inventory/holds": {
+    "/api/v1/wms/web/inventory/holds": {
       "get": {
         "operationId": "InventoryWebController_listHolds",
         "parameters": [
@@ -1465,9 +1667,66 @@
           "WMS-WEB",
           "Operations"
         ]
+      },
+      "post": {
+        "operationId": "InventoryWebController_createHold",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateHoldDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/inventory/policies": {
+    "/api/v1/wms/web/inventory/holds/{id}/release": {
+      "post": {
+        "operationId": "InventoryWebController_releaseHold",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReleaseHoldDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/inventory/policies": {
       "post": {
         "operationId": "InventoryWebController_upsertPolicy",
         "parameters": [],
@@ -1492,7 +1751,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/inventory/scan-location": {
+    "/api/v1/wms/rf/inventory/scan-location": {
       "post": {
         "operationId": "InventoryRfController_scanLocation",
         "parameters": [],
@@ -1506,7 +1765,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/inventory/transaction/putaway": {
+    "/api/v1/wms/rf/inventory/transaction/putaway": {
       "post": {
         "operationId": "InventoryRfController_putaway",
         "parameters": [],
@@ -1530,7 +1789,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/inventory/transaction/pick": {
+    "/api/v1/wms/rf/inventory/transaction/pick": {
       "post": {
         "operationId": "InventoryRfController_pick",
         "parameters": [],
@@ -1554,7 +1813,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/inventory/adjustment/quick": {
+    "/api/v1/wms/rf/inventory/adjustment/quick": {
       "post": {
         "operationId": "InventoryRfController_quickAdjustment",
         "parameters": [],
@@ -1578,7 +1837,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/inventory/lot/{lotNumber}": {
+    "/api/v1/wms/rf/inventory/lot/{lotNumber}": {
       "get": {
         "operationId": "InventoryRfController_lookupLot",
         "parameters": [
@@ -1617,7 +1876,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/inbound/asn": {
+    "/api/v1/wms/web/inbound/asn": {
       "post": {
         "operationId": "InboundWebController_createAsn",
         "parameters": [],
@@ -1640,9 +1899,55 @@
           "WMS-WEB",
           "Operations"
         ]
+      },
+      "get": {
+        "operationId": "InboundWebController_listAsns",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "facilityId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/inbound/asn/{id}/preview": {
+    "/api/v1/wms/web/inbound/asn/{id}/preview": {
       "get": {
         "operationId": "InboundWebController_previewAsn",
         "parameters": [
@@ -1666,7 +1971,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/inbound/asn/{id}/status": {
+    "/api/v1/wms/web/inbound/asn/{id}/status": {
       "patch": {
         "operationId": "InboundWebController_updateAsnStatus",
         "parameters": [
@@ -1700,7 +2005,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/inbound/grn/from-asn": {
+    "/api/v1/wms/web/inbound/grn/from-asn": {
       "post": {
         "operationId": "InboundWebController_createGrnFromAsn",
         "parameters": [],
@@ -1725,7 +2030,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/inbound/grn/ad-hoc": {
+    "/api/v1/wms/web/inbound/grn/ad-hoc": {
       "post": {
         "operationId": "InboundWebController_createGrnAdHoc",
         "parameters": [],
@@ -1750,7 +2055,71 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/inbound/grn/{id}": {
+    "/api/v1/wms/web/inbound/grn": {
+      "get": {
+        "operationId": "InboundWebController_listGrns",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "facilityId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "poNumber",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "asnNumber",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/inbound/grn/{id}": {
       "get": {
         "operationId": "InboundWebController_getGrnProgress",
         "parameters": [
@@ -1774,7 +2143,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/inbound/qc/inspect": {
+    "/api/v1/wms/web/inbound/qc/inspect": {
       "post": {
         "operationId": "InboundWebController_inspectQc",
         "parameters": [],
@@ -1799,7 +2168,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/inbound/putaway/board": {
+    "/api/v1/wms/web/inbound/putaway/board": {
       "get": {
         "operationId": "InboundWebController_getPutawayBoard",
         "parameters": [
@@ -1855,7 +2224,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/inbound/disposition/apply": {
+    "/api/v1/wms/web/inbound/disposition/apply": {
       "post": {
         "operationId": "InboundWebController_applyDisposition",
         "parameters": [],
@@ -1880,7 +2249,219 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/inbound/receive/start": {
+    "/api/v1/wms/web/inbound/grn/{id}/mark-arrived": {
+      "post": {
+        "operationId": "InboundWebController_markArrived",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkGrnArrivedDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/inbound/grn/{id}/start-receiving": {
+      "post": {
+        "operationId": "InboundWebController_startReceiving",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/inbound/grn/{id}/mark-received": {
+      "post": {
+        "operationId": "InboundWebController_markReceived",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/inbound/grn/{id}/start-inspection": {
+      "post": {
+        "operationId": "InboundWebController_startInspection",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/inbound/grn/{id}/complete-inspection": {
+      "post": {
+        "operationId": "InboundWebController_completeInspection",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteInspectionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/inbound/grn/{id}/cancel": {
+      "post": {
+        "operationId": "InboundWebController_cancelGrn",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/inbound/grn/{id}/mark-partial": {
+      "post": {
+        "operationId": "InboundWebController_markPartial",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/inbound/grn/{id}/valid-next-statuses": {
+      "get": {
+        "operationId": "InboundWebController_getValidNextStatuses",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/rf/inbound/receive/start": {
       "post": {
         "operationId": "InboundRfController_startReceiving",
         "parameters": [],
@@ -1894,7 +2475,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/inbound/receive/scan": {
+    "/api/v1/wms/rf/inbound/receive/scan": {
       "post": {
         "operationId": "InboundRfController_receiveScan",
         "parameters": [],
@@ -1918,7 +2499,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/inbound/receive/complete": {
+    "/api/v1/wms/rf/inbound/receive/complete": {
       "post": {
         "operationId": "InboundRfController_completeReceiving",
         "parameters": [],
@@ -1932,7 +2513,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/inbound/qc/scan": {
+    "/api/v1/wms/rf/inbound/qc/scan": {
       "post": {
         "operationId": "InboundRfController_qcScan",
         "parameters": [],
@@ -1946,7 +2527,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/inbound/qc/result": {
+    "/api/v1/wms/rf/inbound/qc/result": {
       "post": {
         "operationId": "InboundRfController_qcResult",
         "parameters": [],
@@ -1970,7 +2551,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/inbound/putaway/next": {
+    "/api/v1/wms/rf/inbound/putaway/next": {
       "get": {
         "operationId": "InboundRfController_getNextPutaway",
         "parameters": [],
@@ -1984,7 +2565,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/inbound/putaway/confirm": {
+    "/api/v1/wms/rf/inbound/putaway/confirm": {
       "post": {
         "operationId": "InboundRfController_confirmPutaway",
         "parameters": [],
@@ -2008,7 +2589,4213 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/outbound/orders": {
+    "/api/v1/wms/web/lpns": {
+      "post": {
+        "operationId": "LpnWebController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLpnDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "get": {
+        "operationId": "LpnWebController_list",
+        "parameters": [
+          {
+            "name": "facilityId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "locationId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "statusIn",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/lpns/available": {
+      "get": {
+        "operationId": "LpnWebController_available",
+        "parameters": [
+          {
+            "name": "facilityId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/lpns/available-for-shipment": {
+      "get": {
+        "operationId": "LpnWebController_availableForShipment",
+        "parameters": [
+          {
+            "name": "facilityId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/lpns/product/{productId}/available-quantity": {
+      "get": {
+        "operationId": "LpnWebController_productAvailableQty",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "facilityId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/lpns/by-number/{lpnNumber}": {
+      "get": {
+        "operationId": "LpnWebController_findByNumber",
+        "parameters": [
+          {
+            "name": "lpnNumber",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/lpns/by-location/{locationId}": {
+      "get": {
+        "operationId": "LpnWebController_findByLocation",
+        "parameters": [
+          {
+            "name": "locationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/lpns/by-grn-line/{grnLineId}": {
+      "get": {
+        "operationId": "LpnWebController_findByGrnLineId",
+        "parameters": [
+          {
+            "name": "grnLineId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/lpns/{id}": {
+      "get": {
+        "operationId": "LpnWebController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "patch": {
+        "operationId": "LpnWebController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLpnDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "delete": {
+        "operationId": "LpnWebController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/lpns/{id}/hierarchy": {
+      "get": {
+        "operationId": "LpnWebController_getHierarchy",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/lpns/{id}/children": {
+      "get": {
+        "operationId": "LpnWebController_getChildren",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/lpns/{id}/status": {
+      "patch": {
+        "operationId": "LpnWebController_updateStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/lpns/{childId}/nest/{parentId}": {
+      "post": {
+        "operationId": "LpnWebController_nest",
+        "parameters": [
+          {
+            "name": "childId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "parentId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Nest child LPN into parent LPN",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/lpns/{id}/unnest": {
+      "post": {
+        "operationId": "LpnWebController_unnest",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Unnest LPN from its parent",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/lpns/{id}/move": {
+      "post": {
+        "operationId": "LpnWebController_move",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Move LPN to a different location",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/rf/lpns/inquiry/{lpnNumber}": {
+      "get": {
+        "operationId": "LpnRfController_inquiry",
+        "parameters": [
+          {
+            "name": "lpnNumber",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "RF LPN inquiry by number",
+        "tags": [
+          "RF"
+        ]
+      }
+    },
+    "/api/v1/wms/rf/lpns/{id}/move": {
+      "post": {
+        "operationId": "LpnRfController_move",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "RF move LPN to location",
+        "tags": [
+          "RF"
+        ]
+      }
+    },
+    "/api/v1/wms/rf/lpns/by-location/{locationId}": {
+      "get": {
+        "operationId": "LpnRfController_findByLocation",
+        "parameters": [
+          {
+            "name": "locationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "RF"
+        ]
+      }
+    },
+    "/api/v1/wms/rf/lpns/product/{productId}/available-quantity": {
+      "get": {
+        "operationId": "LpnRfController_productQty",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "facilityId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "RF"
+        ]
+      }
+    },
+    "/api/v1/wms/web/purchase-orders": {
+      "post": {
+        "operationId": "PurchaseOrderWebController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePurchaseOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "get": {
+        "operationId": "PurchaseOrderWebController_findAll",
+        "parameters": [
+          {
+            "name": "facilityId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/purchase-orders/{id}": {
+      "get": {
+        "operationId": "PurchaseOrderWebController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "patch": {
+        "operationId": "PurchaseOrderWebController_updateStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePurchaseOrderDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "delete": {
+        "operationId": "PurchaseOrderWebController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/purchase-order-lines": {
+      "post": {
+        "operationId": "PurchaseOrderLineWebController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePurchaseOrderLineDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "get": {
+        "operationId": "PurchaseOrderLineWebController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/purchase-order-lines/{id}": {
+      "get": {
+        "operationId": "PurchaseOrderLineWebController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "patch": {
+        "operationId": "PurchaseOrderLineWebController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePurchaseOrderLineDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "delete": {
+        "operationId": "PurchaseOrderLineWebController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/purchase-order-lines/by-po/{poId}": {
+      "get": {
+        "operationId": "PurchaseOrderLineWebController_findByPoId",
+        "parameters": [
+          {
+            "name": "poId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/customer-returns": {
+      "post": {
+        "operationId": "CustomerReturnWebController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCustomerReturnDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "get": {
+        "operationId": "CustomerReturnWebController_findAll",
+        "parameters": [
+          {
+            "name": "facilityId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/customer-returns/{id}": {
+      "get": {
+        "operationId": "CustomerReturnWebController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "patch": {
+        "operationId": "CustomerReturnWebController_updateStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCustomerReturnDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "delete": {
+        "operationId": "CustomerReturnWebController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/customer-return-items": {
+      "post": {
+        "operationId": "CustomerReturnItemWebController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReturnItemStandaloneDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "get": {
+        "operationId": "CustomerReturnItemWebController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/customer-return-items/{id}": {
+      "get": {
+        "operationId": "CustomerReturnItemWebController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "patch": {
+        "operationId": "CustomerReturnItemWebController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateReturnItemStandaloneDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "delete": {
+        "operationId": "CustomerReturnItemWebController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/customer-return-items/by-return/{returnId}": {
+      "get": {
+        "operationId": "CustomerReturnItemWebController_findByReturnId",
+        "parameters": [
+          {
+            "name": "returnId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/loads": {
+      "post": {
+        "operationId": "LoadWebController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLoadDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "get": {
+        "operationId": "LoadWebController_findAll",
+        "parameters": [
+          {
+            "name": "facilityId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/loads/{id}": {
+      "get": {
+        "operationId": "LoadWebController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "patch": {
+        "operationId": "LoadWebController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLoadDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "delete": {
+        "operationId": "LoadWebController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/loads/load-number/{loadNumber}": {
+      "get": {
+        "operationId": "LoadWebController_findByLoadNumber",
+        "parameters": [
+          {
+            "name": "loadNumber",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/loads/{id}/mark-loaded": {
+      "post": {
+        "operationId": "LoadWebController_markLoaded",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/loads/{id}/mark-departed": {
+      "post": {
+        "operationId": "LoadWebController_markDeparted",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/carriers": {
+      "post": {
+        "operationId": "CarrierWebController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCarrierDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "get": {
+        "operationId": "CarrierWebController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      }
+    },
+    "/api/v1/wms/web/carriers/{id}": {
+      "get": {
+        "operationId": "CarrierWebController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "patch": {
+        "operationId": "CarrierWebController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCarrierDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "delete": {
+        "operationId": "CarrierWebController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      }
+    },
+    "/api/v1/wms/web/brands": {
+      "post": {
+        "operationId": "BrandWebController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBrandDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "get": {
+        "operationId": "BrandWebController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      }
+    },
+    "/api/v1/wms/web/brands/{id}": {
+      "get": {
+        "operationId": "BrandWebController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "patch": {
+        "operationId": "BrandWebController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBrandDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "delete": {
+        "operationId": "BrandWebController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      }
+    },
+    "/api/v1/wms/web/categories": {
+      "post": {
+        "operationId": "CategoryWebController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "get": {
+        "operationId": "CategoryWebController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      }
+    },
+    "/api/v1/wms/web/categories/tree": {
+      "get": {
+        "operationId": "CategoryWebController_getTree",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      }
+    },
+    "/api/v1/wms/web/categories/{id}": {
+      "get": {
+        "operationId": "CategoryWebController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "patch": {
+        "operationId": "CategoryWebController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "delete": {
+        "operationId": "CategoryWebController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      }
+    },
+    "/api/v1/wms/web/vendors": {
+      "post": {
+        "operationId": "VendorWebController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVendorDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "get": {
+        "operationId": "VendorWebController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      }
+    },
+    "/api/v1/wms/web/vendors/{id}": {
+      "get": {
+        "operationId": "VendorWebController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "patch": {
+        "operationId": "VendorWebController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateVendorDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "delete": {
+        "operationId": "VendorWebController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      }
+    },
+    "/api/v1/wms/web/vendor-contacts": {
+      "post": {
+        "operationId": "VendorContactWebController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVendorContactDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "get": {
+        "operationId": "VendorContactWebController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      }
+    },
+    "/api/v1/wms/web/vendor-contacts/{id}": {
+      "get": {
+        "operationId": "VendorContactWebController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "patch": {
+        "operationId": "VendorContactWebController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateVendorContactDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "delete": {
+        "operationId": "VendorContactWebController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      }
+    },
+    "/api/v1/wms/web/vendor-contacts/by-vendor/{vendorId}": {
+      "get": {
+        "operationId": "VendorContactWebController_findByVendorId",
+        "parameters": [
+          {
+            "name": "vendorId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      }
+    },
+    "/api/v1/wms/web/vendor-addresses": {
+      "post": {
+        "operationId": "VendorAddressWebController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVendorAddressDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "get": {
+        "operationId": "VendorAddressWebController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      }
+    },
+    "/api/v1/wms/web/vendor-addresses/{id}": {
+      "get": {
+        "operationId": "VendorAddressWebController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "patch": {
+        "operationId": "VendorAddressWebController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateVendorAddressDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "delete": {
+        "operationId": "VendorAddressWebController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      }
+    },
+    "/api/v1/wms/web/vendor-addresses/by-vendor/{vendorId}": {
+      "get": {
+        "operationId": "VendorAddressWebController_findByVendorId",
+        "parameters": [
+          {
+            "name": "vendorId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      }
+    },
+    "/api/v1/wms/web/clients": {
+      "post": {
+        "operationId": "ClientWebController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateClientDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "get": {
+        "operationId": "ClientWebController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      }
+    },
+    "/api/v1/wms/web/clients/{id}": {
+      "get": {
+        "operationId": "ClientWebController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "patch": {
+        "operationId": "ClientWebController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateClientDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "delete": {
+        "operationId": "ClientWebController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      }
+    },
+    "/api/v1/wms/web/client-contacts": {
+      "post": {
+        "operationId": "ClientContactWebController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateClientContactDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "get": {
+        "operationId": "ClientContactWebController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      }
+    },
+    "/api/v1/wms/web/client-contacts/{id}": {
+      "get": {
+        "operationId": "ClientContactWebController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "patch": {
+        "operationId": "ClientContactWebController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateClientContactDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "delete": {
+        "operationId": "ClientContactWebController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      }
+    },
+    "/api/v1/wms/web/client-contacts/by-client/{clientId}": {
+      "get": {
+        "operationId": "ClientContactWebController_findByClientId",
+        "parameters": [
+          {
+            "name": "clientId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      }
+    },
+    "/api/v1/wms/web/client-addresses": {
+      "post": {
+        "operationId": "ClientAddressWebController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateClientAddressDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "get": {
+        "operationId": "ClientAddressWebController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      }
+    },
+    "/api/v1/wms/web/client-addresses/{id}": {
+      "get": {
+        "operationId": "ClientAddressWebController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "patch": {
+        "operationId": "ClientAddressWebController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateClientAddressDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "delete": {
+        "operationId": "ClientAddressWebController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      }
+    },
+    "/api/v1/wms/web/client-addresses/by-client/{clientId}": {
+      "get": {
+        "operationId": "ClientAddressWebController_findByClientId",
+        "parameters": [
+          {
+            "name": "clientId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      }
+    },
+    "/api/v1/wms/web/inventory-reservations": {
+      "post": {
+        "operationId": "InventoryReservationsWebController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReservationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Create inventory reservation",
+        "tags": [
+          "WMS-WEB",
+          "Inventory"
+        ]
+      },
+      "get": {
+        "operationId": "InventoryReservationsWebController_findAll",
+        "parameters": [
+          {
+            "name": "facilityId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List reservations",
+        "tags": [
+          "WMS-WEB",
+          "Inventory"
+        ]
+      }
+    },
+    "/api/v1/wms/web/inventory-reservations/{id}": {
+      "get": {
+        "operationId": "InventoryReservationsWebController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get reservation by id",
+        "tags": [
+          "WMS-WEB",
+          "Inventory"
+        ]
+      },
+      "patch": {
+        "operationId": "InventoryReservationsWebController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateReservationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Update reservation",
+        "tags": [
+          "WMS-WEB",
+          "Inventory"
+        ]
+      },
+      "delete": {
+        "operationId": "InventoryReservationsWebController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Delete reservation",
+        "tags": [
+          "WMS-WEB",
+          "Inventory"
+        ]
+      }
+    },
+    "/api/v1/wms/web/inventory-reservations/{id}/release": {
+      "post": {
+        "operationId": "InventoryReservationsWebController_release",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Release reservation",
+        "tags": [
+          "WMS-WEB",
+          "Inventory"
+        ]
+      }
+    },
+    "/api/v1/wms/web/shipping-labels/generate": {
+      "post": {
+        "operationId": "ShippingLabelsWebController_generate",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateLabelDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Generate shipping label",
+        "tags": [
+          "WMS-WEB",
+          "Outbound"
+        ]
+      }
+    },
+    "/api/v1/wms/web/shipping-labels": {
+      "get": {
+        "operationId": "ShippingLabelsWebController_findAll",
+        "parameters": [
+          {
+            "name": "shipmentId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List shipping labels",
+        "tags": [
+          "WMS-WEB",
+          "Outbound"
+        ]
+      }
+    },
+    "/api/v1/wms/web/shipping-labels/{id}": {
+      "get": {
+        "operationId": "ShippingLabelsWebController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get label by id",
+        "tags": [
+          "WMS-WEB",
+          "Outbound"
+        ]
+      },
+      "delete": {
+        "operationId": "ShippingLabelsWebController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Delete label",
+        "tags": [
+          "WMS-WEB",
+          "Outbound"
+        ]
+      }
+    },
+    "/api/v1/wms/web/shipping-labels/{id}/pdf": {
+      "get": {
+        "operationId": "ShippingLabelsWebController_getPdf",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get label PDF download info",
+        "tags": [
+          "WMS-WEB",
+          "Outbound"
+        ]
+      }
+    },
+    "/api/v1/wms/web/shipping-labels/webhooks/tracking": {
+      "post": {
+        "operationId": "ShippingLabelsWebController_trackingWebhook",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Tracking update webhook",
+        "tags": [
+          "WMS-WEB",
+          "Outbound"
+        ]
+      }
+    },
+    "/api/v1/wms/web/shipping-labels/{id}/print": {
+      "post": {
+        "operationId": "ShippingLabelsWebController_print",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrintLabelDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Print label",
+        "tags": [
+          "WMS-WEB",
+          "Outbound"
+        ]
+      }
+    },
+    "/api/v1/wms/web/product-packaging": {
+      "post": {
+        "operationId": "ProductPackagingWebController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePackagingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Create packaging hierarchy entry",
+        "tags": [
+          "WMS-WEB",
+          "Products"
+        ]
+      },
+      "get": {
+        "operationId": "ProductPackagingWebController_findAll",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List packaging entries",
+        "tags": [
+          "WMS-WEB",
+          "Products"
+        ]
+      }
+    },
+    "/api/v1/wms/web/product-packaging/{id}": {
+      "get": {
+        "operationId": "ProductPackagingWebController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get packaging by id",
+        "tags": [
+          "WMS-WEB",
+          "Products"
+        ]
+      },
+      "patch": {
+        "operationId": "ProductPackagingWebController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePackagingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Update packaging entry",
+        "tags": [
+          "WMS-WEB",
+          "Products"
+        ]
+      },
+      "delete": {
+        "operationId": "ProductPackagingWebController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Delete packaging entry",
+        "tags": [
+          "WMS-WEB",
+          "Products"
+        ]
+      }
+    },
+    "/api/v1/wms/web/product-packaging/convert": {
+      "get": {
+        "operationId": "ProductPackagingWebController_convert",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fromUomId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "toUomId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "quantity",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Convert quantity between UOMs using packaging hierarchy",
+        "tags": [
+          "WMS-WEB",
+          "Products"
+        ]
+      }
+    },
+    "/api/v1/wms/web/product-suppliers": {
+      "post": {
+        "operationId": "ProductSuppliersWebController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductSupplierDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Create product-supplier mapping",
+        "tags": [
+          "WMS-WEB",
+          "Products"
+        ]
+      },
+      "get": {
+        "operationId": "ProductSuppliersWebController_findAll",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "vendorId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List product-supplier mappings",
+        "tags": [
+          "WMS-WEB",
+          "Products"
+        ]
+      }
+    },
+    "/api/v1/wms/web/product-suppliers/{id}": {
+      "get": {
+        "operationId": "ProductSuppliersWebController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get mapping by id",
+        "tags": [
+          "WMS-WEB",
+          "Products"
+        ]
+      },
+      "patch": {
+        "operationId": "ProductSuppliersWebController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductSupplierDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Update mapping",
+        "tags": [
+          "WMS-WEB",
+          "Products"
+        ]
+      },
+      "delete": {
+        "operationId": "ProductSuppliersWebController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Delete mapping",
+        "tags": [
+          "WMS-WEB",
+          "Products"
+        ]
+      }
+    },
+    "/api/v1/wms/web/product-client-assignments": {
+      "post": {
+        "operationId": "ProductClientAssignmentsWebController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductClientAssignmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Assign a product to a client",
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "get": {
+        "operationId": "ProductClientAssignmentsWebController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List all product-client assignments",
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      }
+    },
+    "/api/v1/wms/web/product-client-assignments/by-product/{productId}": {
+      "get": {
+        "operationId": "ProductClientAssignmentsWebController_findByProduct",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Find assignments by product",
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      }
+    },
+    "/api/v1/wms/web/product-client-assignments/by-client/{clientId}": {
+      "get": {
+        "operationId": "ProductClientAssignmentsWebController_findByClient",
+        "parameters": [
+          {
+            "name": "clientId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Find assignments by client",
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      }
+    },
+    "/api/v1/wms/web/product-client-assignments/{id}": {
+      "get": {
+        "operationId": "ProductClientAssignmentsWebController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get assignment by ID",
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "patch": {
+        "operationId": "ProductClientAssignmentsWebController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductClientAssignmentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Update an assignment",
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      },
+      "delete": {
+        "operationId": "ProductClientAssignmentsWebController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Delete an assignment",
+        "tags": [
+          "WMS-WEB",
+          "Master-Data"
+        ]
+      }
+    },
+    "/api/v1/wms/web/exceptions": {
+      "post": {
+        "operationId": "ExceptionManagementWebController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateExceptionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Report an exception",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "get": {
+        "operationId": "ExceptionManagementWebController_findAll",
+        "parameters": [
+          {
+            "name": "status",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "facilityId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List exceptions",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/exceptions/{id}": {
+      "get": {
+        "operationId": "ExceptionManagementWebController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get exception by ID",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "patch": {
+        "operationId": "ExceptionManagementWebController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateExceptionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Update exception (status, assignment, resolution)",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "delete": {
+        "operationId": "ExceptionManagementWebController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Delete an exception",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/rf/exceptions/report": {
+      "post": {
+        "operationId": "ExceptionManagementRfController_reportException",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-RF"
+        ]
+      }
+    },
+    "/api/v1/wms/rf/exceptions/my-reports": {
+      "get": {
+        "operationId": "ExceptionManagementRfController_getMyReports",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-RF"
+        ]
+      }
+    },
+    "/api/v1/wms/rf/exceptions/{id}": {
+      "get": {
+        "operationId": "ExceptionManagementRfController_getException",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-RF"
+        ]
+      }
+    },
+    "/api/v1/wms/web/loading-docks": {
+      "post": {
+        "operationId": "LoadingDocksWebController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLoadingDockDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Create a loading dock",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "get": {
+        "operationId": "LoadingDocksWebController_findAll",
+        "parameters": [
+          {
+            "name": "facilityId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List loading docks",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/loading-docks/{id}": {
+      "get": {
+        "operationId": "LoadingDocksWebController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get loading dock by ID",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "patch": {
+        "operationId": "LoadingDocksWebController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLoadingDockDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Update a loading dock",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "delete": {
+        "operationId": "LoadingDocksWebController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Delete a loading dock",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/rf/loading-docks/available": {
+      "get": {
+        "operationId": "LoadingDocksRfController_getAvailableDocks",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-RF"
+        ]
+      }
+    },
+    "/api/v1/wms/rf/loading-docks/{id}/assign": {
+      "post": {
+        "operationId": "LoadingDocksRfController_assignDock",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-RF"
+        ]
+      }
+    },
+    "/api/v1/wms/rf/loading-docks/{id}/release": {
+      "post": {
+        "operationId": "LoadingDocksRfController_releaseDock",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-RF"
+        ]
+      }
+    },
+    "/api/v1/wms/web/non-conformance-reports": {
+      "post": {
+        "operationId": "NonConformanceReportsWebController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateNcrDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Create a non-conformance report",
+        "tags": [
+          "WMS-WEB",
+          "Quality"
+        ]
+      },
+      "get": {
+        "operationId": "NonConformanceReportsWebController_findAll",
+        "parameters": [
+          {
+            "name": "status",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "facilityId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List NCRs",
+        "tags": [
+          "WMS-WEB",
+          "Quality"
+        ]
+      }
+    },
+    "/api/v1/wms/web/non-conformance-reports/{id}": {
+      "get": {
+        "operationId": "NonConformanceReportsWebController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get NCR by ID",
+        "tags": [
+          "WMS-WEB",
+          "Quality"
+        ]
+      },
+      "patch": {
+        "operationId": "NonConformanceReportsWebController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateNcrDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Update NCR (status, root cause, resolution)",
+        "tags": [
+          "WMS-WEB",
+          "Quality"
+        ]
+      },
+      "delete": {
+        "operationId": "NonConformanceReportsWebController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Delete an NCR",
+        "tags": [
+          "WMS-WEB",
+          "Quality"
+        ]
+      }
+    },
+    "/api/v1/wms/web/vas-tasks": {
+      "post": {
+        "operationId": "VasExecutionWebController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateVasTaskDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Create a VAS task",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "get": {
+        "operationId": "VasExecutionWebController_findAll",
+        "parameters": [
+          {
+            "name": "status",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "facilityId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List VAS tasks",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/vas-tasks/{id}": {
+      "get": {
+        "operationId": "VasExecutionWebController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get VAS task by ID",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "patch": {
+        "operationId": "VasExecutionWebController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateVasTaskDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Update VAS task (status, progress)",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "delete": {
+        "operationId": "VasExecutionWebController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Delete a VAS task",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/vas-tasks/{id}/events": {
+      "post": {
+        "operationId": "VasExecutionWebController_addEvent",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Record a VAS task event",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "get": {
+        "operationId": "VasExecutionWebController_getEvents",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get VAS task event timeline",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/rf/vas-tasks/my-tasks": {
+      "get": {
+        "operationId": "VasExecutionRfController_getMyTasks",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-RF"
+        ]
+      }
+    },
+    "/api/v1/wms/rf/vas-tasks/{id}/start": {
+      "post": {
+        "operationId": "VasExecutionRfController_startTask",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-RF"
+        ]
+      }
+    },
+    "/api/v1/wms/rf/vas-tasks/{id}/complete": {
+      "post": {
+        "operationId": "VasExecutionRfController_completeTask",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-RF"
+        ]
+      }
+    },
+    "/api/v1/wms/web/carrier-rates": {
+      "post": {
+        "operationId": "CarrierRateShoppingWebController_createRate",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCarrierRateDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Create a carrier rate",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "get": {
+        "operationId": "CarrierRateShoppingWebController_findRates",
+        "parameters": [
+          {
+            "name": "carrierId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List carrier rates",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/carrier-rates/quote": {
+      "post": {
+        "operationId": "CarrierRateShoppingWebController_getQuote",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RateQuoteRequestDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Get rate quote from a carrier",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/carrier-rates/compare": {
+      "post": {
+        "operationId": "CarrierRateShoppingWebController_compareRates",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompareRatesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Compare rates across carriers",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/carrier-rates/{id}": {
+      "delete": {
+        "operationId": "CarrierRateShoppingWebController_deleteRate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Delete a carrier rate",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/outbound/orders": {
       "post": {
         "operationId": "OutboundWebController_createOrder",
         "parameters": [],
@@ -2087,7 +6874,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/outbound/allocations/pending": {
+    "/api/v1/wms/web/outbound/allocations/pending": {
       "get": {
         "operationId": "OutboundWebController_getPendingAllocations",
         "parameters": [
@@ -2111,7 +6898,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/outbound/waves": {
+    "/api/v1/wms/web/outbound/waves": {
       "post": {
         "operationId": "OutboundWebController_createWave",
         "parameters": [],
@@ -2136,7 +6923,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/outbound/waves/board": {
+    "/api/v1/wms/web/outbound/waves/board": {
       "get": {
         "operationId": "OutboundWebController_getWaveBoard",
         "parameters": [
@@ -2168,7 +6955,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/outbound/shipments/generate-manifest": {
+    "/api/v1/wms/web/outbound/shipments/generate-manifest": {
       "post": {
         "operationId": "OutboundWebController_generateManifest",
         "parameters": [],
@@ -2193,7 +6980,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/outbound/allocations/override": {
+    "/api/v1/wms/web/outbound/allocations/override": {
       "post": {
         "operationId": "OutboundWebController_overrideAllocation",
         "parameters": [],
@@ -2218,7 +7005,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/outbound/pick/next": {
+    "/api/v1/wms/rf/outbound/pick/next": {
       "get": {
         "operationId": "OutboundRfController_getNextPick",
         "parameters": [],
@@ -2232,7 +7019,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/outbound/pick/assign": {
+    "/api/v1/wms/rf/outbound/pick/assign": {
       "post": {
         "operationId": "OutboundRfController_assignTask",
         "parameters": [],
@@ -2246,7 +7033,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/outbound/pick/scan-location": {
+    "/api/v1/wms/rf/outbound/pick/scan-location": {
       "post": {
         "operationId": "OutboundRfController_scanLocation",
         "parameters": [],
@@ -2260,7 +7047,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/outbound/pick/scan-product": {
+    "/api/v1/wms/rf/outbound/pick/scan-product": {
       "post": {
         "operationId": "OutboundRfController_scanProduct",
         "parameters": [],
@@ -2274,7 +7061,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/outbound/pick/confirm": {
+    "/api/v1/wms/rf/outbound/pick/confirm": {
       "post": {
         "operationId": "OutboundRfController_confirmPick",
         "parameters": [],
@@ -2298,7 +7085,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/outbound/pick/recover": {
+    "/api/v1/wms/rf/outbound/pick/recover": {
       "post": {
         "operationId": "OutboundRfController_recoverPick",
         "parameters": [],
@@ -2322,7 +7109,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/outbound/pack/start": {
+    "/api/v1/wms/rf/outbound/pack/start": {
       "post": {
         "operationId": "OutboundRfController_startPacking",
         "parameters": [],
@@ -2336,7 +7123,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/outbound/pack/scan-lpn": {
+    "/api/v1/wms/rf/outbound/pack/scan-lpn": {
       "post": {
         "operationId": "OutboundRfController_scanLpn",
         "parameters": [],
@@ -2360,7 +7147,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/outbound/pack/seal": {
+    "/api/v1/wms/rf/outbound/pack/seal": {
       "post": {
         "operationId": "OutboundRfController_sealContainer",
         "parameters": [],
@@ -2384,7 +7171,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/outbound/ship/load": {
+    "/api/v1/wms/rf/outbound/ship/load": {
       "post": {
         "operationId": "OutboundRfController_loadShipment",
         "parameters": [],
@@ -2408,7 +7195,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/outbound/ship/dispatch": {
+    "/api/v1/wms/rf/outbound/ship/dispatch": {
       "post": {
         "operationId": "OutboundRfController_dispatch",
         "parameters": [],
@@ -2422,7 +7209,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/outbound/ship/print-generic-label": {
+    "/api/v1/wms/rf/outbound/ship/print-generic-label": {
       "post": {
         "operationId": "OutboundRfController_printGenericLabel",
         "parameters": [],
@@ -2436,7 +7223,165 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/transfers": {
+    "/api/v1/wms/web/packing-stations": {
+      "post": {
+        "operationId": "PackingStationsWebController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePackingStationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Create a packing station",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "get": {
+        "operationId": "PackingStationsWebController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List all packing stations",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/packing-stations/{id}": {
+      "get": {
+        "operationId": "PackingStationsWebController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get packing station by ID",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "patch": {
+        "operationId": "PackingStationsWebController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePackingStationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Update a packing station",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "delete": {
+        "operationId": "PackingStationsWebController_delete",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Delete a packing station",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/rf/packing-stations/available": {
+      "get": {
+        "operationId": "PackingStationsRfController_getAvailableStations",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-RF"
+        ]
+      }
+    },
+    "/api/v1/wms/rf/packing-stations/{stationCode}": {
+      "get": {
+        "operationId": "PackingStationsRfController_getStation",
+        "parameters": [
+          {
+            "name": "stationCode",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-RF"
+        ]
+      }
+    },
+    "/api/v1/wms/web/transfers": {
       "post": {
         "operationId": "TransferWebController_create",
         "parameters": [],
@@ -2491,7 +7436,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/transfers/{id}/dispatch": {
+    "/api/v1/wms/web/transfers/{id}/dispatch": {
       "post": {
         "operationId": "TransferWebController_dispatch",
         "parameters": [
@@ -2515,7 +7460,153 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/transfers/initiate": {
+    "/api/v1/wms/web/transfers/{id}/receive": {
+      "post": {
+        "operationId": "TransferWebController_receive",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebReceiveTransferDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/transfers/lines": {
+      "get": {
+        "operationId": "TransferWebController_listLines",
+        "parameters": [
+          {
+            "name": "transferId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/transfers/lines/{id}": {
+      "get": {
+        "operationId": "TransferWebController_getLine",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      },
+      "patch": {
+        "operationId": "TransferWebController_updateLine",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTransferLineDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/rf/transfers/initiate": {
       "post": {
         "operationId": "TransferRfController_initiate",
         "parameters": [],
@@ -2529,7 +7620,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/transfers/scan-lpn": {
+    "/api/v1/wms/rf/transfers/scan-lpn": {
       "post": {
         "operationId": "TransferRfController_scanLpn",
         "parameters": [],
@@ -2553,7 +7644,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/transfers/complete": {
+    "/api/v1/wms/rf/transfers/complete": {
       "post": {
         "operationId": "TransferRfController_complete",
         "parameters": [],
@@ -2567,7 +7658,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/cycle-counts/schedule": {
+    "/api/v1/wms/web/cycle-counts/schedule": {
       "post": {
         "operationId": "CountWebController_schedule",
         "parameters": [],
@@ -2586,13 +7677,91 @@
             "description": ""
           }
         },
+        "summary": "Schedule a cycle count",
         "tags": [
           "WMS-WEB",
           "Operations"
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/cycle-counts": {
+    "/api/v1/wms/web/cycle-counts/adhoc": {
+      "post": {
+        "operationId": "CountWebController_adhoc",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdhocCountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Create an ad-hoc count for specific locations",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/cycle-counts/batch-submit": {
+      "post": {
+        "operationId": "CountWebController_batchSubmit",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchSubmitLinesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Batch submit count lines",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/cycle-counts/summary": {
+      "get": {
+        "operationId": "CountWebController_summary",
+        "parameters": [
+          {
+            "name": "facilityId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get count summary analytics",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/cycle-counts": {
       "get": {
         "operationId": "CountWebController_list",
         "parameters": [
@@ -2618,13 +7787,64 @@
             "description": ""
           }
         },
+        "summary": "List cycle counts",
         "tags": [
           "WMS-WEB",
           "Operations"
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/cycle-counts/start": {
+    "/api/v1/wms/web/cycle-counts/{id}/lines": {
+      "get": {
+        "operationId": "CountWebController_getLines",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get count lines (hides system qty for blind counts)",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/cycle-counts/{id}/finalize": {
+      "post": {
+        "operationId": "CountWebController_finalize",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "summary": "Finalize a cycle count",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/rf/cycle-counts/start": {
       "post": {
         "operationId": "CountRfController_start",
         "parameters": [],
@@ -2638,7 +7858,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/cycle-counts/scan-location": {
+    "/api/v1/wms/rf/cycle-counts/scan-location": {
       "post": {
         "operationId": "CountRfController_scanLocation",
         "parameters": [],
@@ -2652,7 +7872,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/cycle-counts/enter-qty": {
+    "/api/v1/wms/rf/cycle-counts/enter-qty": {
       "post": {
         "operationId": "CountRfController_enterQty",
         "parameters": [],
@@ -2676,7 +7896,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/cycle-counts/submit-line": {
+    "/api/v1/wms/rf/cycle-counts/submit-line": {
       "post": {
         "operationId": "CountRfController_submitLine",
         "parameters": [],
@@ -2700,7 +7920,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/rf/cycle-counts/complete": {
+    "/api/v1/wms/rf/cycle-counts/complete": {
       "post": {
         "operationId": "CountRfController_complete",
         "parameters": [],
@@ -2714,7 +7934,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/approvals/pending": {
+    "/api/v1/wms/web/approvals/pending": {
       "get": {
         "operationId": "ApprovalWebController_getPending",
         "parameters": [],
@@ -2729,7 +7949,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/approvals/{id}/approve": {
+    "/api/v1/wms/web/approvals/{id}/approve": {
       "post": {
         "operationId": "ApprovalWebController_approve",
         "parameters": [
@@ -2763,7 +7983,7 @@
         ]
       }
     },
-    "/api/v1/wms/api/v1/wms/web/approvals/{id}/reject": {
+    "/api/v1/wms/web/approvals/{id}/reject": {
       "post": {
         "operationId": "ApprovalWebController_reject",
         "parameters": [
@@ -3469,6 +8689,141 @@
           }
         }
       },
+      "CreateFacilityDto": {
+        "type": "object",
+        "properties": {
+          "facilityCode": {
+            "type": "string",
+            "description": "Unique facility code within tenant"
+          },
+          "name": {
+            "type": "string"
+          },
+          "facilityType": {
+            "type": "string",
+            "enum": [
+              "WAREHOUSE",
+              "DISTRIBUTION_CENTER",
+              "CROSS_DOCK",
+              "FULFILLMENT_CENTER"
+            ],
+            "default": "WAREHOUSE"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "attributes": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "facilityCode",
+          "name",
+          "facilityType"
+        ]
+      },
+      "UpdateFacilityDto": {
+        "type": "object",
+        "properties": {
+          "facilityCode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "facilityType": {
+            "type": "string",
+            "enum": [
+              "WAREHOUSE",
+              "DISTRIBUTION_CENTER",
+              "CROSS_DOCK",
+              "FULFILLMENT_CENTER"
+            ]
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "attributes": {
+            "type": "object"
+          }
+        }
+      },
+      "CreateZoneDto": {
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string"
+          },
+          "zoneCode": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "name": {
+            "type": "string"
+          },
+          "zoneType": {
+            "type": "string",
+            "enum": [
+              "BULK",
+              "PICKING",
+              "RECEIVING",
+              "SHIPPING",
+              "PACKING",
+              "STAGING",
+              "QC",
+              "HOLD",
+              "YARD"
+            ],
+            "default": "BULK"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "attributes": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "facilityId",
+          "zoneCode",
+          "name",
+          "zoneType"
+        ]
+      },
+      "UpdateZoneDto": {
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string"
+          },
+          "zoneCode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "zoneType": {
+            "type": "string",
+            "enum": [
+              "BULK",
+              "PICKING",
+              "RECEIVING",
+              "SHIPPING",
+              "PACKING",
+              "STAGING",
+              "QC",
+              "HOLD",
+              "YARD"
+            ]
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "attributes": {
+            "type": "object"
+          }
+        }
+      },
       "ReportParamsDto": {
         "type": "object",
         "properties": {
@@ -3599,6 +8954,40 @@
           "facilityId",
           "reasonCode"
         ]
+      },
+      "CreateHoldDto": {
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "locationId": {
+            "type": "string"
+          },
+          "lotId": {
+            "type": "string"
+          },
+          "holdType": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "facilityId",
+          "holdType"
+        ]
+      },
+      "ReleaseHoldDto": {
+        "type": "object",
+        "properties": {}
       },
       "UpsertPolicyDto": {
         "type": "object",
@@ -3780,6 +9169,28 @@
           "action"
         ]
       },
+      "MarkGrnArrivedDto": {
+        "type": "object",
+        "properties": {
+          "notes": {
+            "type": "string"
+          }
+        }
+      },
+      "CompleteInspectionDto": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "result"
+        ]
+      },
       "RfReceiveDto": {
         "type": "object",
         "properties": {
@@ -3840,6 +9251,1562 @@
         "required": [
           "taskId",
           "scannedLocationId"
+        ]
+      },
+      "CreateLpnDto": {
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string"
+          },
+          "lpnNumber": {
+            "type": "string"
+          },
+          "lpnType": {
+            "type": "string",
+            "enum": [
+              "PALLET",
+              "CARTON",
+              "CASE",
+              "EACH",
+              "MIXED"
+            ],
+            "default": "PALLET"
+          },
+          "locationId": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "lotNumber": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "uomId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "facilityId",
+          "lpnNumber",
+          "lpnType",
+          "locationId",
+          "uomId"
+        ]
+      },
+      "UpdateLpnDto": {
+        "type": "object",
+        "properties": {
+          "locationId": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "lotNumber": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "RECEIVED",
+              "IN_STAGING",
+              "IN_QC",
+              "PUTAWAY_PENDING",
+              "STORED",
+              "QUARANTINED",
+              "CONSUMED",
+              "DISPOSED",
+              "NESTED"
+            ]
+          }
+        }
+      },
+      "CreatePoLineDto": {
+        "type": "object",
+        "properties": {
+          "lineNumber": {
+            "type": "number"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "orderedQuantity": {
+            "type": "number"
+          },
+          "unitPrice": {
+            "type": "number"
+          },
+          "uomId": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "lineNumber",
+          "productId",
+          "orderedQuantity",
+          "uomId"
+        ]
+      },
+      "CreatePurchaseOrderDto": {
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string"
+          },
+          "poNumber": {
+            "type": "string"
+          },
+          "vendorId": {
+            "type": "string"
+          },
+          "orderDate": {
+            "type": "string"
+          },
+          "expectedDate": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreatePoLineDto"
+            }
+          }
+        },
+        "required": [
+          "facilityId",
+          "poNumber",
+          "lines"
+        ]
+      },
+      "UpdatePurchaseOrderDto": {
+        "type": "object",
+        "properties": {
+          "notes": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "CONFIRMED",
+              "IN_TRANSIT",
+              "PARTIALLY_RECEIVED",
+              "RECEIVED",
+              "CANCELLED"
+            ]
+          }
+        }
+      },
+      "CreatePurchaseOrderLineDto": {
+        "type": "object",
+        "properties": {
+          "poId": {
+            "type": "string"
+          },
+          "lineNumber": {
+            "type": "number"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "orderedQuantity": {
+            "type": "number"
+          },
+          "unitPrice": {
+            "type": "number"
+          },
+          "uomId": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "poId",
+          "lineNumber",
+          "productId",
+          "orderedQuantity",
+          "uomId"
+        ]
+      },
+      "UpdatePurchaseOrderLineDto": {
+        "type": "object",
+        "properties": {
+          "orderedQuantity": {
+            "type": "number"
+          },
+          "receivedQuantity": {
+            "type": "number"
+          },
+          "unitPrice": {
+            "type": "number"
+          },
+          "uomId": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateReturnItemDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string"
+          },
+          "expectedQty": {
+            "type": "number"
+          },
+          "condition": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "productId",
+          "expectedQty"
+        ]
+      },
+      "CreateCustomerReturnDto": {
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string"
+          },
+          "returnNumber": {
+            "type": "string"
+          },
+          "clientCode": {
+            "type": "string"
+          },
+          "rmaNumber": {
+            "type": "string"
+          },
+          "carrier": {
+            "type": "string"
+          },
+          "trackingNumber": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateReturnItemDto"
+            }
+          }
+        },
+        "required": [
+          "facilityId",
+          "returnNumber",
+          "items"
+        ]
+      },
+      "UpdateCustomerReturnDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "EXPECTED",
+              "ARRIVED",
+              "INSPECTING",
+              "INSPECTED",
+              "COMPLETED",
+              "CANCELLED"
+            ]
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateReturnItemStandaloneDto": {
+        "type": "object",
+        "properties": {
+          "returnId": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "expectedQty": {
+            "type": "number"
+          },
+          "receivedQty": {
+            "type": "number"
+          },
+          "condition": {
+            "type": "string"
+          },
+          "disposition": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "returnId",
+          "productId",
+          "expectedQty"
+        ]
+      },
+      "UpdateReturnItemStandaloneDto": {
+        "type": "object",
+        "properties": {
+          "receivedQty": {
+            "type": "number"
+          },
+          "condition": {
+            "type": "string"
+          },
+          "disposition": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateLoadDto": {
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string"
+          },
+          "loadNumber": {
+            "type": "string"
+          },
+          "carrierCode": {
+            "type": "string"
+          },
+          "driverName": {
+            "type": "string"
+          },
+          "driverPhone": {
+            "type": "string"
+          },
+          "vehiclePlate": {
+            "type": "string"
+          },
+          "dockDoorCode": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "facilityId",
+          "loadNumber"
+        ]
+      },
+      "UpdateLoadDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "carrierCode": {
+            "type": "string"
+          },
+          "driverName": {
+            "type": "string"
+          },
+          "driverPhone": {
+            "type": "string"
+          },
+          "vehiclePlate": {
+            "type": "string"
+          },
+          "dockDoorCode": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateCarrierDto": {
+        "type": "object",
+        "properties": {
+          "carrierCode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "scac": {
+            "type": "string"
+          },
+          "website": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "carrierCode",
+          "name"
+        ]
+      },
+      "UpdateCarrierDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "scac": {
+            "type": "string"
+          },
+          "website": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateBrandDto": {
+        "type": "object",
+        "properties": {
+          "brandCode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "brandCode",
+          "name"
+        ]
+      },
+      "UpdateBrandDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateCategoryDto": {
+        "type": "object",
+        "properties": {
+          "categoryCode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "categoryCode",
+          "name"
+        ]
+      },
+      "UpdateCategoryDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "parentId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "VendorContactDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "isPrimary": {
+            "type": "boolean"
+          }
+        }
+      },
+      "VendorAddressDto": {
+        "type": "object",
+        "properties": {
+          "addressType": {
+            "type": "string"
+          },
+          "addressLine1": {
+            "type": "string"
+          },
+          "addressLine2": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "isDefault": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateVendorDto": {
+        "type": "object",
+        "properties": {
+          "vendorCode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "contacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VendorContactDto"
+            }
+          },
+          "addresses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VendorAddressDto"
+            }
+          }
+        },
+        "required": [
+          "vendorCode",
+          "name"
+        ]
+      },
+      "UpdateVendorDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateVendorContactDto": {
+        "type": "object",
+        "properties": {
+          "vendorId": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "isPrimary": {
+            "type": "boolean"
+          }
+        }
+      },
+      "UpdateVendorContactDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "isPrimary": {
+            "type": "boolean"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateVendorAddressDto": {
+        "type": "object",
+        "properties": {
+          "vendorId": {
+            "type": "string"
+          },
+          "addressType": {
+            "type": "string"
+          },
+          "addressLine1": {
+            "type": "string"
+          },
+          "addressLine2": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "isDefault": {
+            "type": "boolean"
+          }
+        }
+      },
+      "UpdateVendorAddressDto": {
+        "type": "object",
+        "properties": {
+          "addressType": {
+            "type": "string"
+          },
+          "addressLine1": {
+            "type": "string"
+          },
+          "addressLine2": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "isDefault": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ClientContactDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "isPrimary": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ClientAddressDto": {
+        "type": "object",
+        "properties": {
+          "addressType": {
+            "type": "string"
+          },
+          "addressLine1": {
+            "type": "string"
+          },
+          "addressLine2": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "isDefault": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateClientDto": {
+        "type": "object",
+        "properties": {
+          "clientCode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "contacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClientContactDto"
+            }
+          },
+          "addresses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClientAddressDto"
+            }
+          }
+        },
+        "required": [
+          "clientCode",
+          "name"
+        ]
+      },
+      "UpdateClientDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateClientContactDto": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "string"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "jobTitle": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "isPrimary": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "clientId",
+          "firstName"
+        ]
+      },
+      "UpdateClientContactDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "jobTitle": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "isPrimary": {
+            "type": "boolean"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateClientAddressDto": {
+        "type": "object",
+        "properties": {
+          "clientId": {
+            "type": "string"
+          },
+          "addressType": {
+            "type": "string"
+          },
+          "addressLine1": {
+            "type": "string"
+          },
+          "addressLine2": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string"
+          },
+          "countryCode": {
+            "type": "string"
+          },
+          "isDefault": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "clientId",
+          "addressType"
+        ]
+      },
+      "UpdateClientAddressDto": {
+        "type": "object",
+        "properties": {
+          "addressType": {
+            "type": "string"
+          },
+          "addressLine1": {
+            "type": "string"
+          },
+          "addressLine2": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string"
+          },
+          "countryCode": {
+            "type": "string"
+          },
+          "isDefault": {
+            "type": "boolean"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateReservationDto": {
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "locationId": {
+            "type": "string"
+          },
+          "lotId": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "uomId": {
+            "type": "string"
+          },
+          "reservationType": {
+            "type": "string"
+          },
+          "referenceType": {
+            "type": "string"
+          },
+          "referenceId": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "facilityId",
+          "productId",
+          "locationId",
+          "quantity",
+          "uomId",
+          "reservationType",
+          "referenceType",
+          "referenceId"
+        ]
+      },
+      "UpdateReservationDto": {
+        "type": "object",
+        "properties": {
+          "quantity": {
+            "type": "number"
+          },
+          "expiresAt": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "GenerateLabelDto": {
+        "type": "object",
+        "properties": {
+          "shipmentId": {
+            "type": "string"
+          },
+          "containerId": {
+            "type": "string"
+          },
+          "labelType": {
+            "type": "string"
+          },
+          "carrierCode": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "shipmentId",
+          "labelType"
+        ]
+      },
+      "PrintLabelDto": {
+        "type": "object",
+        "properties": {
+          "copies": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "copies"
+        ]
+      },
+      "CreatePackagingDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string"
+          },
+          "fromUomId": {
+            "type": "string"
+          },
+          "toUomId": {
+            "type": "string"
+          },
+          "conversionFactor": {
+            "type": "number"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "productId",
+          "fromUomId",
+          "toUomId",
+          "conversionFactor"
+        ]
+      },
+      "UpdatePackagingDto": {
+        "type": "object",
+        "properties": {
+          "conversionFactor": {
+            "type": "number"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateProductSupplierDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string"
+          },
+          "vendorId": {
+            "type": "string"
+          },
+          "vendorSku": {
+            "type": "string"
+          },
+          "unitCost": {
+            "type": "number"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "leadTimeDays": {
+            "type": "number"
+          },
+          "moq": {
+            "type": "number"
+          },
+          "isPreferred": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "productId",
+          "vendorId"
+        ]
+      },
+      "UpdateProductSupplierDto": {
+        "type": "object",
+        "properties": {
+          "vendorSku": {
+            "type": "string"
+          },
+          "unitCost": {
+            "type": "number"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "leadTimeDays": {
+            "type": "number"
+          },
+          "moq": {
+            "type": "number"
+          },
+          "isPreferred": {
+            "type": "boolean"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateProductClientAssignmentDto": {
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "clientId": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "effectiveDate": {
+            "type": "string"
+          },
+          "expiryDate": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "facilityId",
+          "productId",
+          "clientId"
+        ]
+      },
+      "UpdateProductClientAssignmentDto": {
+        "type": "object",
+        "properties": {
+          "isActive": {
+            "type": "boolean"
+          },
+          "effectiveDate": {
+            "type": "string"
+          },
+          "expiryDate": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateExceptionDto": {
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string"
+          },
+          "exceptionType": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH",
+              "CRITICAL"
+            ]
+          },
+          "referenceType": {
+            "type": "string"
+          },
+          "referenceId": {
+            "type": "string"
+          },
+          "locationId": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "lotId": {
+            "type": "string"
+          },
+          "assignedToUserId": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "facilityId",
+          "exceptionType"
+        ]
+      },
+      "UpdateExceptionDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "ACKNOWLEDGED",
+              "IN_PROGRESS",
+              "RESOLVED",
+              "CLOSED"
+            ]
+          },
+          "assignedToUserId": {
+            "type": "string"
+          },
+          "resolutionDescription": {
+            "type": "string"
+          },
+          "rootCause": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateLoadingDockDto": {
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string"
+          },
+          "dockCode": {
+            "type": "string"
+          },
+          "dockName": {
+            "type": "string"
+          },
+          "dockType": {
+            "type": "string",
+            "enum": [
+              "RECEIVING",
+              "SHIPPING",
+              "BOTH"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "locationId": {
+            "type": "string"
+          },
+          "maxTrailerLength": {
+            "type": "number"
+          },
+          "maxTrailerHeight": {
+            "type": "number"
+          },
+          "hasLeveler": {
+            "type": "boolean"
+          },
+          "hasSealant": {
+            "type": "boolean"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "isAvailable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "facilityId",
+          "dockCode"
+        ]
+      },
+      "UpdateLoadingDockDto": {
+        "type": "object",
+        "properties": {
+          "dockName": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "locationId": {
+            "type": "string"
+          },
+          "maxTrailerLength": {
+            "type": "number"
+          },
+          "maxTrailerHeight": {
+            "type": "number"
+          },
+          "hasLeveler": {
+            "type": "boolean"
+          },
+          "hasSealant": {
+            "type": "boolean"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "isAvailable": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateNcrDto": {
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string"
+          },
+          "ncrName": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "referenceType": {
+            "type": "string"
+          },
+          "referenceId": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "lotId": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "LOW",
+              "MEDIUM",
+              "HIGH",
+              "CRITICAL"
+            ]
+          },
+          "assignedToUserId": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "facilityId"
+        ]
+      },
+      "UpdateNcrDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "INVESTIGATING",
+              "RESOLVED",
+              "CLOSED"
+            ]
+          },
+          "assignedToUserId": {
+            "type": "string"
+          },
+          "rootCause": {
+            "type": "string"
+          },
+          "resolution": {
+            "type": "string"
+          },
+          "correctiveAction": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateVasTaskDto": {
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string"
+          },
+          "taskType": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string"
+          },
+          "shipmentId": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "quantityRequired": {
+            "type": "number"
+          },
+          "uomId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "ASSIGNED",
+              "IN_PROGRESS",
+              "COMPLETED",
+              "CANCELLED"
+            ]
+          },
+          "priority": {
+            "type": "number"
+          },
+          "assignedToUserId": {
+            "type": "string"
+          },
+          "ratePerUnit": {
+            "type": "number"
+          },
+          "notes": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "facilityId",
+          "taskType"
+        ]
+      },
+      "UpdateVasTaskDto": {
+        "type": "object",
+        "properties": {
+          "quantityCompleted": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "ASSIGNED",
+              "IN_PROGRESS",
+              "COMPLETED",
+              "CANCELLED"
+            ]
+          },
+          "priority": {
+            "type": "number"
+          },
+          "assignedToUserId": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      },
+      "CreateCarrierRateDto": {
+        "type": "object",
+        "properties": {
+          "carrierId": {
+            "type": "string"
+          },
+          "serviceCode": {
+            "type": "string"
+          },
+          "serviceName": {
+            "type": "string"
+          },
+          "zone": {
+            "type": "string"
+          },
+          "weightFrom": {
+            "type": "number"
+          },
+          "weightTo": {
+            "type": "number"
+          },
+          "baseRate": {
+            "type": "number"
+          },
+          "ratePerKg": {
+            "type": "number"
+          },
+          "fuelSurcharge": {
+            "type": "number"
+          },
+          "minCharge": {
+            "type": "number"
+          },
+          "transitDaysMin": {
+            "type": "number"
+          },
+          "transitDaysMax": {
+            "type": "number"
+          },
+          "effectiveDate": {
+            "type": "string"
+          },
+          "expiryDate": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "carrierId",
+          "serviceCode"
+        ]
+      },
+      "RateQuoteRequestDto": {
+        "type": "object",
+        "properties": {
+          "carrierId": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "number"
+          },
+          "destinationZone": {
+            "type": "string"
+          },
+          "serviceCodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "carrierId",
+          "weight",
+          "destinationZone"
+        ]
+      },
+      "CompareRatesDto": {
+        "type": "object",
+        "properties": {
+          "carrierIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "weight": {
+            "type": "number"
+          },
+          "destinationZone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "carrierIds",
+          "weight",
+          "destinationZone"
         ]
       },
       "CreateOrderDto": {
@@ -4007,6 +10974,74 @@
           "dockDoorCode"
         ]
       },
+      "CreatePackingStationDto": {
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string"
+          },
+          "stationCode": {
+            "type": "string"
+          },
+          "stationName": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "locationId": {
+            "type": "string"
+          },
+          "printerType": {
+            "type": "string"
+          },
+          "scaleType": {
+            "type": "string"
+          },
+          "scannerType": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "isAvailable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "facilityId",
+          "stationCode"
+        ]
+      },
+      "UpdatePackingStationDto": {
+        "type": "object",
+        "properties": {
+          "stationName": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "locationId": {
+            "type": "string"
+          },
+          "printerType": {
+            "type": "string"
+          },
+          "scaleType": {
+            "type": "string"
+          },
+          "scannerType": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "isAvailable": {
+            "type": "boolean"
+          }
+        }
+      },
       "CreateTransferDto": {
         "type": "object",
         "properties": {
@@ -4034,6 +11069,34 @@
           "transferType",
           "toLocationId"
         ]
+      },
+      "WebReceiveTransferDto": {
+        "type": "object",
+        "properties": {
+          "lpnNumber": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "lpnNumber"
+        ]
+      },
+      "UpdateTransferLineDto": {
+        "type": "object",
+        "properties": {
+          "quantityRequested": {
+            "type": "number"
+          },
+          "quantityShipped": {
+            "type": "number"
+          },
+          "quantityReceived": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
       },
       "ReceiveLpnTransferDto": {
         "type": "object",
@@ -4076,6 +11139,56 @@
           "facilityId",
           "scopeType",
           "countMethod"
+        ]
+      },
+      "AdhocCountDto": {
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string"
+          },
+          "scopeType": {
+            "type": "string"
+          },
+          "scopeIdentifier": {
+            "type": "string"
+          },
+          "countMethod": {
+            "type": "string"
+          },
+          "autoAdjust": {
+            "type": "boolean"
+          },
+          "locationIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "facilityId",
+          "scopeType",
+          "countMethod",
+          "locationIds"
+        ]
+      },
+      "BatchSubmitLinesDto": {
+        "type": "object",
+        "properties": {
+          "countId": {
+            "type": "string"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "countId",
+          "lines"
         ]
       },
       "SubmitCountLineDto": {

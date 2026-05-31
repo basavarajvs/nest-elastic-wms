@@ -7,18 +7,39 @@ import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './common/cache/redis.module';
 import { CoreClientModule } from './core-client/core-client.module';
 import { QuotaModule } from './quota/quota.module';
-import { QuotaSyncRetryProcessor, QUOTA_SYNC_QUEUE } from './quota/quota-sync-retry.processor';
+import { QuotaSyncRetryProcessor } from './quota/quota-sync-retry.processor';
+import { QUOTA_SYNC_QUEUE } from './quota/quota-sync.constants';
 import { CaslModule } from './casl/casl.module';
 import { SeedModule } from './seed/seed.module';
 import { WarehouseModule } from './warehouse/warehouse.module';
 import { RfSessionModule } from './rf/rf.module';
 import { HealthModule } from './health/health.module';
-import { ProductsModule } from './products/products.module';
+import { ProductsModule } from './master-data/products/products.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { InboundModule } from './inbound/inbound.module';
+import { LpnModule } from './warehouse/lpn/lpn.module';
+import { PurchaseOrderModule } from './inbound/purchase-orders/purchase-order.module';
+import { CustomerReturnModule } from './inbound/customer-returns/customer-return.module';
+import { LoadModule } from './outbound/loads/load.module';
+import { CarrierModule } from './master-data/carriers/carrier.module';
+import { BrandModule } from './master-data/brands/brand.module';
+import { CategoryModule } from './master-data/categories/category.module';
+import { VendorModule } from './master-data/vendors/vendor.module';
+import { ClientModule } from './master-data/clients/client.module';
+import { InventoryReservationsModule } from './inventory/inventory-reservations/inventory-reservations.module';
+import { ShippingLabelsModule } from './outbound/shipping-labels/shipping-labels.module';
+import { ProductPackagingModule } from './master-data/product-packaging/product-packaging.module';
+import { ProductSuppliersModule } from './master-data/product-suppliers/product-suppliers.module';
+import { ProductClientAssignmentsModule } from './master-data/product-client-assignments/product-client-assignments.module';
+import { ExceptionManagementModule } from './master-data/exception-management/exception-management.module';
+import { LoadingDocksModule } from './outbound/loading-docks/loading-docks.module';
+import { NonConformanceReportsModule } from './quality/non-conformance-reports/non-conformance-reports.module';
+import { VasExecutionModule } from './outbound/vas-execution/vas-execution.module';
+import { CarrierRateShoppingModule } from './outbound/carrier-rate-shopping/carrier-rate-shopping.module';
 import { OutboundModule } from './outbound/outbound.module';
+import { PackingStationsModule } from './outbound/packing-stations/packing-stations.module';
 import { TransfersModule } from './transfers/transfers.module';
-import { CycleCountModule } from './counts/counts.module';
+import { CycleCountModule } from './inventory/counts/counts.module';
 import { ApprovalsModule } from './approvals/approvals.module';
 import { CustomizationModule } from './customization/customization.module';
 import { NotificationModule } from './notifications/notification.module';
@@ -28,9 +49,8 @@ import { ScannerModule } from './scanner/scanner.module';
 import { ObservabilityModule } from './observability/observability.module';
 import { ClusterModule } from './cluster/cluster.module';
 import { SecurityModule } from './security/security.module';
-import { ShutdownService } from './lifecycle/shutdown.service';
+import { LifecycleModule } from './lifecycle/lifecycle.module';
 import { validationSchema } from './config/app.config';
-import { TenantResolutionMiddleware } from './common/middleware/tenant-resolution.middleware';
 import { ShutdownDrainMiddleware } from './common/middleware/shutdown-drain.middleware';
 import { TraceContextMiddleware } from './observability/trace-context.middleware';
 import { Rfc7807ExceptionFilter } from './common/filters/rfc7807-exception.filter';
@@ -72,15 +92,6 @@ import { validatePermissionRegistry } from './casl/permission-registry.bootstrap
       }),
       inject: [ConfigService],
     }),
-    BullModule.registerQueue({
-      name: QUOTA_SYNC_QUEUE,
-      defaultJobOptions: {
-        attempts: 5,
-        backoff: { type: 'exponential', delay: 300000 },
-        removeOnComplete: { age: 86400, count: 1000 },
-        removeOnFail: { age: 604800, count: 5000 },
-      },
-    }),
     PrismaModule,
     RedisModule,
     CoreClientModule,
@@ -93,7 +104,27 @@ import { validatePermissionRegistry } from './casl/permission-registry.bootstrap
     ProductsModule,
     InventoryModule,
     InboundModule,
+    LpnModule,
+    PurchaseOrderModule,
+    CustomerReturnModule,
+    LoadModule,
+    CarrierModule,
+    BrandModule,
+    CategoryModule,
+    VendorModule,
+    ClientModule,
+    InventoryReservationsModule,
+    ShippingLabelsModule,
+    ProductPackagingModule,
+    ProductSuppliersModule,
+    ProductClientAssignmentsModule,
+    ExceptionManagementModule,
+    LoadingDocksModule,
+    NonConformanceReportsModule,
+    VasExecutionModule,
+    CarrierRateShoppingModule,
     OutboundModule,
+    PackingStationsModule,
     TransfersModule,
     CycleCountModule,
     ApprovalsModule,
@@ -105,12 +136,12 @@ import { validatePermissionRegistry } from './casl/permission-registry.bootstrap
     ObservabilityModule,
     ClusterModule,
     SecurityModule,
+    LifecycleModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
     QuotaSyncRetryProcessor,
-    ShutdownService,
     {
       provide: APP_FILTER,
       useClass: Rfc7807ExceptionFilter,
@@ -148,7 +179,6 @@ export class AppModule implements NestModule, OnModuleInit {
   }
 
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(TenantResolutionMiddleware).forRoutes('*path');
     consumer.apply(ShutdownDrainMiddleware).forRoutes('*path');
     consumer.apply(TraceContextMiddleware).forRoutes('*path');
   }

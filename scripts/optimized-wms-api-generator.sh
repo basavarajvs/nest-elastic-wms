@@ -1,0 +1,666 @@
+#!/bin/bash
+
+# ============================================================================
+# WMS  — OpenAPI Client Generator
+# Generates TypeScript client code from the NestJS Swagger/OpenAPI spec
+# ============================================================================
+
+set -e
+
+# --- Configuration ---
+echo "╔════════════════════════════════════════════════════════════════╗"
+echo "║        WMS  — OpenAPI Client Generator               ║"
+echo "╚════════════════════════════════════════════════════════════════╝"
+echo ""
+
+# 1. Service Information — this project is the API source
+ALL_SERVICES=(
+    "wms-api:3001"
+)
+
+# 2. Directories (relative to project root, script lives in scripts/)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$PROJECT_DIR"
+
+GENERATED_DIR="./generated-client"
+SPEC_OUTPUT_DIR="$GENERATED_DIR/openapi-specs"
+API_DIR="$GENERATED_DIR/lib/api"
+TYPES_DIR="$GENERATED_DIR/lib/types"
+HTTP_DIR="$GENERATED_DIR/lib/http"
+HOOKS_DIR="$GENERATED_DIR/hooks"
+AI_PROMPTS_DIR="$GENERATED_DIR/ai-prompts"
+
+# 3. Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+# --- Helper Functions ---
+print_success() { echo -e "${GREEN}✓ $1${NC}"; }
+print_error()   { echo -e "${RED}✗ $1${NC}"; }
+print_warning() { echo -e "${YELLOW}⚠ $1${NC}"; }
+print_info()    { echo -e "${CYAN}ℹ $1${NC}"; }
+print_step()    { echo -e "\n${BLUE}▶ $1${NC}"; }
+
+# --- Prerequisites Check ---
+check_node() {
+    if ! command -v node &>/dev/null; then
+        print_error "Node.js is not installed"
+        exit 1
+    fi
+    print_success "Node.js $(node -v) detected"
+}
+
+check_pnpm() {
+    if command -v pnpm &>/dev/null; then
+        PKG_CMD="pnpm"
+        PKG_INSTALL="pnpm add"
+        print_success "pnpm $(pnpm -v) detected"
+    elif command -v npm &>/dev/null; then
+        PKG_CMD="npm"
+        PKG_INSTALL="npm install"
+        print_warning "npm detected (project uses pnpm, but npm will work)"
+    else
+        print_error "No package manager found (pnpm or npm required)"
+        exit 1
+    fi
+}
+
+install_orval() {
+    print_step "Checking for Orval (TypeScript API Client Generator)"
+
+    ORVAL_CMD="npx --yes orval"
+    print_success "Using npx orval"
+}
+
+# --- Service Management ---
+check_service_running() {
+    local service_name=$1
+    local port=$2
+
+    curl -sf --connect-timeout 2 "http://localhost:$port/health" >/dev/null 2>&1 && return 0
+    curl -sf --connect-timeout 2 "http://localhost:$port/api/docs-json" >/dev/null 2>&1 && return 0
+    return 1
+}
+
+start_service_if_needed() {
+    local service_name=$1
+    local port=$2
+
+    echo -n "  Checking $service_name on port $port... "
+
+    if check_service_running "$service_name" "$port"; then
+        print_success "Running"
+    else
+        print_warning "Not running"
+        echo ""
+        print_info "Starting the NestJS application..."
+        (pnpm run start &>/dev/null &)
+        echo -n "  Waiting for server to start on port $port..."
+        for i in $(seq 1 60); do
+            sleep 2
+            if check_service_running "$service_name" "$port"; then
+                print_success "Started"
+                break
+            fi
+            echo -n "."
+        done
+        if ! check_service_running "$service_name" "$port"; then
+            print_error "Server still not responding on port $port"
+            exit 1
+        fi
+    fi
+}
+
+# --- OpenAPI Spec Fetching ---
+fetch_openapi_spec() {
+    local service_name=$1
+    local port=$2
+    local output_file="$SPEC_OUTPUT_DIR/${service_name}.json"
+
+    # Try multiple common Swagger JSON endpoints
+    local endpoints=(
+        "http://localhost:$port/api/docs-json"
+        "http://localhost:$port/api/docs/openapi.json"
+        "http://localhost:$port/api/v1/docs/openapi.json"
+        "http://localhost:$port/swagger.json"
+        "http://localhost:$port/v3/api-docs"
+    )
+
+    for ep in "${endpoints[@]}"; do
+        echo -n "  Fetching OpenAPI spec from $ep... "
+        if curl -sf "$ep" -o "$output_file" 2>/dev/null; then
+            if [[ -s "$output_file" ]]; then
+                print_success "Downloaded from $ep"
+                return 0
+            fi
+        fi
+        echo "not found"
+    done
+
+    print_error "Failed to fetch OpenAPI spec (tried all endpoints)"
+    return 1
+}
+
+# --- Orval Config Generation ---
+generate_orval_config() {
+    local service_name=$1
+    local spec_file="$SPEC_OUTPUT_DIR/${service_name}.json"
+    local config_file="./orval.${service_name}.config.cjs"
+
+    cat > "$config_file" << 'CONFIGEOF'
+module.exports = {
+  'SERVICE_NAME': {
+    input: {
+      target: 'SPEC_FILE',
+    },
+    output: {
+      mode: 'tags-split',
+      target: 'API_DIR/SERVICE_NAME',
+      schemas: 'TYPES_DIR/SERVICE_NAME',
+      client: 'react-query',
+      clean: true,
+      prettier: true,
+      propertySortOrder: 'Alphabetical',
+      override: {
+        header: () => [
+    '/**',
+    ' * Generated by orval v8.12.3 🍺',
+    ' * Do not edit manually.',
+    ' * ElasticWMS API',
+    ' * Warehouse Management System API - Web, RF, and Integration endpoints',
+    ' * OpenAPI spec version: 1.0.0',
+    ' */',
+    '',
+  ].join('\n'),
+        operationName: (operation, route, verb) => {
+          const opId = operation.operationId;
+
+          if (opId) return opId;
+
+          const pathParts = route.split('/').filter(Boolean);
+          const relevantParts = pathParts.filter(p =>
+            p !== 'api' && !/^v\d+$/.test(p) && !p.includes('{')
+          );
+
+          if (relevantParts.length === 0) return opId || 'unknownOperation';
+
+          const lastPart = relevantParts[relevantParts.length - 1];
+          const hasIdParam = route.includes('{id}');
+          const method = verb.toLowerCase();
+
+          const resourcePascal = relevantParts
+            .flatMap(part => part.split('-'))
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join('');
+
+          if (method === 'get' && hasIdParam) return `get${resourcePascal}ById`;
+          if (method === 'get') return `getAll${resourcePascal}`;
+          if (method === 'post' && lastPart === 'search') return `search${resourcePascal}`;
+          if (method === 'post') return `create${resourcePascal}`;
+          if (method === 'put' || method === 'patch') return `update${resourcePascal}`;
+          if (method === 'delete') return `delete${resourcePascal}`;
+
+          return `${method}${resourcePascal}`;
+        },
+        mutator: {
+          path: 'HTTP_DIR/httpClient.ts',
+          name: 'customInstance',
+        },
+        query: {
+          useQuery: true,
+          useMutation: true,
+          signal: true,
+        },
+      },
+    },
+  },
+};
+CONFIGEOF
+
+    sed -i "s|SERVICE_NAME|${service_name}|g" "$config_file"
+    sed -i "s|SPEC_FILE|${spec_file}|g" "$config_file"
+    sed -i "s|API_DIR|${API_DIR}|g" "$config_file"
+    sed -i "s|TYPES_DIR|${TYPES_DIR}|g" "$config_file"
+    sed -i "s|HTTP_DIR|${HTTP_DIR}|g" "$config_file"
+
+    echo "$config_file"
+}
+
+# --- Code Generation with Orval ---
+generate_api_client() {
+    local service_name=$1
+
+    echo -n "  Generating API client for $service_name... "
+
+    local config_file
+    config_file=$(generate_orval_config "$service_name")
+    local log_file="/tmp/orval_${service_name}.log"
+
+    if $ORVAL_CMD --config "$config_file" > "$log_file" 2>&1; then
+        print_success "Generated"
+        rm -f "$config_file"
+        rm -f "$log_file"
+    else
+        print_error "Generation failed"
+        echo ""
+        print_warning "Orval output:"
+        cat "$log_file"
+        echo ""
+        rm -f "$config_file"
+        return 1
+    fi
+}
+
+# --- HTTP Client Setup ---
+create_http_client() {
+    print_step "Creating HTTP Client Configuration"
+
+    mkdir -p "$HTTP_DIR"
+
+    cat > "$HTTP_DIR/httpClient.ts" << 'EOF'
+import Axios, { AxiosRequestConfig, AxiosError } from 'axios';
+
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+
+export const AXIOS_INSTANCE = Axios.create({
+  baseURL: `${BASE_URL}/api/v1/wms`,
+  headers: { 'Content-Type': 'application/json' },
+});
+
+AXIOS_INSTANCE.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    const tenantCode = localStorage.getItem('tenant_code');
+    if (tenantCode) {
+      config.headers['X-Tenant-Code'] = tenantCode;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
+
+AXIOS_INSTANCE.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('auth_token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  },
+);
+
+export const customInstance = <T>(
+  config: AxiosRequestConfig,
+  options?: AxiosRequestConfig,
+): Promise<T> => {
+  const promise = AXIOS_INSTANCE({
+    ...config,
+    ...options,
+  }).then(({ data }) => data);
+
+  return promise;
+};
+
+export default customInstance;
+EOF
+
+    print_success "Created httpClient.ts"
+}
+
+create_query_client_config() {
+    print_step "Creating React Query Configuration"
+
+    cat > "$GENERATED_DIR/lib/queryClient.ts" << 'EOF'
+import { QueryClient } from '@tanstack/react-query';
+
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5,
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+    mutations: {
+      retry: 0,
+    },
+  },
+});
+EOF
+
+    print_success "Created queryClient.ts"
+}
+
+# --- AI Prompt Generation ---
+generate_ai_prompts() {
+    print_step "Generating AI Prompt Templates"
+
+    mkdir -p "$AI_PROMPTS_DIR"
+
+    cat > "$AI_PROMPTS_DIR/00-master-context.md" << 'EOF'
+# WMS  — API Client Context
+
+## Project Structure
+
+```
+generated-client/
+├── lib/
+│   ├── api/              # Generated API clients with React Query hooks
+│   ├── types/            # Generated TypeScript types from OpenAPI
+│   ├── http/             # HTTP client configuration
+│   └── queryClient.ts    # React Query configuration
+├── hooks/                # Custom React hooks
+└── ai-prompts/           # AI prompt templates
+```
+
+## API Details
+- **Base URL**: `http://localhost:3001/api/v1/wms`
+- **Auth**: JWT Bearer token or API Key
+- **Tenant**: `X-Tenant-Code` header required for most endpoints
+
+## Generated Files
+
+EOF
+
+    for item in "${SELECTED_SERVICES[@]}"; do
+        IFS=':' read -r service_name port <<< "$item"
+        cat >> "$AI_PROMPTS_DIR/00-master-context.md" << EOF
+
+### ${service_name}
+- **API Client**: \`${API_DIR}/${service_name}\`
+- **Types**: \`${TYPES_DIR}/${service_name}/*.ts\`
+- **Hooks**: Auto-generated React Query hooks
+
+EOF
+    done
+
+    cat >> "$AI_PROMPTS_DIR/00-master-context.md" << 'EOF'
+
+## Usage
+1. Import types: `import { TypeName } from '@/lib/types/service-name'`
+2. Use hooks: `import { useGetResource } from '@/lib/api/service-name'`
+3. HTTP client auto-includes auth token & tenant code
+EOF
+
+    print_success "Created 00-master-context.md"
+
+    cat > "$AI_PROMPTS_DIR/01-design-system.md" << 'EOF'
+# Design System for shadcn/ui Components
+
+## Colors
+- Primary: `blue-600` (#2563eb)
+- Success: `green-600` (#16a34a)
+- Warning: `amber-500` (#f59e0b)
+- Danger: `red-600` (#dc2626)
+- Background: `gray-50` (#f9fafb)
+- Text Primary: `gray-900`
+- Text Secondary: `gray-600`
+
+## Component Patterns
+
+### Cards
+```tsx
+<Card className="bg-white rounded-lg shadow-sm border border-gray-200">
+  <CardHeader className="pb-3">
+    <CardTitle className="text-lg font-semibold">Title</CardTitle>
+  </CardHeader>
+  <CardContent className="space-y-4">{/* Content */}</CardContent>
+</Card>
+```
+
+### Tables
+```tsx
+<Table>
+  <TableHeader className="bg-gray-50">
+    <TableRow>
+      <TableHead>Column</TableHead>
+    </TableRow>
+  </TableHeader>
+  <TableBody>
+    <TableRow className="hover:bg-gray-50">
+      <TableCell>Data</TableCell>
+    </TableRow>
+  </TableBody>
+</Table>
+```
+
+### Status Badges
+```tsx
+<Badge className="bg-green-100 text-green-800">Active</Badge>
+<Badge className="bg-amber-100 text-amber-800">Pending</Badge>
+<Badge className="bg-red-100 text-red-800">Inactive</Badge>
+```
+
+## Spacing
+- Page padding: `p-6`
+- Card padding: `p-6`
+- Section gaps: `space-y-4` or `gap-4`
+
+## Typography
+- Page title: `text-2xl font-bold text-gray-900`
+- Section title: `text-xl font-semibold text-gray-900`
+- Card title: `text-lg font-semibold text-gray-900`
+- Body text: `text-sm text-gray-600`
+EOF
+
+    print_success "Created 01-design-system.md"
+
+    cat > "$AI_PROMPTS_DIR/02-component-generation-template.md" << 'EOF'
+# Component Generation Template
+
+## Template
+```
+Create a [FEATURE_NAME] component that:
+
+1. Uses the [HOOK_NAME] hook from @/lib/api/[SERVICE_NAME]
+2. Displays data in a [TABLE/CARD/LIST] format
+3. Includes [SEARCH/FILTER/PAGINATION] functionality
+4. Shows loading states with skeleton components
+5. Handles errors with toast notifications
+6. Follows the design system in ai-prompts/01-design-system.md
+
+Requirements:
+- Mobile responsive (use Tailwind breakpoints)
+- Accessible (proper ARIA labels)
+- TypeScript strict mode
+- Includes proper error boundaries
+
+File: src/components/features/[feature-name]/[ComponentName].tsx
+```
+
+## Example
+```
+Create a TenantList component that:
+
+1. Uses the useGetAllTenants hook from @/lib/api/wms-saas-core-api
+2. Displays tenants in a table: Name, Code, Status, Created
+3. Includes search by name and filter by status
+4. Shows loading skeleton during fetch
+5. Handles errors with toast
+
+Requirements:
+- Status badges: active (green), suspended (red), pending (amber)
+- Click row to view tenant details
+- Mobile: show cards instead of table
+
+File: src/components/features/tenants/TenantList.tsx
+```
+EOF
+
+    print_success "Created 02-component-generation-template.md"
+
+    local service_index=1
+    for item in "${SELECTED_SERVICES[@]}"; do
+        IFS=':' read -r service_name port <<< "$item"
+        local padded_index=$(printf "%02d" $((service_index + 2)))
+
+        cat > "$AI_PROMPTS_DIR/${padded_index}-${service_name}-usage.md" << EOF
+# ${service_name} API Usage
+
+## Generated Files
+- **API Client**: \`${API_DIR}/${service_name}\`
+- **Types**: \`${TYPES_DIR}/${service_name}/\`
+
+## Available Hooks
+Check the generated file at \`${API_DIR}/${service_name}\` for all available hooks.
+
+### Typical Pattern
+\`\`\`typescript
+import { useGetAllTenants, useCreateTenant } from '${API_DIR}/${service_name}';
+
+const { data, isLoading, error } = useGetAllTenants();
+const createMutation = useCreateTenant();
+
+createMutation.mutate(newData, {
+  onSuccess: () => { toast({ title: 'Success!' }); },
+  onError: (error) => { toast({ title: 'Error', variant: 'destructive' }); },
+});
+\`\`\`
+EOF
+
+        print_success "Created ${padded_index}-${service_name}-usage.md"
+        ((service_index++))
+    done
+}
+
+# --- Environment Setup ---
+create_env_example() {
+    print_step "Creating .env.example for generated client"
+
+    cat > "$GENERATED_DIR/.env.example" << 'EOF'
+# WMS  API Client Configuration
+VITE_API_BASE_URL=http://localhost:3001
+VITE_TENANT_CODE=your-tenant-code
+EOF
+
+    print_success "Created .env.example"
+}
+
+# --- Main Execution ---
+main() {
+    # Step 1: Prerequisites
+    print_step "Checking Prerequisites"
+    check_node
+    check_pnpm
+    install_orval
+    echo ""
+
+    # Step 2: Setup Directory Structure
+    print_step "Setting Up Directory Structure"
+    mkdir -p "$SPEC_OUTPUT_DIR"
+    mkdir -p "$API_DIR"
+    mkdir -p "$TYPES_DIR"
+    mkdir -p "$HTTP_DIR"
+    mkdir -p "$HOOKS_DIR"
+    mkdir -p "$AI_PROMPTS_DIR"
+    print_success "Directories created under $GENERATED_DIR"
+    echo ""
+
+    # Step 3: Select services (auto-select all for this project)
+    SELECTED_SERVICES=("${ALL_SERVICES[@]}")
+    print_info "Auto-selected service: ${ALL_SERVICES[0]}"
+    echo ""
+
+    # Step 4: Ensure Server is Running
+    print_step "Checking API Server"
+    for item in "${SELECTED_SERVICES[@]}"; do
+        IFS=':' read -r service_name port <<< "$item"
+        start_service_if_needed "$service_name" "$port"
+    done
+    echo ""
+
+    # Step 5: Fetch OpenAPI Spec
+    print_step "Fetching OpenAPI Specification"
+    for item in "${SELECTED_SERVICES[@]}"; do
+        IFS=':' read -r service_name port <<< "$item"
+        fetch_openapi_spec "$service_name" "$port" || {
+            print_error "Failed to fetch spec for $service_name"
+            exit 1
+        }
+    done
+    echo ""
+
+    # Step 6: Deduplicate Operation IDs in Spec
+    print_step "Deduplicating Operation IDs in OpenAPI Spec"
+    for item in "${SELECTED_SERVICES[@]}"; do
+        IFS=':' read -r service_name port <<< "$item"
+        local spec_file="$SPEC_OUTPUT_DIR/${service_name}.json"
+        node -e "
+const fs = require('fs');
+const spec = JSON.parse(fs.readFileSync('$spec_file', 'utf8'));
+const opIdCount = {};
+for (const [p, methods] of Object.entries(spec.paths)) {
+  for (const [method, details] of Object.entries(methods)) {
+    const opId = details.operationId;
+    if (!opId) continue;
+    if (!opIdCount[opId]) opIdCount[opId] = [];
+    opIdCount[opId].push({path: p, method});
+  }
+}
+for (const [opId, endpoints] of Object.entries(opIdCount)) {
+  if (endpoints.length > 1) {
+    console.log('  Duplicate: ' + opId + ' -> ' + endpoints.map((e,i) => (i===0?'keep':'v'+(i+1)+' suffix')).join(', '));
+    endpoints.slice(1).forEach((ep, i) => {
+      spec.paths[ep.path][ep.method].operationId = opId + '_v' + (i + 2);
+    });
+  }
+}
+fs.writeFileSync('$spec_file', JSON.stringify(spec, null, 2));
+" && print_success "Deduplicated operation IDs in $spec_file"
+    done
+    echo ""
+
+    # Step 7: Generate HTTP Client
+    create_http_client
+    create_query_client_config
+    echo ""
+
+    # Step 8: Generate API Clients
+    print_step "Generating TypeScript API Clients"
+    for item in "${SELECTED_SERVICES[@]}"; do
+        IFS=':' read -r service_name port <<< "$item"
+        generate_api_client "$service_name" || {
+            print_error "Failed to generate client for $service_name"
+        }
+    done
+    echo ""
+
+    # Step 9: Generate AI Prompts
+    generate_ai_prompts
+    echo ""
+
+    # Step 10: Setup Environment
+    create_env_example
+    echo ""
+
+    # Success Summary
+    echo ""
+    echo "╔════════════════════════════════════════════════════════════════╗"
+    echo "║                    ✓ Generation Complete!                      ║"
+    echo "╚════════════════════════════════════════════════════════════════╝"
+    echo ""
+    print_success "OpenAPI specs: $SPEC_OUTPUT_DIR"
+    print_success "Generated API clients: $API_DIR"
+    print_success "TypeScript types: $TYPES_DIR"
+    print_success "HTTP client: $HTTP_DIR/httpClient.ts"
+    print_success "AI prompts: $AI_PROMPTS_DIR"
+    echo ""
+    print_info "Service processed: ${SELECTED_SERVICES[0]}"
+    echo ""
+    print_info "To use the generated client in a frontend app:"
+    echo "  cp -r $GENERATED_DIR/* /path/to/frontend/src/"
+    echo ""
+    echo "  Install dependencies:"
+    echo "  ${CYAN}npm install axios @tanstack/react-query${NC}"
+    echo ""
+}
+
+main "$@"

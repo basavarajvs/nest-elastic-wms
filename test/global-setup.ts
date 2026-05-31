@@ -18,15 +18,28 @@ export default async function globalSetup(): Promise<void> {
   const schemaMatch = E2E_TEST_DB_URL.match(/\?schema=([a-zA-Z0-9_]+)/);
   const testSchema = schemaMatch ? schemaMatch[1] : 'e2e_test';
 
+  // ── Challenge 1: Connection pool isolation for E2E ──
+  // Inject pool_timeout and connection_limit into E2E_TEST_DB_URL to prevent
+  // SET LOCAL tenant context leaks between Jest test runners.
+  // Each test runner gets its own connection, preventing cross-test contamination.
+  const poolIsolatedUrl = E2E_TEST_DB_URL.includes('?')
+    ? E2E_TEST_DB_URL + '&pool_timeout=1000&connection_limit=1'
+    : E2E_TEST_DB_URL + '?pool_timeout=1000&connection_limit=1';
+
+  // Override DATABASE_URL for all subsequent Prisma connections
+  process.env.DATABASE_URL = poolIsolatedUrl;
+  process.env.E2E_TEST_DB_URL = poolIsolatedUrl;
+
   // Create schema if not exists
-  const client = new Client({ connectionString: E2E_TEST_DB_URL });
+  const client = new Client({ connectionString: poolIsolatedUrl });
   await client.connect();
   await client.query(`CREATE SCHEMA IF NOT EXISTS "${testSchema}"`);
   await client.end();
 
   // Run Prisma migrations on the test schema
-  const env = { ...process.env, DATABASE_URL: E2E_TEST_DB_URL };
+  const env = { ...process.env, DATABASE_URL: poolIsolatedUrl };
   execSync('pnpx prisma migrate deploy', { env, cwd: process.cwd(), stdio: 'inherit' });
 
   console.log('[global-setup] E2E test database ready.');
+  console.log(`[global-setup] Connection pool isolation: pool_timeout=1000&connection_limit=1`);
 }

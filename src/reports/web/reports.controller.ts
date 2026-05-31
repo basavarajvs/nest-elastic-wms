@@ -24,7 +24,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 @ApiTags('WMS-WEB', 'Analytics')
-@Controller('/api/v1/wms/web/reports')
+@Controller('web/reports')
 @UseGuards(CaslGuard, QuotaGuard)
 export class ReportsController {
   constructor(

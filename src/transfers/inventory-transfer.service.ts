@@ -2,7 +2,7 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { InventoryTransactionService } from '../inventory/inventory-transaction.service';
-import { CreateTransferDto, ReceiveLpnTransferDto } from './dtos/transfer.dto';
+import { CreateTransferDto, ReceiveLpnTransferDto, UpdateTransferLineDto } from './dtos/transfer.dto';
 
 @Injectable()
 export class InventoryTransferService {
@@ -213,5 +213,54 @@ export class InventoryTransferService {
       (this.prisma as any).inventoryTransfer.count({ where }),
     ]);
     return { data, total };
+  }
+
+  async listLines(tenantId: string, filters: {
+    transferId?: string;
+    productId?: string;
+    status?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ data: any[]; total: number }> {
+    const where: any = { tenantId };
+    if (filters.transferId) where.transferId = filters.transferId;
+    if (filters.productId) where.productId = filters.productId;
+    if (filters.status) where.status = filters.status;
+
+    const page = filters.page || 1;
+    const limit = Math.min(filters.limit || 50, 200);
+    const [data, total] = await Promise.all([
+      (this.prisma as any).inventoryTransferLine.findMany({
+        where, skip: (page - 1) * limit, take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      (this.prisma as any).inventoryTransferLine.count({ where }),
+    ]);
+    return { data, total };
+  }
+
+  async getLine(lineId: string, tenantId: string): Promise<any> {
+    const line = await (this.prisma as any).inventoryTransferLine.findFirst({
+      where: { id: lineId, tenantId },
+    });
+    if (!line) throw new BadRequestException('Transfer line not found');
+    return line;
+  }
+
+  async updateLine(lineId: string, dto: UpdateTransferLineDto, tenantId: string): Promise<any> {
+    const line = await (this.prisma as any).inventoryTransferLine.findFirst({
+      where: { id: lineId, tenantId },
+    });
+    if (!line) throw new BadRequestException('Transfer line not found');
+
+    return (this.prisma as any).inventoryTransferLine.update({
+      where: { id: lineId },
+      data: {
+        ...(dto.quantityRequested !== undefined && { quantityRequested: dto.quantityRequested }),
+        ...(dto.quantityShipped !== undefined && { quantityShipped: dto.quantityShipped }),
+        ...(dto.quantityReceived !== undefined && { quantityReceived: dto.quantityReceived }),
+        ...(dto.status !== undefined && { status: dto.status }),
+      },
+    });
   }
 }

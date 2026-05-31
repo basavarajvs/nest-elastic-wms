@@ -17,7 +17,7 @@ import { ComplianceNotificationGuard } from '../guards/compliance-notification.g
 import { NotificationAuditStreamerService } from '../notification-audit-streamer.service';
 
 @ApiTags('WMS-WEB')
-@Controller('/api/v1/wms/web/notifications')
+@Controller('web/notifications')
 export class NotificationAdminController {
   constructor(
     private readonly client: WmsNotificationClientService,

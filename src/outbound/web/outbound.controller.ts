@@ -15,7 +15,7 @@ import { QuotaCheck } from '../../common/decorators/quota-check.decorator';
 import { CaslGuard } from '../../common/guards/casl.guard';
 
 @ApiTags('WMS-WEB', 'Operations')
-@Controller('/api/v1/wms/web/outbound')
+@Controller('web/outbound')
 @UseGuards(CaslGuard)
 export class OutboundWebController {
   constructor(

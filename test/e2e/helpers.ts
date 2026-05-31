@@ -34,11 +34,11 @@ export async function bootstrapApp(): Promise<{
     }),
   );
 
-  // Disable global guards for testing (we test them explicitly)
-  app.useGlobalGuards();
-  app.useGlobalInterceptors();
-  app.useGlobalFilters();
-  app.useGlobalPipes();
+  // NOTE: Global guards/filters/interceptors are NOT disabled here.
+  // Guard chain tests verify the full pipeline includes CorrelationId, JwtAuth,
+  // TenantResolution, CaslAbilitiesGuard, SubscriptionGuard, QuotaGuard, etc.
+  // Disabling them would break guard chain verification.
+  // Each test that needs to bypass guards should mock its own route.
 
   await app.init();
   await app.getHttpAdapter().getInstance().ready();

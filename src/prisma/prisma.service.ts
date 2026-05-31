@@ -26,19 +26,11 @@ export class PrismaService
   }
 
   private async setTenantContext(tenantId: string): Promise<void> {
-    if (this.pgbouncerEnabled) {
-      await this.$executeRawUnsafe(`SELECT set_config('app.tenant_id', $1, true)`, tenantId);
-    } else {
-      await this.$executeRawUnsafe(`SET LOCAL app.tenant_id = $1`, tenantId);
-    }
+    await this.$executeRawUnsafe(`SELECT set_config('app.tenant_id', $1, true)`, tenantId);
   }
 
   private async resetTenantContext(): Promise<void> {
-    if (this.pgbouncerEnabled) {
-      await this.$executeRawUnsafe(`SELECT set_config('app.tenant_id', '', true)`);
-    } else {
-      await this.$executeRawUnsafe(`RESET app.tenant_id`).catch(() => {});
-    }
+    await this.$executeRawUnsafe(`SELECT set_config('app.tenant_id', '', true)`).catch(() => {});
   }
 
   async onModuleInit() {

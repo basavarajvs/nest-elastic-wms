@@ -5,7 +5,7 @@ import { ScannerTelemetryService } from './scanner-telemetry.service';
 import { TokenBucketRateLimiter } from '../common/rate-limiter/token-bucket.rate-limiter';
 import { PrismaService } from '../prisma/prisma.service';
 
-@Controller('/api/v1/wms/scanner')
+@Controller('scanner')
 export class ScannerController {
   private readonly logger = new Logger(ScannerController.name);
 

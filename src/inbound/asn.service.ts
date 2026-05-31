@@ -95,6 +95,24 @@ export class AsnService {
     return updated;
   }
 
+  async list(tenantId: string, filters: { status?: string; facilityId?: string; page?: number; limit?: number }): Promise<{ data: any[]; total: number }> {
+    const where: any = { tenantId };
+    if (filters.status) where.status = filters.status;
+    if (filters.facilityId) where.facilityId = filters.facilityId;
+
+    const page = filters.page || 1;
+    const limit = Math.min(filters.limit || 50, 200);
+    const [data, total] = await Promise.all([
+      (this.prisma as any).advanceShipNotice.findMany({
+        where, skip: (page - 1) * limit, take: limit,
+        include: { lines: true },
+        orderBy: { createdAt: 'desc' },
+      }),
+      (this.prisma as any).advanceShipNotice.count({ where }),
+    ]);
+    return { data, total };
+  }
+
   async previewReceive(asnId: string, tenantId: string): Promise<any> {
     const asn = await (this.prisma as any).advanceShipNotice.findFirst({
       where: { id: asnId, tenantId },

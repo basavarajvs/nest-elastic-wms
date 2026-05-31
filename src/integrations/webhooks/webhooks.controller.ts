@@ -10,7 +10,7 @@ import { AdapterFactory } from '../adapters/adapter-factory';
 import { TokenBucketRateLimiter } from '../../common/rate-limiter/token-bucket.rate-limiter';
 
 @ApiTags('WMS-INTEGRATIONS')
-@Controller('/api/v1/wms/webhooks')
+@Controller('webhooks')
 export class WebhooksController {
   private readonly logger = new Logger(WebhooksController.name);
 

@@ -13,7 +13,7 @@ import { RfAction } from '../../common/guards/rf-action.decorator';
 import { RfActionLightweightGuard } from '../../common/guards/rf-action-lightweight.guard';
 
 @ApiTags('WMS-RF')
-@Controller('/api/v1/wms/rf/inbound')
+@Controller('rf/inbound')
 @UseGuards(RfSessionGuard, RfActionLightweightGuard)
 export class InboundRfController {
   constructor(

@@ -17,7 +17,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../generated/prisma';
 
 const prisma = new PrismaClient();
 
@@ -183,7 +183,7 @@ async function migrateProducts(
 
     try {
       // Validate all rows in chunk
-      const validRows = [];
+      const validRows: Array<Record<string, any>> = [];
       for (const row of chunk) {
         const rowNum = rows.indexOf(row) + 2; // +2 for header + 0-index
         if (row['facility_type'] && !validateEnum(row['facility_type'], validFacilityTypes)) {
@@ -224,7 +224,7 @@ async function migrateProducts(
       if (validRows.length === 0) continue;
 
       // Single transaction per chunk — not Serializable to avoid deadlocks
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: any) => {
         await (tx as any).product.createMany({
           data: validRows,
           skipDuplicates: true,

@@ -11,7 +11,7 @@ import { RfAction } from '../../common/guards/rf-action.decorator';
 import { RfActionLightweightGuard } from '../../common/guards/rf-action-lightweight.guard';
 
 @ApiTags('WMS-RF')
-@Controller('/api/v1/wms/rf/inventory')
+@Controller('rf/inventory')
 @UseGuards(RfSessionGuard, RfActionLightweightGuard)
 export class InventoryRfController {
   constructor(

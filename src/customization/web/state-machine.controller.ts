@@ -45,7 +45,7 @@ export class WmsStateMachineController {
 
   @Post(':key/validate')
   @CheckAbility({ action: 'read', subject: 'WmsStateMachine' })
-  async validate(@Req() req: any, @Body('definition') definition: any) {
+  async validate(@Req() req: any, @Param('key') key: string, @Body('definition') definition: any) {
     await this.stateMachineService.validateDefinition(definition);
     return { valid: true };
   }

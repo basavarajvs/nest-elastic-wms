@@ -543,7 +543,7 @@ export const getNotificationRfControllerPollUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/notifications/poll`
+  return `/api/v1/wms/rf/notifications/poll`
 }
 
 export const NotificationRfController_poll = async ( options?: RequestInit): Promise<NotificationRfController_pollResponse> => {
@@ -563,7 +563,7 @@ export const NotificationRfController_poll = async ( options?: RequestInit): Pro
 
 export const getNotificationRfControllerPollQueryKey = () => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/notifications/poll`
+    'POST', `/api/v1/wms/rf/notifications/poll`
     ] as const;
     }
 
@@ -775,7 +775,7 @@ export const getInventoryRfControllerScanLocationUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/inventory/scan-location`
+  return `/api/v1/wms/rf/inventory/scan-location`
 }
 
 export const InventoryRfController_scanLocation = async ( options?: RequestInit): Promise<InventoryRfController_scanLocationResponse> => {
@@ -795,7 +795,7 @@ export const InventoryRfController_scanLocation = async ( options?: RequestInit)
 
 export const getInventoryRfControllerScanLocationQueryKey = () => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/inventory/scan-location`
+    'POST', `/api/v1/wms/rf/inventory/scan-location`
     ] as const;
     }
 
@@ -857,7 +857,7 @@ export const getInventoryRfControllerPutawayUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/inventory/transaction/putaway`
+  return `/api/v1/wms/rf/inventory/transaction/putaway`
 }
 
 export const InventoryRfController_putaway = async (createTransactionDto: CreateTransactionDto, options?: RequestInit): Promise<InventoryRfController_putawayResponse> => {
@@ -877,7 +877,7 @@ export const InventoryRfController_putaway = async (createTransactionDto: Create
 
 export const getInventoryRfControllerPutawayQueryKey = (createTransactionDto?: CreateTransactionDto,) => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/inventory/transaction/putaway`, createTransactionDto
+    'POST', `/api/v1/wms/rf/inventory/transaction/putaway`, createTransactionDto
     ] as const;
     }
 
@@ -939,7 +939,7 @@ export const getInventoryRfControllerPickUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/inventory/transaction/pick`
+  return `/api/v1/wms/rf/inventory/transaction/pick`
 }
 
 export const InventoryRfController_pick = async (createTransactionDto: CreateTransactionDto, options?: RequestInit): Promise<InventoryRfController_pickResponse> => {
@@ -959,7 +959,7 @@ export const InventoryRfController_pick = async (createTransactionDto: CreateTra
 
 export const getInventoryRfControllerPickQueryKey = (createTransactionDto?: CreateTransactionDto,) => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/inventory/transaction/pick`, createTransactionDto
+    'POST', `/api/v1/wms/rf/inventory/transaction/pick`, createTransactionDto
     ] as const;
     }
 
@@ -1021,7 +1021,7 @@ export const getInventoryRfControllerQuickAdjustmentUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/inventory/adjustment/quick`
+  return `/api/v1/wms/rf/inventory/adjustment/quick`
 }
 
 export const InventoryRfController_quickAdjustment = async (createTransactionDto: CreateTransactionDto, options?: RequestInit): Promise<InventoryRfController_quickAdjustmentResponse> => {
@@ -1041,7 +1041,7 @@ export const InventoryRfController_quickAdjustment = async (createTransactionDto
 
 export const getInventoryRfControllerQuickAdjustmentQueryKey = (createTransactionDto?: CreateTransactionDto,) => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/inventory/adjustment/quick`, createTransactionDto
+    'POST', `/api/v1/wms/rf/inventory/adjustment/quick`, createTransactionDto
     ] as const;
     }
 
@@ -1111,7 +1111,7 @@ export const getInventoryRfControllerLookupLotUrl = (lotNumber: string,
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/api/v1/wms/api/v1/wms/rf/inventory/lot/${lotNumber}?${stringifiedParams}` : `/api/v1/wms/api/v1/wms/rf/inventory/lot/${lotNumber}`
+  return stringifiedParams.length > 0 ? `/api/v1/wms/rf/inventory/lot/${lotNumber}?${stringifiedParams}` : `/api/v1/wms/rf/inventory/lot/${lotNumber}`
 }
 
 export const InventoryRfController_lookupLot = async (lotNumber: string,
@@ -1187,7 +1187,7 @@ export const getInboundRfControllerStartReceivingUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/inbound/receive/start`
+  return `/api/v1/wms/rf/inbound/receive/start`
 }
 
 export const InboundRfController_startReceiving = async ( options?: RequestInit): Promise<InboundRfController_startReceivingResponse> => {
@@ -1207,7 +1207,7 @@ export const InboundRfController_startReceiving = async ( options?: RequestInit)
 
 export const getInboundRfControllerStartReceivingQueryKey = () => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/inbound/receive/start`
+    'POST', `/api/v1/wms/rf/inbound/receive/start`
     ] as const;
     }
 
@@ -1269,7 +1269,7 @@ export const getInboundRfControllerReceiveScanUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/inbound/receive/scan`
+  return `/api/v1/wms/rf/inbound/receive/scan`
 }
 
 export const InboundRfController_receiveScan = async (rfReceiveDto: RfReceiveDto, options?: RequestInit): Promise<InboundRfController_receiveScanResponse> => {
@@ -1289,7 +1289,7 @@ export const InboundRfController_receiveScan = async (rfReceiveDto: RfReceiveDto
 
 export const getInboundRfControllerReceiveScanQueryKey = (rfReceiveDto?: RfReceiveDto,) => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/inbound/receive/scan`, rfReceiveDto
+    'POST', `/api/v1/wms/rf/inbound/receive/scan`, rfReceiveDto
     ] as const;
     }
 
@@ -1351,7 +1351,7 @@ export const getInboundRfControllerCompleteReceivingUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/inbound/receive/complete`
+  return `/api/v1/wms/rf/inbound/receive/complete`
 }
 
 export const InboundRfController_completeReceiving = async ( options?: RequestInit): Promise<InboundRfController_completeReceivingResponse> => {
@@ -1371,7 +1371,7 @@ export const InboundRfController_completeReceiving = async ( options?: RequestIn
 
 export const getInboundRfControllerCompleteReceivingQueryKey = () => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/inbound/receive/complete`
+    'POST', `/api/v1/wms/rf/inbound/receive/complete`
     ] as const;
     }
 
@@ -1433,7 +1433,7 @@ export const getInboundRfControllerQcScanUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/inbound/qc/scan`
+  return `/api/v1/wms/rf/inbound/qc/scan`
 }
 
 export const InboundRfController_qcScan = async ( options?: RequestInit): Promise<InboundRfController_qcScanResponse> => {
@@ -1453,7 +1453,7 @@ export const InboundRfController_qcScan = async ( options?: RequestInit): Promis
 
 export const getInboundRfControllerQcScanQueryKey = () => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/inbound/qc/scan`
+    'POST', `/api/v1/wms/rf/inbound/qc/scan`
     ] as const;
     }
 
@@ -1515,7 +1515,7 @@ export const getInboundRfControllerQcResultUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/inbound/qc/result`
+  return `/api/v1/wms/rf/inbound/qc/result`
 }
 
 export const InboundRfController_qcResult = async (qcRfResultDto: QcRfResultDto, options?: RequestInit): Promise<InboundRfController_qcResultResponse> => {
@@ -1535,7 +1535,7 @@ export const InboundRfController_qcResult = async (qcRfResultDto: QcRfResultDto,
 
 export const getInboundRfControllerQcResultQueryKey = (qcRfResultDto?: QcRfResultDto,) => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/inbound/qc/result`, qcRfResultDto
+    'POST', `/api/v1/wms/rf/inbound/qc/result`, qcRfResultDto
     ] as const;
     }
 
@@ -1597,7 +1597,7 @@ export const getInboundRfControllerGetNextPutawayUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/inbound/putaway/next`
+  return `/api/v1/wms/rf/inbound/putaway/next`
 }
 
 export const InboundRfController_getNextPutaway = async ( options?: RequestInit): Promise<InboundRfController_getNextPutawayResponse> => {
@@ -1672,7 +1672,7 @@ export const getInboundRfControllerConfirmPutawayUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/inbound/putaway/confirm`
+  return `/api/v1/wms/rf/inbound/putaway/confirm`
 }
 
 export const InboundRfController_confirmPutaway = async (confirmPutawayDto: ConfirmPutawayDto, options?: RequestInit): Promise<InboundRfController_confirmPutawayResponse> => {
@@ -1692,7 +1692,7 @@ export const InboundRfController_confirmPutaway = async (confirmPutawayDto: Conf
 
 export const getInboundRfControllerConfirmPutawayQueryKey = (confirmPutawayDto?: ConfirmPutawayDto,) => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/inbound/putaway/confirm`, confirmPutawayDto
+    'POST', `/api/v1/wms/rf/inbound/putaway/confirm`, confirmPutawayDto
     ] as const;
     }
 
@@ -1737,6 +1737,716 @@ export function useInboundRfControllerConfirmPutaway<TData = Awaited<ReturnType<
 
 
 
+export type ExceptionManagementRfController_reportExceptionResponse201 = {
+  data: void
+  status: 201
+}
+
+export type ExceptionManagementRfController_reportExceptionResponseSuccess = (ExceptionManagementRfController_reportExceptionResponse201) & {
+  headers: Headers;
+};
+;
+
+export type ExceptionManagementRfController_reportExceptionResponse = (ExceptionManagementRfController_reportExceptionResponseSuccess)
+
+export const getExceptionManagementRfControllerReportExceptionUrl = () => {
+
+
+
+
+  return `/api/v1/wms/rf/exceptions/report`
+}
+
+export const ExceptionManagementRfController_reportException = async ( options?: RequestInit): Promise<ExceptionManagementRfController_reportExceptionResponse> => {
+
+  return customInstance<ExceptionManagementRfController_reportExceptionResponse>(getExceptionManagementRfControllerReportExceptionUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getExceptionManagementRfControllerReportExceptionQueryKey = () => {
+    return [
+    'POST', `/api/v1/wms/rf/exceptions/report`
+    ] as const;
+    }
+
+
+export const getExceptionManagementRfControllerReportExceptionQueryOptions = <TData = Awaited<ReturnType<typeof ExceptionManagementRfController_reportException>>, TError = unknown>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof ExceptionManagementRfController_reportException>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExceptionManagementRfControllerReportExceptionQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof ExceptionManagementRfController_reportException>>> = ({ signal }) => ExceptionManagementRfController_reportException({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof ExceptionManagementRfController_reportException>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ExceptionManagementRfControllerReportExceptionQueryResult = NonNullable<Awaited<ReturnType<typeof ExceptionManagementRfController_reportException>>>
+export type ExceptionManagementRfControllerReportExceptionQueryError = unknown
+
+
+
+export function useExceptionManagementRfControllerReportException<TData = Awaited<ReturnType<typeof ExceptionManagementRfController_reportException>>, TError = unknown>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof ExceptionManagementRfController_reportException>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getExceptionManagementRfControllerReportExceptionQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+export type ExceptionManagementRfController_getMyReportsResponse200 = {
+  data: void
+  status: 200
+}
+
+export type ExceptionManagementRfController_getMyReportsResponseSuccess = (ExceptionManagementRfController_getMyReportsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type ExceptionManagementRfController_getMyReportsResponse = (ExceptionManagementRfController_getMyReportsResponseSuccess)
+
+export const getExceptionManagementRfControllerGetMyReportsUrl = () => {
+
+
+
+
+  return `/api/v1/wms/rf/exceptions/my-reports`
+}
+
+export const ExceptionManagementRfController_getMyReports = async ( options?: RequestInit): Promise<ExceptionManagementRfController_getMyReportsResponse> => {
+
+  return customInstance<ExceptionManagementRfController_getMyReportsResponse>(getExceptionManagementRfControllerGetMyReportsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+export const getExceptionManagementRfControllerGetMyReportsMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ExceptionManagementRfController_getMyReports>>, TError,void, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof ExceptionManagementRfController_getMyReports>>, TError,void, TContext> => {
+
+const mutationKey = ['exceptionManagementRfControllerGetMyReports'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ExceptionManagementRfController_getMyReports>>, void> = () => {
+
+
+          return  ExceptionManagementRfController_getMyReports(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ExceptionManagementRfControllerGetMyReportsMutationResult = NonNullable<Awaited<ReturnType<typeof ExceptionManagementRfController_getMyReports>>>
+
+    export type ExceptionManagementRfControllerGetMyReportsMutationError = unknown
+
+    export const useExceptionManagementRfControllerGetMyReports = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ExceptionManagementRfController_getMyReports>>, TError,void, TContext>, request?: SecondParameter<typeof customInstance>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof ExceptionManagementRfController_getMyReports>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getExceptionManagementRfControllerGetMyReportsMutationOptions(options));
+    }
+    export type ExceptionManagementRfController_getExceptionResponse200 = {
+  data: void
+  status: 200
+}
+
+export type ExceptionManagementRfController_getExceptionResponseSuccess = (ExceptionManagementRfController_getExceptionResponse200) & {
+  headers: Headers;
+};
+;
+
+export type ExceptionManagementRfController_getExceptionResponse = (ExceptionManagementRfController_getExceptionResponseSuccess)
+
+export const getExceptionManagementRfControllerGetExceptionUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/wms/rf/exceptions/${id}`
+}
+
+export const ExceptionManagementRfController_getException = async (id: string, options?: RequestInit): Promise<ExceptionManagementRfController_getExceptionResponse> => {
+
+  return customInstance<ExceptionManagementRfController_getExceptionResponse>(getExceptionManagementRfControllerGetExceptionUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+export const getExceptionManagementRfControllerGetExceptionMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ExceptionManagementRfController_getException>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof ExceptionManagementRfController_getException>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['exceptionManagementRfControllerGetException'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ExceptionManagementRfController_getException>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  ExceptionManagementRfController_getException(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ExceptionManagementRfControllerGetExceptionMutationResult = NonNullable<Awaited<ReturnType<typeof ExceptionManagementRfController_getException>>>
+
+    export type ExceptionManagementRfControllerGetExceptionMutationError = unknown
+
+    export const useExceptionManagementRfControllerGetException = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ExceptionManagementRfController_getException>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof ExceptionManagementRfController_getException>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getExceptionManagementRfControllerGetExceptionMutationOptions(options));
+    }
+    export type LoadingDocksRfController_getAvailableDocksResponse200 = {
+  data: void
+  status: 200
+}
+
+export type LoadingDocksRfController_getAvailableDocksResponseSuccess = (LoadingDocksRfController_getAvailableDocksResponse200) & {
+  headers: Headers;
+};
+;
+
+export type LoadingDocksRfController_getAvailableDocksResponse = (LoadingDocksRfController_getAvailableDocksResponseSuccess)
+
+export const getLoadingDocksRfControllerGetAvailableDocksUrl = () => {
+
+
+
+
+  return `/api/v1/wms/rf/loading-docks/available`
+}
+
+export const LoadingDocksRfController_getAvailableDocks = async ( options?: RequestInit): Promise<LoadingDocksRfController_getAvailableDocksResponse> => {
+
+  return customInstance<LoadingDocksRfController_getAvailableDocksResponse>(getLoadingDocksRfControllerGetAvailableDocksUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+export const getLoadingDocksRfControllerGetAvailableDocksMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof LoadingDocksRfController_getAvailableDocks>>, TError,void, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof LoadingDocksRfController_getAvailableDocks>>, TError,void, TContext> => {
+
+const mutationKey = ['loadingDocksRfControllerGetAvailableDocks'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof LoadingDocksRfController_getAvailableDocks>>, void> = () => {
+
+
+          return  LoadingDocksRfController_getAvailableDocks(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LoadingDocksRfControllerGetAvailableDocksMutationResult = NonNullable<Awaited<ReturnType<typeof LoadingDocksRfController_getAvailableDocks>>>
+
+    export type LoadingDocksRfControllerGetAvailableDocksMutationError = unknown
+
+    export const useLoadingDocksRfControllerGetAvailableDocks = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof LoadingDocksRfController_getAvailableDocks>>, TError,void, TContext>, request?: SecondParameter<typeof customInstance>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof LoadingDocksRfController_getAvailableDocks>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getLoadingDocksRfControllerGetAvailableDocksMutationOptions(options));
+    }
+    export type LoadingDocksRfController_assignDockResponse201 = {
+  data: void
+  status: 201
+}
+
+export type LoadingDocksRfController_assignDockResponseSuccess = (LoadingDocksRfController_assignDockResponse201) & {
+  headers: Headers;
+};
+;
+
+export type LoadingDocksRfController_assignDockResponse = (LoadingDocksRfController_assignDockResponseSuccess)
+
+export const getLoadingDocksRfControllerAssignDockUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/wms/rf/loading-docks/${id}/assign`
+}
+
+export const LoadingDocksRfController_assignDock = async (id: string, options?: RequestInit): Promise<LoadingDocksRfController_assignDockResponse> => {
+
+  return customInstance<LoadingDocksRfController_assignDockResponse>(getLoadingDocksRfControllerAssignDockUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getLoadingDocksRfControllerAssignDockQueryKey = (id: string,) => {
+    return [
+    'POST', `/api/v1/wms/rf/loading-docks/${id}/assign`
+    ] as const;
+    }
+
+
+export const getLoadingDocksRfControllerAssignDockQueryOptions = <TData = Awaited<ReturnType<typeof LoadingDocksRfController_assignDock>>, TError = unknown>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof LoadingDocksRfController_assignDock>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getLoadingDocksRfControllerAssignDockQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof LoadingDocksRfController_assignDock>>> = ({ signal }) => LoadingDocksRfController_assignDock(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof LoadingDocksRfController_assignDock>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type LoadingDocksRfControllerAssignDockQueryResult = NonNullable<Awaited<ReturnType<typeof LoadingDocksRfController_assignDock>>>
+export type LoadingDocksRfControllerAssignDockQueryError = unknown
+
+
+
+export function useLoadingDocksRfControllerAssignDock<TData = Awaited<ReturnType<typeof LoadingDocksRfController_assignDock>>, TError = unknown>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof LoadingDocksRfController_assignDock>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getLoadingDocksRfControllerAssignDockQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+export type LoadingDocksRfController_releaseDockResponse201 = {
+  data: void
+  status: 201
+}
+
+export type LoadingDocksRfController_releaseDockResponseSuccess = (LoadingDocksRfController_releaseDockResponse201) & {
+  headers: Headers;
+};
+;
+
+export type LoadingDocksRfController_releaseDockResponse = (LoadingDocksRfController_releaseDockResponseSuccess)
+
+export const getLoadingDocksRfControllerReleaseDockUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/wms/rf/loading-docks/${id}/release`
+}
+
+export const LoadingDocksRfController_releaseDock = async (id: string, options?: RequestInit): Promise<LoadingDocksRfController_releaseDockResponse> => {
+
+  return customInstance<LoadingDocksRfController_releaseDockResponse>(getLoadingDocksRfControllerReleaseDockUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getLoadingDocksRfControllerReleaseDockQueryKey = (id: string,) => {
+    return [
+    'POST', `/api/v1/wms/rf/loading-docks/${id}/release`
+    ] as const;
+    }
+
+
+export const getLoadingDocksRfControllerReleaseDockQueryOptions = <TData = Awaited<ReturnType<typeof LoadingDocksRfController_releaseDock>>, TError = unknown>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof LoadingDocksRfController_releaseDock>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getLoadingDocksRfControllerReleaseDockQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof LoadingDocksRfController_releaseDock>>> = ({ signal }) => LoadingDocksRfController_releaseDock(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof LoadingDocksRfController_releaseDock>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type LoadingDocksRfControllerReleaseDockQueryResult = NonNullable<Awaited<ReturnType<typeof LoadingDocksRfController_releaseDock>>>
+export type LoadingDocksRfControllerReleaseDockQueryError = unknown
+
+
+
+export function useLoadingDocksRfControllerReleaseDock<TData = Awaited<ReturnType<typeof LoadingDocksRfController_releaseDock>>, TError = unknown>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof LoadingDocksRfController_releaseDock>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getLoadingDocksRfControllerReleaseDockQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+export type VasExecutionRfController_getMyTasksResponse200 = {
+  data: void
+  status: 200
+}
+
+export type VasExecutionRfController_getMyTasksResponseSuccess = (VasExecutionRfController_getMyTasksResponse200) & {
+  headers: Headers;
+};
+;
+
+export type VasExecutionRfController_getMyTasksResponse = (VasExecutionRfController_getMyTasksResponseSuccess)
+
+export const getVasExecutionRfControllerGetMyTasksUrl = () => {
+
+
+
+
+  return `/api/v1/wms/rf/vas-tasks/my-tasks`
+}
+
+export const VasExecutionRfController_getMyTasks = async ( options?: RequestInit): Promise<VasExecutionRfController_getMyTasksResponse> => {
+
+  return customInstance<VasExecutionRfController_getMyTasksResponse>(getVasExecutionRfControllerGetMyTasksUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+export const getVasExecutionRfControllerGetMyTasksMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof VasExecutionRfController_getMyTasks>>, TError,void, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof VasExecutionRfController_getMyTasks>>, TError,void, TContext> => {
+
+const mutationKey = ['vasExecutionRfControllerGetMyTasks'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof VasExecutionRfController_getMyTasks>>, void> = () => {
+
+
+          return  VasExecutionRfController_getMyTasks(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VasExecutionRfControllerGetMyTasksMutationResult = NonNullable<Awaited<ReturnType<typeof VasExecutionRfController_getMyTasks>>>
+
+    export type VasExecutionRfControllerGetMyTasksMutationError = unknown
+
+    export const useVasExecutionRfControllerGetMyTasks = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof VasExecutionRfController_getMyTasks>>, TError,void, TContext>, request?: SecondParameter<typeof customInstance>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof VasExecutionRfController_getMyTasks>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getVasExecutionRfControllerGetMyTasksMutationOptions(options));
+    }
+    export type VasExecutionRfController_startTaskResponse201 = {
+  data: void
+  status: 201
+}
+
+export type VasExecutionRfController_startTaskResponseSuccess = (VasExecutionRfController_startTaskResponse201) & {
+  headers: Headers;
+};
+;
+
+export type VasExecutionRfController_startTaskResponse = (VasExecutionRfController_startTaskResponseSuccess)
+
+export const getVasExecutionRfControllerStartTaskUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/wms/rf/vas-tasks/${id}/start`
+}
+
+export const VasExecutionRfController_startTask = async (id: string, options?: RequestInit): Promise<VasExecutionRfController_startTaskResponse> => {
+
+  return customInstance<VasExecutionRfController_startTaskResponse>(getVasExecutionRfControllerStartTaskUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getVasExecutionRfControllerStartTaskQueryKey = (id: string,) => {
+    return [
+    'POST', `/api/v1/wms/rf/vas-tasks/${id}/start`
+    ] as const;
+    }
+
+
+export const getVasExecutionRfControllerStartTaskQueryOptions = <TData = Awaited<ReturnType<typeof VasExecutionRfController_startTask>>, TError = unknown>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof VasExecutionRfController_startTask>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getVasExecutionRfControllerStartTaskQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof VasExecutionRfController_startTask>>> = ({ signal }) => VasExecutionRfController_startTask(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof VasExecutionRfController_startTask>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type VasExecutionRfControllerStartTaskQueryResult = NonNullable<Awaited<ReturnType<typeof VasExecutionRfController_startTask>>>
+export type VasExecutionRfControllerStartTaskQueryError = unknown
+
+
+
+export function useVasExecutionRfControllerStartTask<TData = Awaited<ReturnType<typeof VasExecutionRfController_startTask>>, TError = unknown>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof VasExecutionRfController_startTask>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getVasExecutionRfControllerStartTaskQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+export type VasExecutionRfController_completeTaskResponse201 = {
+  data: void
+  status: 201
+}
+
+export type VasExecutionRfController_completeTaskResponseSuccess = (VasExecutionRfController_completeTaskResponse201) & {
+  headers: Headers;
+};
+;
+
+export type VasExecutionRfController_completeTaskResponse = (VasExecutionRfController_completeTaskResponseSuccess)
+
+export const getVasExecutionRfControllerCompleteTaskUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/wms/rf/vas-tasks/${id}/complete`
+}
+
+export const VasExecutionRfController_completeTask = async (id: string, options?: RequestInit): Promise<VasExecutionRfController_completeTaskResponse> => {
+
+  return customInstance<VasExecutionRfController_completeTaskResponse>(getVasExecutionRfControllerCompleteTaskUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getVasExecutionRfControllerCompleteTaskQueryKey = (id: string,) => {
+    return [
+    'POST', `/api/v1/wms/rf/vas-tasks/${id}/complete`
+    ] as const;
+    }
+
+
+export const getVasExecutionRfControllerCompleteTaskQueryOptions = <TData = Awaited<ReturnType<typeof VasExecutionRfController_completeTask>>, TError = unknown>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof VasExecutionRfController_completeTask>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getVasExecutionRfControllerCompleteTaskQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof VasExecutionRfController_completeTask>>> = ({ signal }) => VasExecutionRfController_completeTask(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof VasExecutionRfController_completeTask>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type VasExecutionRfControllerCompleteTaskQueryResult = NonNullable<Awaited<ReturnType<typeof VasExecutionRfController_completeTask>>>
+export type VasExecutionRfControllerCompleteTaskQueryError = unknown
+
+
+
+export function useVasExecutionRfControllerCompleteTask<TData = Awaited<ReturnType<typeof VasExecutionRfController_completeTask>>, TError = unknown>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof VasExecutionRfController_completeTask>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getVasExecutionRfControllerCompleteTaskQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 export type OutboundRfController_getNextPickResponse200 = {
   data: void
   status: 200
@@ -1754,7 +2464,7 @@ export const getOutboundRfControllerGetNextPickUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/outbound/pick/next`
+  return `/api/v1/wms/rf/outbound/pick/next`
 }
 
 export const OutboundRfController_getNextPick = async ( options?: RequestInit): Promise<OutboundRfController_getNextPickResponse> => {
@@ -1829,7 +2539,7 @@ export const getOutboundRfControllerAssignTaskUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/outbound/pick/assign`
+  return `/api/v1/wms/rf/outbound/pick/assign`
 }
 
 export const OutboundRfController_assignTask = async ( options?: RequestInit): Promise<OutboundRfController_assignTaskResponse> => {
@@ -1849,7 +2559,7 @@ export const OutboundRfController_assignTask = async ( options?: RequestInit): P
 
 export const getOutboundRfControllerAssignTaskQueryKey = () => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/outbound/pick/assign`
+    'POST', `/api/v1/wms/rf/outbound/pick/assign`
     ] as const;
     }
 
@@ -1911,7 +2621,7 @@ export const getOutboundRfControllerScanLocationUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/outbound/pick/scan-location`
+  return `/api/v1/wms/rf/outbound/pick/scan-location`
 }
 
 export const OutboundRfController_scanLocation = async ( options?: RequestInit): Promise<OutboundRfController_scanLocationResponse> => {
@@ -1931,7 +2641,7 @@ export const OutboundRfController_scanLocation = async ( options?: RequestInit):
 
 export const getOutboundRfControllerScanLocationQueryKey = () => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/outbound/pick/scan-location`
+    'POST', `/api/v1/wms/rf/outbound/pick/scan-location`
     ] as const;
     }
 
@@ -1993,7 +2703,7 @@ export const getOutboundRfControllerScanProductUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/outbound/pick/scan-product`
+  return `/api/v1/wms/rf/outbound/pick/scan-product`
 }
 
 export const OutboundRfController_scanProduct = async ( options?: RequestInit): Promise<OutboundRfController_scanProductResponse> => {
@@ -2013,7 +2723,7 @@ export const OutboundRfController_scanProduct = async ( options?: RequestInit): 
 
 export const getOutboundRfControllerScanProductQueryKey = () => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/outbound/pick/scan-product`
+    'POST', `/api/v1/wms/rf/outbound/pick/scan-product`
     ] as const;
     }
 
@@ -2075,7 +2785,7 @@ export const getOutboundRfControllerConfirmPickUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/outbound/pick/confirm`
+  return `/api/v1/wms/rf/outbound/pick/confirm`
 }
 
 export const OutboundRfController_confirmPick = async (confirmPickDto: ConfirmPickDto, options?: RequestInit): Promise<OutboundRfController_confirmPickResponse> => {
@@ -2095,7 +2805,7 @@ export const OutboundRfController_confirmPick = async (confirmPickDto: ConfirmPi
 
 export const getOutboundRfControllerConfirmPickQueryKey = (confirmPickDto?: ConfirmPickDto,) => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/outbound/pick/confirm`, confirmPickDto
+    'POST', `/api/v1/wms/rf/outbound/pick/confirm`, confirmPickDto
     ] as const;
     }
 
@@ -2157,7 +2867,7 @@ export const getOutboundRfControllerRecoverPickUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/outbound/pick/recover`
+  return `/api/v1/wms/rf/outbound/pick/recover`
 }
 
 export const OutboundRfController_recoverPick = async (pickRecoverDto: PickRecoverDto, options?: RequestInit): Promise<OutboundRfController_recoverPickResponse> => {
@@ -2177,7 +2887,7 @@ export const OutboundRfController_recoverPick = async (pickRecoverDto: PickRecov
 
 export const getOutboundRfControllerRecoverPickQueryKey = (pickRecoverDto?: PickRecoverDto,) => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/outbound/pick/recover`, pickRecoverDto
+    'POST', `/api/v1/wms/rf/outbound/pick/recover`, pickRecoverDto
     ] as const;
     }
 
@@ -2239,7 +2949,7 @@ export const getOutboundRfControllerStartPackingUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/outbound/pack/start`
+  return `/api/v1/wms/rf/outbound/pack/start`
 }
 
 export const OutboundRfController_startPacking = async ( options?: RequestInit): Promise<OutboundRfController_startPackingResponse> => {
@@ -2259,7 +2969,7 @@ export const OutboundRfController_startPacking = async ( options?: RequestInit):
 
 export const getOutboundRfControllerStartPackingQueryKey = () => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/outbound/pack/start`
+    'POST', `/api/v1/wms/rf/outbound/pack/start`
     ] as const;
     }
 
@@ -2321,7 +3031,7 @@ export const getOutboundRfControllerScanLpnUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/outbound/pack/scan-lpn`
+  return `/api/v1/wms/rf/outbound/pack/scan-lpn`
 }
 
 export const OutboundRfController_scanLpn = async (scanLpnToContainerDto: ScanLpnToContainerDto, options?: RequestInit): Promise<OutboundRfController_scanLpnResponse> => {
@@ -2341,7 +3051,7 @@ export const OutboundRfController_scanLpn = async (scanLpnToContainerDto: ScanLp
 
 export const getOutboundRfControllerScanLpnQueryKey = (scanLpnToContainerDto?: ScanLpnToContainerDto,) => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/outbound/pack/scan-lpn`, scanLpnToContainerDto
+    'POST', `/api/v1/wms/rf/outbound/pack/scan-lpn`, scanLpnToContainerDto
     ] as const;
     }
 
@@ -2403,7 +3113,7 @@ export const getOutboundRfControllerSealContainerUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/outbound/pack/seal`
+  return `/api/v1/wms/rf/outbound/pack/seal`
 }
 
 export const OutboundRfController_sealContainer = async (sealContainerDto: SealContainerDto, options?: RequestInit): Promise<OutboundRfController_sealContainerResponse> => {
@@ -2423,7 +3133,7 @@ export const OutboundRfController_sealContainer = async (sealContainerDto: SealC
 
 export const getOutboundRfControllerSealContainerQueryKey = (sealContainerDto?: SealContainerDto,) => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/outbound/pack/seal`, sealContainerDto
+    'POST', `/api/v1/wms/rf/outbound/pack/seal`, sealContainerDto
     ] as const;
     }
 
@@ -2485,7 +3195,7 @@ export const getOutboundRfControllerLoadShipmentUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/outbound/ship/load`
+  return `/api/v1/wms/rf/outbound/ship/load`
 }
 
 export const OutboundRfController_loadShipment = async (shipmentLoadDto: ShipmentLoadDto, options?: RequestInit): Promise<OutboundRfController_loadShipmentResponse> => {
@@ -2505,7 +3215,7 @@ export const OutboundRfController_loadShipment = async (shipmentLoadDto: Shipmen
 
 export const getOutboundRfControllerLoadShipmentQueryKey = (shipmentLoadDto?: ShipmentLoadDto,) => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/outbound/ship/load`, shipmentLoadDto
+    'POST', `/api/v1/wms/rf/outbound/ship/load`, shipmentLoadDto
     ] as const;
     }
 
@@ -2567,7 +3277,7 @@ export const getOutboundRfControllerDispatchUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/outbound/ship/dispatch`
+  return `/api/v1/wms/rf/outbound/ship/dispatch`
 }
 
 export const OutboundRfController_dispatch = async ( options?: RequestInit): Promise<OutboundRfController_dispatchResponse> => {
@@ -2587,7 +3297,7 @@ export const OutboundRfController_dispatch = async ( options?: RequestInit): Pro
 
 export const getOutboundRfControllerDispatchQueryKey = () => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/outbound/ship/dispatch`
+    'POST', `/api/v1/wms/rf/outbound/ship/dispatch`
     ] as const;
     }
 
@@ -2649,7 +3359,7 @@ export const getOutboundRfControllerPrintGenericLabelUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/outbound/ship/print-generic-label`
+  return `/api/v1/wms/rf/outbound/ship/print-generic-label`
 }
 
 export const OutboundRfController_printGenericLabel = async ( options?: RequestInit): Promise<OutboundRfController_printGenericLabelResponse> => {
@@ -2669,7 +3379,7 @@ export const OutboundRfController_printGenericLabel = async ( options?: RequestI
 
 export const getOutboundRfControllerPrintGenericLabelQueryKey = () => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/outbound/ship/print-generic-label`
+    'POST', `/api/v1/wms/rf/outbound/ship/print-generic-label`
     ] as const;
     }
 
@@ -2714,7 +3424,157 @@ export function useOutboundRfControllerPrintGenericLabel<TData = Awaited<ReturnT
 
 
 
-export type TransferRfController_initiateResponse201 = {
+export type PackingStationsRfController_getAvailableStationsResponse200 = {
+  data: void
+  status: 200
+}
+
+export type PackingStationsRfController_getAvailableStationsResponseSuccess = (PackingStationsRfController_getAvailableStationsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type PackingStationsRfController_getAvailableStationsResponse = (PackingStationsRfController_getAvailableStationsResponseSuccess)
+
+export const getPackingStationsRfControllerGetAvailableStationsUrl = () => {
+
+
+
+
+  return `/api/v1/wms/rf/packing-stations/available`
+}
+
+export const PackingStationsRfController_getAvailableStations = async ( options?: RequestInit): Promise<PackingStationsRfController_getAvailableStationsResponse> => {
+
+  return customInstance<PackingStationsRfController_getAvailableStationsResponse>(getPackingStationsRfControllerGetAvailableStationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+export const getPackingStationsRfControllerGetAvailableStationsMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof PackingStationsRfController_getAvailableStations>>, TError,void, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof PackingStationsRfController_getAvailableStations>>, TError,void, TContext> => {
+
+const mutationKey = ['packingStationsRfControllerGetAvailableStations'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof PackingStationsRfController_getAvailableStations>>, void> = () => {
+
+
+          return  PackingStationsRfController_getAvailableStations(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PackingStationsRfControllerGetAvailableStationsMutationResult = NonNullable<Awaited<ReturnType<typeof PackingStationsRfController_getAvailableStations>>>
+
+    export type PackingStationsRfControllerGetAvailableStationsMutationError = unknown
+
+    export const usePackingStationsRfControllerGetAvailableStations = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof PackingStationsRfController_getAvailableStations>>, TError,void, TContext>, request?: SecondParameter<typeof customInstance>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof PackingStationsRfController_getAvailableStations>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getPackingStationsRfControllerGetAvailableStationsMutationOptions(options));
+    }
+    export type PackingStationsRfController_getStationResponse200 = {
+  data: void
+  status: 200
+}
+
+export type PackingStationsRfController_getStationResponseSuccess = (PackingStationsRfController_getStationResponse200) & {
+  headers: Headers;
+};
+;
+
+export type PackingStationsRfController_getStationResponse = (PackingStationsRfController_getStationResponseSuccess)
+
+export const getPackingStationsRfControllerGetStationUrl = (stationCode: string,) => {
+
+
+
+
+  return `/api/v1/wms/rf/packing-stations/${stationCode}`
+}
+
+export const PackingStationsRfController_getStation = async (stationCode: string, options?: RequestInit): Promise<PackingStationsRfController_getStationResponse> => {
+
+  return customInstance<PackingStationsRfController_getStationResponse>(getPackingStationsRfControllerGetStationUrl(stationCode),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+export const getPackingStationsRfControllerGetStationMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof PackingStationsRfController_getStation>>, TError,{stationCode: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof PackingStationsRfController_getStation>>, TError,{stationCode: string}, TContext> => {
+
+const mutationKey = ['packingStationsRfControllerGetStation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof PackingStationsRfController_getStation>>, {stationCode: string}> = (props) => {
+          const {stationCode} = props ?? {};
+
+          return  PackingStationsRfController_getStation(stationCode,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PackingStationsRfControllerGetStationMutationResult = NonNullable<Awaited<ReturnType<typeof PackingStationsRfController_getStation>>>
+
+    export type PackingStationsRfControllerGetStationMutationError = unknown
+
+    export const usePackingStationsRfControllerGetStation = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof PackingStationsRfController_getStation>>, TError,{stationCode: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof PackingStationsRfController_getStation>>,
+        TError,
+        {stationCode: string},
+        TContext
+      > => {
+      return useMutation(getPackingStationsRfControllerGetStationMutationOptions(options));
+    }
+    export type TransferRfController_initiateResponse201 = {
   data: void
   status: 201
 }
@@ -2731,7 +3591,7 @@ export const getTransferRfControllerInitiateUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/transfers/initiate`
+  return `/api/v1/wms/rf/transfers/initiate`
 }
 
 export const TransferRfController_initiate = async ( options?: RequestInit): Promise<TransferRfController_initiateResponse> => {
@@ -2751,7 +3611,7 @@ export const TransferRfController_initiate = async ( options?: RequestInit): Pro
 
 export const getTransferRfControllerInitiateQueryKey = () => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/transfers/initiate`
+    'POST', `/api/v1/wms/rf/transfers/initiate`
     ] as const;
     }
 
@@ -2813,7 +3673,7 @@ export const getTransferRfControllerScanLpnUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/transfers/scan-lpn`
+  return `/api/v1/wms/rf/transfers/scan-lpn`
 }
 
 export const TransferRfController_scanLpn = async (receiveLpnTransferDto: ReceiveLpnTransferDto, options?: RequestInit): Promise<TransferRfController_scanLpnResponse> => {
@@ -2833,7 +3693,7 @@ export const TransferRfController_scanLpn = async (receiveLpnTransferDto: Receiv
 
 export const getTransferRfControllerScanLpnQueryKey = (receiveLpnTransferDto?: ReceiveLpnTransferDto,) => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/transfers/scan-lpn`, receiveLpnTransferDto
+    'POST', `/api/v1/wms/rf/transfers/scan-lpn`, receiveLpnTransferDto
     ] as const;
     }
 
@@ -2895,7 +3755,7 @@ export const getTransferRfControllerCompleteUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/transfers/complete`
+  return `/api/v1/wms/rf/transfers/complete`
 }
 
 export const TransferRfController_complete = async ( options?: RequestInit): Promise<TransferRfController_completeResponse> => {
@@ -2915,7 +3775,7 @@ export const TransferRfController_complete = async ( options?: RequestInit): Pro
 
 export const getTransferRfControllerCompleteQueryKey = () => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/transfers/complete`
+    'POST', `/api/v1/wms/rf/transfers/complete`
     ] as const;
     }
 
@@ -2977,7 +3837,7 @@ export const getCountRfControllerStartUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/cycle-counts/start`
+  return `/api/v1/wms/rf/cycle-counts/start`
 }
 
 export const CountRfController_start = async ( options?: RequestInit): Promise<CountRfController_startResponse> => {
@@ -2997,7 +3857,7 @@ export const CountRfController_start = async ( options?: RequestInit): Promise<C
 
 export const getCountRfControllerStartQueryKey = () => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/cycle-counts/start`
+    'POST', `/api/v1/wms/rf/cycle-counts/start`
     ] as const;
     }
 
@@ -3059,7 +3919,7 @@ export const getCountRfControllerScanLocationUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/cycle-counts/scan-location`
+  return `/api/v1/wms/rf/cycle-counts/scan-location`
 }
 
 export const CountRfController_scanLocation = async ( options?: RequestInit): Promise<CountRfController_scanLocationResponse> => {
@@ -3079,7 +3939,7 @@ export const CountRfController_scanLocation = async ( options?: RequestInit): Pr
 
 export const getCountRfControllerScanLocationQueryKey = () => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/cycle-counts/scan-location`
+    'POST', `/api/v1/wms/rf/cycle-counts/scan-location`
     ] as const;
     }
 
@@ -3141,7 +4001,7 @@ export const getCountRfControllerEnterQtyUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/cycle-counts/enter-qty`
+  return `/api/v1/wms/rf/cycle-counts/enter-qty`
 }
 
 export const CountRfController_enterQty = async (submitCountLineDto: SubmitCountLineDto, options?: RequestInit): Promise<CountRfController_enterQtyResponse> => {
@@ -3161,7 +4021,7 @@ export const CountRfController_enterQty = async (submitCountLineDto: SubmitCount
 
 export const getCountRfControllerEnterQtyQueryKey = (submitCountLineDto?: SubmitCountLineDto,) => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/cycle-counts/enter-qty`, submitCountLineDto
+    'POST', `/api/v1/wms/rf/cycle-counts/enter-qty`, submitCountLineDto
     ] as const;
     }
 
@@ -3223,7 +4083,7 @@ export const getCountRfControllerSubmitLineUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/cycle-counts/submit-line`
+  return `/api/v1/wms/rf/cycle-counts/submit-line`
 }
 
 export const CountRfController_submitLine = async (submitCountLineDto: SubmitCountLineDto, options?: RequestInit): Promise<CountRfController_submitLineResponse> => {
@@ -3243,7 +4103,7 @@ export const CountRfController_submitLine = async (submitCountLineDto: SubmitCou
 
 export const getCountRfControllerSubmitLineQueryKey = (submitCountLineDto?: SubmitCountLineDto,) => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/cycle-counts/submit-line`, submitCountLineDto
+    'POST', `/api/v1/wms/rf/cycle-counts/submit-line`, submitCountLineDto
     ] as const;
     }
 
@@ -3305,7 +4165,7 @@ export const getCountRfControllerCompleteUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/rf/cycle-counts/complete`
+  return `/api/v1/wms/rf/cycle-counts/complete`
 }
 
 export const CountRfController_complete = async ( options?: RequestInit): Promise<CountRfController_completeResponse> => {
@@ -3325,7 +4185,7 @@ export const CountRfController_complete = async ( options?: RequestInit): Promis
 
 export const getCountRfControllerCompleteQueryKey = () => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/rf/cycle-counts/complete`
+    'POST', `/api/v1/wms/rf/cycle-counts/complete`
     ] as const;
     }
 

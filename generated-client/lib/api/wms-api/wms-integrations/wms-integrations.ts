@@ -56,7 +56,7 @@ export const getWebhooksControllerShopifyWebhookUrl = (tenantCode: string,) => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/webhooks/shopify/${tenantCode}`
+  return `/api/v1/wms/webhooks/shopify/${tenantCode}`
 }
 
 /**
@@ -80,7 +80,7 @@ export const WebhooksController_shopifyWebhook = async (tenantCode: string, opti
 
 export const getWebhooksControllerShopifyWebhookQueryKey = (tenantCode: string,) => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/webhooks/shopify/${tenantCode}`
+    'POST', `/api/v1/wms/webhooks/shopify/${tenantCode}`
     ] as const;
     }
 
@@ -162,7 +162,7 @@ export const getWebhooksControllerWooCommerceWebhookUrl = (tenantCode: string,) 
 
 
 
-  return `/api/v1/wms/api/v1/wms/webhooks/woocommerce/${tenantCode}`
+  return `/api/v1/wms/webhooks/woocommerce/${tenantCode}`
 }
 
 /**
@@ -186,7 +186,7 @@ export const WebhooksController_wooCommerceWebhook = async (tenantCode: string, 
 
 export const getWebhooksControllerWooCommerceWebhookQueryKey = (tenantCode: string,) => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/webhooks/woocommerce/${tenantCode}`
+    'POST', `/api/v1/wms/webhooks/woocommerce/${tenantCode}`
     ] as const;
     }
 

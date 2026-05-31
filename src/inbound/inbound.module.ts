@@ -10,12 +10,14 @@ import { PutawayReconciliationJob } from './putaway-reconciliation.job';
 import { ZoneCapacityValidator } from './zone-capacity.validator';
 import { InboundWebController } from './web/inbound.controller';
 import { InboundRfController } from './rf/inbound.controller';
+import { InventoryModule } from '../inventory/inventory.module';
 
 @Module({
   imports: [
     BullModule.registerQueue(
       { name: 'putaway-generator' },
     ),
+    InventoryModule,
   ],
   controllers: [InboundWebController, InboundRfController],
   providers: [

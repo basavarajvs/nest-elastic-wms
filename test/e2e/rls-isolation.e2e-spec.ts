@@ -104,7 +104,7 @@ describe('RLS Cross-Tenant Isolation (e2e)', () => {
 
     // Count should only include Tenant A's products, not B's
     const ownCount = await (prisma as any).product.count({
-      where: { tenantId },
+      where: { tenantId: tenantA },
     });
 
     expect(Number(count)).toBeLessThanOrEqual(2); // Tenant A products only

@@ -4,7 +4,7 @@ import { AllocationService } from '../outbound/allocation.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AsnService } from '../inbound/asn.service';
 import { LpnService } from '../inbound/lpn.service';
-import { CycleCountService } from '../counts/cycle-count.service';
+import { CycleCountService } from '../inventory/counts/cycle-count.service';
 import { InventoryAdjustmentService } from '../inventory/inventory-adjustment.service';
 import { OrderService } from '../outbound/order.service';
 import { REDIS_CLIENT } from '../common/cache/redis.constants';

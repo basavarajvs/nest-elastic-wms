@@ -13,6 +13,7 @@ import { TenantCodeAuthGuard } from './tenant-code-auth.guard';
     SwaggerDocsGuard,
     TenantCodeAuthGuard,
     RfRateLimiterGuard,
+    WmsThrottlerGuard,
     {
       provide: APP_GUARD,
       useClass: WmsThrottlerGuard,

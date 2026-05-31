@@ -72,3 +72,28 @@ export class UpdateAsnStatusDto {
   @IsEnum(['CREATED', 'IN_TRANSIT', 'ARRIVED', 'IN_RECEIVING', 'PARTIALLY_RECEIVED', 'RECEIVED', 'CLOSED', 'CANCELLED'])
   status: string;
 }
+
+export class AsnFilterDto {
+  @IsOptional()
+  @ApiPropertyOptional({ type: String })
+  @IsString()
+  status?: string;
+
+  @IsOptional()
+  @ApiPropertyOptional({ type: String })
+  @IsUUID()
+  facilityId?: string;
+
+  @IsOptional()
+  @ApiPropertyOptional({ type: Number })
+  @Type(() => Number)
+  @IsNumber()
+  page?: number;
+
+  @IsOptional()
+  @ApiPropertyOptional({ type: Number })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  limit?: number;
+}

@@ -6,13 +6,11 @@
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },
-  "globalSetup": "./test/global-setup.ts",
-  "globalTeardown": "./test/global-teardown.ts",
-  "setupFilesAfterSetup": ["./test/utils/setup-e2e-context.ts"],
+  "globalSetup": "./global-setup.ts",
+  "globalTeardown": "./global-teardown.ts",
   "testTimeout": 30000,
   "maxConcurrency": 1,
   "maxWorkers": 1,
-  "testRunner": "jest-circus/runner",
   "bail": 1,
   "verbose": true
 }

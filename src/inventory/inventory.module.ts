@@ -9,6 +9,7 @@ import { InventoryReconciliationService } from './inventory-reconciliation.servi
 import { InventoryReconciliationProcessor } from './inventory-reconciliation.processor';
 import { InventoryAlertProcessor } from './inventory-alert.processor';
 import { InventorySeederService } from './inventory-seeder.service';
+import { InventoryLotService } from './inventory-lot.service';
 import { InventoryWebController } from './web/inventory.controller';
 import { InventoryRfController } from './rf/inventory.controller';
 import { HoldOverrideGuard } from '../common/guards/hold-override.guard';
@@ -31,6 +32,7 @@ import { HoldOverrideGuard } from '../common/guards/hold-override.guard';
     InventoryReconciliationProcessor,
     InventoryAlertProcessor,
     InventorySeederService,
+    InventoryLotService,
     HoldOverrideGuard,
   ],
   exports: [
@@ -38,6 +40,7 @@ import { HoldOverrideGuard } from '../common/guards/hold-override.guard';
     InventoryOnHandService,
     InventoryHoldService,
     InventoryAdjustmentService,
+    InventoryLotService,
     InventoryPolicyService,
     InventorySeederService,
   ],

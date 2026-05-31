@@ -7,7 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CoreClientService } from '../core-client/core-client.service';
 import { TenantContextService } from '../common/context/tenant-context.service';
 import { RedisPubSubService } from '../cluster/redis-pubsub.service';
-import { QUOTA_SYNC_QUEUE } from './quota-sync-retry.processor';
+import { QUOTA_SYNC_QUEUE } from './quota-sync.constants';
 
 @Injectable()
 export class QuotaInitService implements OnModuleInit {

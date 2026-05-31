@@ -171,7 +171,10 @@ export class OrderService {
     limit?: number;
   }): Promise<{ data: any[]; total: number }> {
     const where: any = { tenantId };
-    if (filters.status) where.status = filters.status;
+    if (filters.status) {
+      const statuses = filters.status.split(',').map((s: string) => s.trim().toUpperCase());
+      where.status = { in: statuses };
+    }
     if (filters.clientCode) where.clientCode = filters.clientCode;
     if (filters.facilityId) where.facilityId = filters.facilityId;
 

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Cron } from '@nestjs/schedule';
 
@@ -11,10 +11,15 @@ interface MigrationRecord {
 }
 
 @Injectable()
-export class MigrationStatusService {
+export class MigrationStatusService implements OnApplicationBootstrap {
   private readonly logger = new Logger(MigrationStatusService.name);
 
   constructor(private readonly prisma: PrismaService) {}
+
+  async onApplicationBootstrap(): Promise<void> {
+    await this.ensureMigrationStatusTable();
+    this.logger.log('Migration status table ensured');
+  }
 
   async ensureMigrationStatusTable(): Promise<void> {
     await this.prisma.$executeRawUnsafe(`

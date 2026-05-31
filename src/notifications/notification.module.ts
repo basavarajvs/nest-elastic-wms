@@ -54,6 +54,7 @@ const DLQ_QUEUE = `${MDC_QUEUE}-dlq`;
     WmsNotificationClientService,
     ComplianceNotificationGuard,
     NotificationAuditStreamerService,
+    BullModule,
   ],
 })
 export class NotificationModule {}

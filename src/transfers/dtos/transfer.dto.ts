@@ -2,6 +2,67 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsUUID, IsOptional, IsNumber, IsEnum, Min, IsArray, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
+export class WebReceiveTransferDto {
+  @ApiProperty({ type: String, required: true })
+  @IsString()
+  lpnNumber: string;
+}
+
+export class UpdateTransferLineDto {
+  @IsOptional()
+  @ApiPropertyOptional({ type: Number })
+  @IsNumber()
+  @Min(0)
+  quantityRequested?: number;
+
+  @IsOptional()
+  @ApiPropertyOptional({ type: Number })
+  @IsNumber()
+  @Min(0)
+  quantityShipped?: number;
+
+  @IsOptional()
+  @ApiPropertyOptional({ type: Number })
+  @IsNumber()
+  @Min(0)
+  quantityReceived?: number;
+
+  @IsOptional()
+  @ApiPropertyOptional({ type: String })
+  @IsString()
+  status?: string;
+}
+
+export class TransferLineFilterDto {
+  @IsOptional()
+  @ApiPropertyOptional({ type: String })
+  @IsUUID()
+  transferId?: string;
+
+  @IsOptional()
+  @ApiPropertyOptional({ type: String })
+  @IsUUID()
+  productId?: string;
+
+  @IsOptional()
+  @ApiPropertyOptional({ type: String })
+  @IsString()
+  status?: string;
+
+  @IsOptional()
+  @ApiPropertyOptional({ type: Number })
+  @Type(() => Number)
+  @IsNumber()
+  page?: number;
+
+  @IsOptional()
+  @ApiPropertyOptional({ type: Number })
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  limit?: number;
+}
+
 export class TransferLineDto {
   @ApiProperty({ type: String, required: true })
   @IsUUID()

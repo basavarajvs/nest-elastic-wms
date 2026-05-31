@@ -17,7 +17,7 @@ const RF_UNREAD_PREFIX = 'wms:rf:unread:';
 const MAX_PER_SESSION = 50;
 
 @ApiTags('WMS-RF')
-@Controller('/api/v1/wms/rf/notifications')
+@Controller('rf/notifications')
 export class NotificationRfController {
   constructor(
     @Inject(REDIS_CLIENT) private readonly redis: Redis,

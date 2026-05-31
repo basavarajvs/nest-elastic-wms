@@ -16,6 +16,7 @@ import { ReportProcessor } from './report.processor';
 import { ReportSchedulerJob } from './report-scheduler.job';
 import { ReportCacheInvalidatorService } from './report-cache-invalidator.service';
 import { REPORT_QUEUE, REPORT_DLQ } from './report.types';
+import { NotificationModule } from '../notifications/notification.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { REPORT_QUEUE, REPORT_DLQ } from './report.types';
         name: REPORT_DLQ,
       },
     ),
+    NotificationModule,
   ],
   controllers: [ReportsController],
   providers: [
@@ -51,6 +53,6 @@ import { REPORT_QUEUE, REPORT_DLQ } from './report.types';
     ReportSchedulerJob,
     ReportCacheInvalidatorService,
   ],
-  exports: [StockDailySnapshotService],
+  exports: [StockDailySnapshotService, BullModule],
 })
 export class ReportsModule {}

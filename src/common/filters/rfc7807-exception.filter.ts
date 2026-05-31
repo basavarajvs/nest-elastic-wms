@@ -27,7 +27,12 @@ export class Rfc7807ExceptionFilter implements ExceptionFilter {
     const reply = ctx.getResponse<FastifyReply>();
     const req = ctx.getRequest<any>();
     const traceId = req?.headers?.['x-request-id'] || req?.id || '';
-    const tenantId = req?.tenantContext?.getTenantId?.() || '';
+    let tenantId = '';
+    try {
+      tenantId = req?.tenantContext?.getTenantId?.() || '';
+    } catch {
+      tenantId = (req?.headers?.['x-tenant-id'] as string) || '';
+    }
 
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let problem: Record<string, any> = {

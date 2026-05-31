@@ -49,6 +49,7 @@ const INTEGRATION_QUEUES = [PRODUCT_SYNC_QUEUE, ORDER_SYNC_QUEUE, INVENTORY_SYNC
     InboundOrderSyncProcessor,
     BatchedInventorySyncService,
     TokenBucketRateLimiter,
+    BullModule,
   ],
 })
 export class IntegrationsModule {}

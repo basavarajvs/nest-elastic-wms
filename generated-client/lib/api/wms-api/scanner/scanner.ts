@@ -39,7 +39,7 @@ export const getScannerControllerLoginUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/scanner/session/login`
+  return `/api/v1/wms/scanner/session/login`
 }
 
 export const ScannerController_login = async ( options?: RequestInit): Promise<ScannerController_loginResponse> => {
@@ -59,7 +59,7 @@ export const ScannerController_login = async ( options?: RequestInit): Promise<S
 
 export const getScannerControllerLoginQueryKey = () => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/scanner/session/login`
+    'POST', `/api/v1/wms/scanner/session/login`
     ] as const;
     }
 
@@ -121,7 +121,7 @@ export const getScannerControllerValidateBarcodeUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/scanner/validate`
+  return `/api/v1/wms/scanner/validate`
 }
 
 export const ScannerController_validateBarcode = async ( options?: RequestInit): Promise<ScannerController_validateBarcodeResponse> => {
@@ -141,7 +141,7 @@ export const ScannerController_validateBarcode = async ( options?: RequestInit):
 
 export const getScannerControllerValidateBarcodeQueryKey = () => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/scanner/validate`
+    'POST', `/api/v1/wms/scanner/validate`
     ] as const;
     }
 
@@ -203,7 +203,7 @@ export const getScannerControllerLookupProductUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/scanner/lookup/product`
+  return `/api/v1/wms/scanner/lookup/product`
 }
 
 export const ScannerController_lookupProduct = async ( options?: RequestInit): Promise<ScannerController_lookupProductResponse> => {
@@ -223,7 +223,7 @@ export const ScannerController_lookupProduct = async ( options?: RequestInit): P
 
 export const getScannerControllerLookupProductQueryKey = () => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/scanner/lookup/product`
+    'POST', `/api/v1/wms/scanner/lookup/product`
     ] as const;
     }
 
@@ -285,7 +285,7 @@ export const getScannerControllerLookupLocationUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/scanner/lookup/location`
+  return `/api/v1/wms/scanner/lookup/location`
 }
 
 export const ScannerController_lookupLocation = async ( options?: RequestInit): Promise<ScannerController_lookupLocationResponse> => {
@@ -305,7 +305,7 @@ export const ScannerController_lookupLocation = async ( options?: RequestInit): 
 
 export const getScannerControllerLookupLocationQueryKey = () => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/scanner/lookup/location`
+    'POST', `/api/v1/wms/scanner/lookup/location`
     ] as const;
     }
 
@@ -367,7 +367,7 @@ export const getScannerControllerTelemetryUrl = () => {
 
 
 
-  return `/api/v1/wms/api/v1/wms/scanner/telemetry`
+  return `/api/v1/wms/scanner/telemetry`
 }
 
 export const ScannerController_telemetry = async ( options?: RequestInit): Promise<ScannerController_telemetryResponse> => {
@@ -387,7 +387,7 @@ export const ScannerController_telemetry = async ( options?: RequestInit): Promi
 
 export const getScannerControllerTelemetryQueryKey = () => {
     return [
-    'POST', `/api/v1/wms/api/v1/wms/scanner/telemetry`
+    'POST', `/api/v1/wms/scanner/telemetry`
     ] as const;
     }
 

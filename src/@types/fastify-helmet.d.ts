@@ -1,4 +1,4 @@
-declare module 'fastify-helmet' {
+declare module '@fastify/helmet' {
   import { FastifyPluginCallback } from 'fastify';
   interface HelmetOptions {
     contentSecurityPolicy?: boolean | { directives?: Record<string, (string | boolean)[]> };
