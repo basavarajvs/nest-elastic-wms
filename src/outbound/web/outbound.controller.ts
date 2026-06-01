@@ -8,7 +8,7 @@ import { PackingService } from '../packing.service';
 import { ShippingService } from '../shipping.service';
 import { CreateOrderDto } from '../dtos/order.dto';
 import { CreateWaveDto } from '../dtos/wave.dto';
-import { GenerateManifestDto } from '../dtos/shipping.dto';
+import { GenerateManifestDto, ShipmentLoadDto } from '../dtos/shipping.dto';
 import { AllocationOverrideDto } from '../dtos/allocation.dto';
 import { CheckAbility } from '../../common/decorators/check-ability.decorator';
 import { QuotaCheck } from '../../common/decorators/quota-check.decorator';
@@ -32,6 +32,12 @@ export class OutboundWebController {
   @CheckAbility({ action: 'create', subject: 'SalesOrder' })
   async createOrder(@Req() req: any, @Body() dto: CreateOrderDto) {
     return this.orderService.create(dto, req.tenantContext.getTenantId());
+  }
+
+  @Get('/orders/:id')
+  @CheckAbility({ action: 'read', subject: 'SalesOrder' })
+  async getOrder(@Req() req: any, @Param('id') id: string) {
+    return this.orderService.findById(id, req.tenantContext.getTenantId());
   }
 
   @Get('/orders')
@@ -67,6 +73,18 @@ export class OutboundWebController {
     @Query('facilityId') facilityId: string,
   ) {
     return this.waveService.getBoard(req.tenantContext.getTenantId(), { status, facilityId });
+  }
+
+  @Post('/waves/:id/generate-pick-tasks')
+  @CheckAbility({ action: 'update', subject: 'PickingWave' })
+  async generatePickTasks(@Req() req: any, @Param('id') id: string) {
+    return this.waveService.releaseWave(id, req.tenantContext.getTenantId());
+  }
+
+  @Post('/shipments/assign-to-load')
+  @CheckAbility({ action: 'update', subject: 'OutboundShipment' })
+  async assignShipmentToLoad(@Req() req: any, @Body() dto: ShipmentLoadDto) {
+    return this.shippingService.assignToLoad(dto, req.tenantContext.getTenantId());
   }
 
   @Post('/shipments/generate-manifest')

@@ -6,6 +6,7 @@ import { PutawayService } from '../putaway.service';
 import { QcService } from '../qc.service';
 import { CreateAsnDto, UpdateAsnStatusDto, AsnFilterDto } from '../dtos/asn.dto';
 import { CreateGrnFromAsnDto, CreateGrnAdHocDto, MarkGrnArrivedDto, CompleteInspectionDto, GrnFilterDto } from '../dtos/grn.dto';
+import { UpdatePutawayTaskStatusDto } from '../dtos/putaway.dto';
 import { QcInspectDto, QcDispositionDto } from '../dtos/qc.dto';
 import { CheckAbility } from '../../common/decorators/check-ability.decorator';
 import { CaslGuard } from '../../common/guards/casl.guard';
@@ -31,6 +32,12 @@ export class InboundWebController {
   @CheckAbility({ action: 'read', subject: 'AdvanceShipNotice' })
   async previewAsn(@Req() req: any, @Param('id') id: string) {
     return this.asnService.previewReceive(id, req.tenantContext.getTenantId());
+  }
+
+  @Get('/asn/:id')
+  @CheckAbility({ action: 'read', subject: 'AdvanceShipNotice' })
+  async getAsnDetail(@Req() req: any, @Param('id') id: string) {
+    return this.asnService.findById(id, req.tenantContext.getTenantId());
   }
 
   @Patch('/asn/:id/status')
@@ -88,6 +95,12 @@ export class InboundWebController {
     return this.putawayService.getTaskBoard(req.tenantContext.getTenantId(), {
       status, assignedToUserId, priority, page, limit,
     });
+  }
+
+  @Patch('/putaway/tasks/:id/status')
+  @CheckAbility({ action: 'update', subject: 'PutawayTask' })
+  async updatePutawayTaskStatus(@Req() req: any, @Param('id') id: string, @Body() dto: UpdatePutawayTaskStatusDto) {
+    return this.putawayService.updateTaskStatus(id, dto.status, req.tenantContext.getTenantId());
   }
 
   @Post('/disposition/apply')

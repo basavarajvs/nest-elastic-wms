@@ -43,7 +43,7 @@ export class AsnService {
         expectedArrivalDate: dto.expectedArrivalDate ? new Date(dto.expectedArrivalDate) : null,
         notes: dto.notes,
         lines: {
-          create: dto.lines.map((l) => ({
+          create: dto.lines.map((l, idx) => ({
             tenantId,
             facilityId: dto.facilityId,
             productId: l.productId,
@@ -51,6 +51,8 @@ export class AsnService {
             uomId: l.uomId,
             lotNumber: l.lotNumber,
             expiryDate: l.expiryDate ? new Date(l.expiryDate) : null,
+            lineNumber: idx + 1,
+            notes: l.notes || null,
           })),
         },
       },
@@ -111,6 +113,15 @@ export class AsnService {
       (this.prisma as any).advanceShipNotice.count({ where }),
     ]);
     return { data, total };
+  }
+
+  async findById(id: string, tenantId: string): Promise<any> {
+    const asn = await (this.prisma as any).advanceShipNotice.findFirst({
+      where: { id, tenantId },
+      include: { lines: true },
+    });
+    if (!asn) throw new BadRequestException('ASN not found');
+    return asn;
   }
 
   async previewReceive(asnId: string, tenantId: string): Promise<any> {

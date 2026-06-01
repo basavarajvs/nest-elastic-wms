@@ -157,6 +157,17 @@ export class PutawayService {
     });
   }
 
+  async updateTaskStatus(taskId: string, status: string, tenantId: string): Promise<any> {
+    const task = await (this.prisma as any).putawayTask.findFirst({
+      where: { id: taskId, tenantId },
+    });
+    if (!task) throw new BadRequestException('Putaway task not found');
+    return (this.prisma as any).putawayTask.update({
+      where: { id: taskId },
+      data: { status },
+    });
+  }
+
   async getTaskBoard(tenantId: string, filters: {
     status?: string;
     assignedToUserId?: string;

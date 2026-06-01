@@ -50,6 +50,8 @@ import { ObservabilityModule } from './observability/observability.module';
 import { ClusterModule } from './cluster/cluster.module';
 import { SecurityModule } from './security/security.module';
 import { LifecycleModule } from './lifecycle/lifecycle.module';
+import { ReplenishmentModule } from './inventory/replenishment/replenishment.module';
+import { HierarchyModule } from './warehouse/hierarchy/hierarchy.module';
 import { validationSchema } from './config/app.config';
 import { ShutdownDrainMiddleware } from './common/middleware/shutdown-drain.middleware';
 import { TraceContextMiddleware } from './observability/trace-context.middleware';
@@ -137,6 +139,8 @@ import { validatePermissionRegistry } from './casl/permission-registry.bootstrap
     ClusterModule,
     SecurityModule,
     LifecycleModule,
+    ReplenishmentModule,
+    HierarchyModule,
   ],
   controllers: [AppController],
   providers: [

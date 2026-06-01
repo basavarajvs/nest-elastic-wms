@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsUUID, IsOptional, IsEnum } from 'class-validator';
+import { IsString, IsUUID, IsOptional, IsEnum, IsNumber, Min } from 'class-validator';
 
 export enum HoldTypeDto {
   QC_PENDING = 'QC_PENDING',
@@ -9,6 +9,10 @@ export enum HoldTypeDto {
   CREDIT_HOLD = 'CREDIT_HOLD',
   CUSTOMER_REQUEST = 'CUSTOMER_REQUEST',
   QUARANTINE = 'QUARANTINE',
+  QA = 'QA',
+  DISPUTE = 'DISPUTE',
+  OTHER = 'OTHER',
+  CUSTOMER_HOLD = 'CUSTOMER_HOLD',
 }
 
 export class CreateHoldDto {
@@ -16,32 +20,43 @@ export class CreateHoldDto {
   @IsUUID()
   facilityId: string;
 
-  @IsOptional()
   @ApiProperty({ type: String, required: false })
+  @IsOptional()
   @IsUUID()
   productId?: string;
 
-  @IsOptional()
   @ApiProperty({ type: String, required: false })
+  @IsOptional()
   @IsUUID()
   locationId?: string;
 
-  @IsOptional()
   @ApiProperty({ type: String, required: false })
+  @IsOptional()
   @IsUUID()
   lotId?: string;
 
-  @ApiProperty({ required: true })
+  @ApiProperty({ type: Number, required: false, default: 0 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  quantity?: number;
+
+  @ApiProperty({ required: true, enum: HoldTypeDto })
   @IsEnum(HoldTypeDto)
   holdType: HoldTypeDto;
 
-  @IsOptional()
   @ApiProperty({ type: String, required: false })
+  @IsOptional()
   @IsString()
   reason?: string;
 
-  @IsOptional()
   @ApiProperty({ type: String, required: false })
+  @IsOptional()
+  @IsString()
+  notes?: string;
+
+  @ApiProperty({ type: String, required: false })
+  @IsOptional()
   @IsString()
   expiresAt?: string;
 }

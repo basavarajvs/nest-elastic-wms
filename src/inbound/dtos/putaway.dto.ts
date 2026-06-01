@@ -11,6 +11,12 @@ export class AssignTaskDto {
   userId: string;
 }
 
+export class UpdatePutawayTaskStatusDto {
+  @ApiProperty({ type: String, required: true })
+  @IsString()
+  status: string;
+}
+
 export class ConfirmPutawayDto {
   @ApiProperty({ type: String, required: true })
   @IsUUID()

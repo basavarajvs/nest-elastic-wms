@@ -163,6 +163,24 @@ export class OrderService {
     return order;
   }
 
+  async findById(orderId: string, tenantId: string): Promise<any> {
+    const order = await (this.prisma as any).salesOrder.findFirst({
+      where: { id: orderId, tenantId },
+      include: {
+        lines: {
+          include: {
+            allocations: true,
+            product: {
+              select: { id: true, name: true, productCode: true },
+            },
+          },
+        },
+      },
+    });
+    if (!order) throw new BadRequestException('Order not found');
+    return order;
+  }
+
   async list(tenantId: string, filters: {
     status?: string;
     clientCode?: string;

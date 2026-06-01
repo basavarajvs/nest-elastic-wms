@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, NotFoundException, Logger } from '@nes
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFacilityDto } from './dtos/create-facility.dto';
 import { UpdateFacilityDto } from './dtos/update-facility.dto';
+import { GenerateLocationsDto } from './dtos/generate-locations.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
@@ -117,5 +118,97 @@ export class WarehouseFacilityService {
       facilityCode: facility.facilityCode,
       tenantId,
     });
+  }
+
+  async generateLocations(facilityId: string, dto: GenerateLocationsDto, tenantId: string): Promise<any> {
+    const facility = await (this.prisma as any).warehouseFacility.findFirst({
+      where: { id: facilityId, tenantId },
+    });
+    if (!facility) throw new NotFoundException('Facility not found');
+
+    const results: any[] = [];
+
+    for (const zoneCfg of dto.zones) {
+      let zone = await (this.prisma as any).warehouseZone.findFirst({
+        where: { tenantId, facilityId, zoneCode: zoneCfg.code },
+      });
+
+      if (!zone) {
+        zone = await (this.prisma as any).warehouseZone.create({
+          data: { tenantId, facilityId, zoneCode: zoneCfg.code, name: zoneCfg.name, zoneType: 'BULK' },
+        });
+      }
+
+      for (const aisleCfg of zoneCfg.aisles) {
+        let aisle = await (this.prisma as any).aisle.findFirst({
+          where: { tenantId, facilityId, zoneId: zone.id, aisleCode: aisleCfg.code },
+        });
+        if (!aisle) {
+          aisle = await (this.prisma as any).aisle.create({
+            data: { tenantId, facilityId, zoneId: zone.id, aisleCode: aisleCfg.code },
+          });
+        }
+        results.push({ type: 'aisle', id: aisle.id, code: aisleCfg.code });
+
+        for (const bayCfg of aisleCfg.bays) {
+          let bay = await (this.prisma as any).bay.findFirst({
+            where: { tenantId, facilityId, zoneId: zone.id, aisleId: aisle.id, bayCode: bayCfg.code },
+          });
+          if (!bay) {
+            bay = await (this.prisma as any).bay.create({
+              data: { tenantId, facilityId, zoneId: zone.id, aisleId: aisle.id, bayCode: bayCfg.code },
+            });
+          }
+          results.push({ type: 'bay', id: bay.id, code: bayCfg.code });
+
+          let rack = await (this.prisma as any).rack.findFirst({
+            where: { tenantId, facilityId, zoneId: zone.id, aisleId: aisle.id, bayId: bay.id, rackCode: 'R01' },
+          });
+          if (!rack) {
+            rack = await (this.prisma as any).rack.create({
+              data: { tenantId, facilityId, zoneId: zone.id, aisleId: aisle.id, bayId: bay.id, rackCode: 'R01' },
+            });
+          }
+          results.push({ type: 'rack', id: rack.id, code: 'R01' });
+
+          for (const levelCfg of bayCfg.levels) {
+            let level = await (this.prisma as any).level.findFirst({
+              where: { tenantId, facilityId, zoneId: zone.id, aisleId: aisle.id, bayId: bay.id, rackId: rack.id, levelCode: levelCfg.code },
+            });
+            if (!level) {
+              level = await (this.prisma as any).level.create({
+                data: { tenantId, facilityId, zoneId: zone.id, aisleId: aisle.id, bayId: bay.id, rackId: rack.id, levelCode: levelCfg.code },
+              });
+            }
+            if (levelCfg.locationsPerLevel > 0) {
+              for (let i = 1; i <= levelCfg.locationsPerLevel; i++) {
+                const locCode = levelCfg.locationPrefix
+                  ? `${levelCfg.locationPrefix}-${String(i).padStart(2, '0')}`
+                  : `${aisleCfg.code}-${bayCfg.code}-${levelCfg.code}-${String(i).padStart(2, '0')}`;
+                const existingLoc = await (this.prisma as any).storageLocation.findFirst({
+                  where: { tenantId, facilityId, locationCode: locCode },
+                });
+                if (!existingLoc) {
+                  const loc = await (this.prisma as any).storageLocation.create({
+                    data: {
+                      tenantId, facilityId, zoneId: zone.id,
+                      locationCode: locCode,
+                      locationType: 'PALLET',
+                    },
+                  });
+                  results.push({ type: 'location', id: loc.id, code: locCode });
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    this.eventEmitter.emit('facility.locations.generated', {
+      facilityId, tenantId, totalCreated: results.length,
+    });
+
+    return { created: results.length, details: results };
   }
 }

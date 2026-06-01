@@ -10,6 +10,10 @@ import { PutawayReconciliationJob } from './putaway-reconciliation.job';
 import { ZoneCapacityValidator } from './zone-capacity.validator';
 import { InboundWebController } from './web/inbound.controller';
 import { InboundRfController } from './rf/inbound.controller';
+import { AsnLineWebController } from './web/asn-line.controller';
+import { GrnLineWebController } from './web/grn-line.controller';
+import { QualityWebController } from './web/quality.controller';
+import { QualityService } from './quality.service';
 import { InventoryModule } from '../inventory/inventory.module';
 
 @Module({
@@ -19,13 +23,14 @@ import { InventoryModule } from '../inventory/inventory.module';
     ),
     InventoryModule,
   ],
-  controllers: [InboundWebController, InboundRfController],
+  controllers: [InboundWebController, InboundRfController, AsnLineWebController, GrnLineWebController, QualityWebController],
   providers: [
     AsnService,
     GrnService,
     LpnService,
     PutawayService,
     QcService,
+    QualityService,
     PutawayGeneratorProcessor,
     PutawayReconciliationJob,
     ZoneCapacityValidator,

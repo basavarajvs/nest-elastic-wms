@@ -24,6 +24,11 @@ export class AsnLineDto {
   @ApiProperty({ type: String, required: false })
   @IsDateString()
   expiryDate?: string;
+
+  @IsOptional()
+  @ApiProperty({ type: String, required: false })
+  @IsString()
+  notes?: string;
 }
 
 export class CreateAsnDto {

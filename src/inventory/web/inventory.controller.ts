@@ -97,6 +97,12 @@ export class InventoryWebController {
     return this.holdService.createHold(dto, req.tenantContext.getTenantId(), req.user?.userId);
   }
 
+  @Get('/holds/:id')
+  @CheckAbility({ action: 'read', subject: 'InventoryHold' })
+  async getHold(@Req() req: any, @Param('id') id: string) {
+    return this.holdService.getHoldById(id, req.tenantContext.getTenantId());
+  }
+
   @Post('/holds/:id/release')
   @CheckAbility({ action: 'update', subject: 'InventoryHold' })
   async releaseHold(@Req() req: any, @Param('id') id: string, @Body() dto: ReleaseHoldDto) {

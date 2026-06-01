@@ -44,6 +44,8 @@ export class GrnService {
             uomId: l.uomId,
             lotNumber: l.lotNumber,
             expiryDate: l.expiryDate,
+            lineNumber: l.lineNumber || 0,
+            notes: l.notes || null,
           })),
         },
       },

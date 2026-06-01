@@ -105,10 +105,11 @@ model StorageLocation {
   parentId     String?          @map("parent_id") @db.Uuid
   locationCode String           @map("location_code") @db.VarChar(100)
   locationType LocationType     @map("location_type")
-  isActive     Boolean          @default(true) @map("is_active")
-  isBlocked    Boolean          @default(false) @map("is_blocked")
-  attributes   Json?            @db.Json
-  children     StorageLocation[] @relation("LocationHierarchy")
+  isActive         Boolean          @default(true) @map("is_active")
+  isBlocked        Boolean          @default(false) @map("is_blocked")
+  isPickLocation   Boolean          @default(false) @map("is_pick_location")
+  attributes       Json?            @db.Json
+  children         StorageLocation[] @relation("LocationHierarchy")
   parent       StorageLocation?  @relation("LocationHierarchy", fields: [parentId], references: [id])
   zone         WarehouseZone     @relation(fields: [zoneId], references: [id], onDelete: Cascade)
   createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz
@@ -189,12 +190,15 @@ model Product {
   trackSerial   Boolean            @default(false) @map("track_serial")
   trackExpiry   Boolean            @default(false) @map("track_expiry")
   shelfLifeDays Int?               @map("shelf_life_days")
-  velocityClass String?            @map("velocity_class") @db.VarChar(1)
-  attributes    ProductAttribute[]
+  velocityClass      String?            @map("velocity_class") @db.VarChar(1)
+  replenishmentMinQty Float?            @map("replenishment_min_qty") @db.Real
+  replenishmentMaxQty Float?            @map("replenishment_max_qty") @db.Real
+  attributes         ProductAttribute[]
   barcodes      ProductBarcode[]
   category      ProductCategory    @relation(fields: [categoryId], references: [id])
   brand         ProductBrand?      @relation(fields: [brandId], references: [id])
   baseUom       UnitOfMeasure      @relation(fields: [baseUomId], references: [id])
+  salesOrderLines SalesOrderLine[]
   createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime           @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -316,6 +320,10 @@ enum HoldType {
   CREDIT_HOLD      @map("CREDIT_HOLD")
   CUSTOMER_REQUEST @map("CUSTOMER_REQUEST")
   QUARANTINE       @map("QUARANTINE")
+  QA               @map("QA")
+  DISPUTE          @map("DISPUTE")
+  OTHER            @map("OTHER")
+  CUSTOMER_HOLD    @map("CUSTOMER_HOLD")
 
   @@schema("multitenant")
 }
@@ -411,9 +419,11 @@ model InventoryHold {
   productId        String?    @map("product_id") @db.Uuid
   locationId       String?    @map("location_id") @db.Uuid
   lotId            String?    @map("lot_id") @db.Uuid
+  quantity         Float      @default(0) @map("quantity")
   holdType         HoldType   @map("hold_type")
   status           HoldStatus @default(ACTIVE) @map("status")
   reason           String?    @map("reason") @db.Text
+  notes            String?    @map("notes") @db.Text
   placedByUserId   String     @map("placed_by_user_id") @db.Uuid
   releasedByUserId String?    @map("released_by_user_id") @db.Uuid
   releasedAt       DateTime?  @map("released_at") @db.Timestamptz
@@ -596,6 +606,8 @@ model AsnLine {
   uomId             String           @map("uom_id") @db.Uuid
   lotNumber         String?          @map("lot_number") @db.VarChar(100)
   expiryDate        DateTime?        @map("expiry_date") @db.Date
+  lineNumber        Int              @default(0) @map("line_number")
+  notes             String?          @map("notes") @db.Text
   status            String           @default("OPEN") @map("status") @db.VarChar(20)
   asn               AdvanceShipNotice @relation(fields: [asnId], references: [id], onDelete: Cascade)
   createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamptz
@@ -642,6 +654,8 @@ model GoodsReceiptLine {
   uomId             String           @map("uom_id") @db.Uuid
   lotNumber         String?          @map("lot_number") @db.VarChar(100)
   expiryDate        DateTime?        @map("expiry_date") @db.Date
+  lineNumber        Int              @default(0) @map("line_number")
+  notes             String?          @map("notes") @db.Text
   status            GrnLineStatus    @default(OPEN) @map("status")
   disposition       DispositionAction @default(ACCEPT) @map("disposition")
   qcResult          String?          @map("qc_result") @db.VarChar(20)
@@ -883,9 +897,12 @@ model SalesOrderLine {
   requestedQuantity  Float               @map("requested_quantity")
   fulfilledQuantity  Float               @default(0) @map("fulfilled_quantity")
   uomId              String              @map("uom_id") @db.Uuid
+  unitPrice          Float?              @map("unit_price")
+  lineNumber         Int                 @default(0) @map("line_number")
   status             OrderLineStatus     @default(CREATED) @map("status")
   notes              String?             @map("notes") @db.Text
   order              SalesOrder          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product            Product             @relation(fields: [productId], references: [id])
   allocations        InventoryAllocation[]
   pickingTasks       PickingTask[]
   createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz
@@ -2169,4 +2186,115 @@ model CarrierRate {
   @@index([tenantId, carrierId], name: "idx_carrier_rates_carrier")
   @@schema("multitenant")
   @@map("carrier_rates")
+}
+
+// ── P2: Warehouse Hierarchy — Aisle ──
+model Aisle {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  facilityId String  @map("facility_id") @db.Uuid
+  zoneId    String   @map("zone_id") @db.Uuid
+  aisleCode String   @map("aisle_code") @db.VarChar(20)
+  name      String?  @db.VarChar(255)
+  isActive  Boolean  @default(true) @map("is_active")
+  bays      Bay[]
+  zone      WarehouseZone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, facilityId, zoneId, aisleCode], name: "aisles_uq")
+  @@index([tenantId, facilityId, zoneId], name: "idx_aisles_zone")
+  @@schema("multitenant")
+  @@map("warehouse_aisles")
+}
+
+// ── P2: Warehouse Hierarchy — Bay ──
+model Bay {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  facilityId String  @map("facility_id") @db.Uuid
+  zoneId    String   @map("zone_id") @db.Uuid
+  aisleId   String   @map("aisle_id") @db.Uuid
+  bayCode   String   @map("bay_code") @db.VarChar(20)
+  name      String?  @db.VarChar(255)
+  isActive  Boolean  @default(true) @map("is_active")
+  racks     Rack[]
+  aisle     Aisle    @relation(fields: [aisleId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, facilityId, zoneId, aisleId, bayCode], name: "bays_uq")
+  @@index([tenantId, facilityId, aisleId], name: "idx_bays_aisle")
+  @@schema("multitenant")
+  @@map("warehouse_bays")
+}
+
+// ── P2: Warehouse Hierarchy — Rack ──
+model Rack {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  facilityId String  @map("facility_id") @db.Uuid
+  zoneId    String   @map("zone_id") @db.Uuid
+  aisleId   String   @map("aisle_id") @db.Uuid
+  bayId     String   @map("bay_id") @db.Uuid
+  rackCode  String   @map("rack_code") @db.VarChar(20)
+  name      String?  @db.VarChar(255)
+  isActive  Boolean  @default(true) @map("is_active")
+  levels    Level[]
+  bay       Bay      @relation(fields: [bayId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, facilityId, zoneId, bayId, rackCode], name: "racks_uq")
+  @@index([tenantId, facilityId, bayId], name: "idx_racks_bay")
+  @@schema("multitenant")
+  @@map("warehouse_racks")
+}
+
+// ── P2: Warehouse Hierarchy — Level ──
+model Level {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  facilityId String   @map("facility_id") @db.Uuid
+  zoneId     String   @map("zone_id") @db.Uuid
+  aisleId    String   @map("aisle_id") @db.Uuid
+  bayId      String   @map("bay_id") @db.Uuid
+  rackId     String   @map("rack_id") @db.Uuid
+  levelCode  String   @map("level_code") @db.VarChar(20)
+  name       String?  @db.VarChar(255)
+  isActive   Boolean  @default(true) @map("is_active")
+  rack       Rack     @relation(fields: [rackId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, facilityId, zoneId, rackId, levelCode], name: "levels_uq")
+  @@index([tenantId, facilityId, rackId], name: "idx_levels_rack")
+  @@schema("multitenant")
+  @@map("warehouse_levels")
+}
+
+// ── P2: Replenishment Task ──
+model ReplenishmentTask {
+  id                String   @id @default(uuid()) @db.Uuid
+  tenantId          String   @map("tenant_id") @db.Uuid
+  facilityId        String   @map("facility_id") @db.Uuid
+  taskNumber        String   @map("task_number") @db.VarChar(50)
+  productId         String   @map("product_id") @db.Uuid
+  fromLocationId    String   @map("from_location_id") @db.Uuid
+  toLocationId      String   @map("to_location_id") @db.Uuid
+  requestedQuantity Float    @map("requested_quantity")
+  fulfilledQuantity Float?   @default(0) @map("fulfilled_quantity")
+  status            String   @default("OPEN") @map("status") @db.VarChar(20)
+  priority          String   @default("MEDIUM") @map("priority") @db.VarChar(10)
+  assignedToUserId  String?  @map("assigned_to_user_id") @db.Uuid
+  notes             String?  @map("notes") @db.Text
+  completedAt       DateTime? @map("completed_at") @db.Timestamptz
+  completedByUserId String?  @map("completed_by_user_id") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([tenantId, facilityId, taskNumber], name: "replen_tasks_number_uq")
+  @@index([tenantId, facilityId, status], name: "idx_replen_tasks_status")
+  @@schema("multitenant")
+  @@map("replenishment_tasks")
 }

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateHoldDto, ReleaseHoldDto } from './dtos/hold.dto';
 
@@ -16,12 +16,32 @@ export class InventoryHoldService {
         productId: dto.productId,
         locationId: dto.locationId,
         lotId: dto.lotId,
+        quantity: dto.quantity ?? 0,
         holdType: dto.holdType,
         reason: dto.reason,
+        notes: dto.notes,
         placedByUserId: userId,
         expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
       },
     });
+  }
+
+  async getHoldById(holdId: string, tenantId: string): Promise<any> {
+    const hold = await (this.prisma as any).inventoryHold.findFirst({
+      where: { id: holdId, tenantId },
+    });
+    if (!hold) throw new NotFoundException('Hold not found');
+
+    let productName: string | undefined;
+    if (hold.productId) {
+      const product = await (this.prisma as any).product.findUnique({
+        where: { id: hold.productId },
+        select: { name: true },
+      });
+      productName = product?.name;
+    }
+
+    return { ...hold, productName };
   }
 
   async releaseHold(holdId: string, dto: ReleaseHoldDto, tenantId: string, userId: string): Promise<any> {
@@ -29,10 +49,10 @@ export class InventoryHoldService {
       const hold = await tx.inventoryHold.findFirst({
         where: { id: holdId, tenantId, status: 'ACTIVE' },
       });
-      if (!hold) throw new Error('Active hold not found');
+      if (!hold) throw new NotFoundException('Active hold not found');
 
       if (dto.disposition === 'RESTORE' && hold.lotId) {
-        const holdQty = hold.quantityOnHold ?? 1;
+        const holdQty = hold.quantity ?? 1;
         await tx.inventoryOnHand.updateMany({
           where: { tenantId, lotId: hold.lotId },
           data: { quantityOnHold: { decrement: holdQty } },

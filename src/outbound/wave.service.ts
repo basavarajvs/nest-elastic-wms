@@ -23,12 +23,17 @@ export class WaveService {
     });
     const waveNumber = `WV-${dto.facilityId.slice(0, 4).toUpperCase()}-${(count + 1).toString().padStart(4, '0')}`;
 
+    const criteria: any = dto.selectionCriteria || {};
+    if (dto.orderIds?.length) {
+      criteria.orderIds = dto.orderIds;
+    }
+
     return (this.prisma as any).pickingWave.create({
       data: {
         tenantId,
         facilityId: dto.facilityId,
         waveNumber,
-        selectionCriteria: dto.selectionCriteria || undefined,
+        selectionCriteria: criteria,
       },
     });
   }
@@ -40,14 +45,19 @@ export class WaveService {
     if (!wave) throw new BadRequestException('Wave not found');
 
     const criteria = (wave.selectionCriteria as any) || {};
+    const orderFilter: any = {
+      tenantId,
+      facilityId: wave.facilityId,
+      status: 'ALLOCATED',
+    };
+    if (criteria.orderIds?.length) {
+      orderFilter.id = { in: criteria.orderIds };
+    }
+    if (criteria.clientCode) {
+      orderFilter.clientCode = criteria.clientCode;
+    }
     const orders = await (this.prisma as any).salesOrder.findMany({
-      where: {
-        tenantId,
-        facilityId: wave.facilityId,
-        status: 'ALLOCATED',
-        ...(criteria.clientCode ? { clientCode: criteria.clientCode } : {}),
-        ...(criteria.carrier ? {} : {}),
-      },
+      where: orderFilter,
       include: {
         lines: {
           where: { status: 'ALLOCATED' },

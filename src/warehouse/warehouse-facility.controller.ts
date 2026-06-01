@@ -1,8 +1,9 @@
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, Req } from '@nestjs/common';
 import { WarehouseFacilityService } from './warehouse-facility.service';
 import { CreateFacilityDto } from './dtos/create-facility.dto';
 import { UpdateFacilityDto } from './dtos/update-facility.dto';
+import { GenerateLocationsDto } from './dtos/generate-locations.dto';
 import { CheckAbility } from '../common/decorators/check-ability.decorator';
 import { CaslGuard } from '../common/guards/casl.guard';
 import { RfSessionGuard } from '../common/guards/rf-session.guard';
@@ -47,6 +48,13 @@ export class WarehouseFacilityController {
   async delete(@Req() req: any, @Param('id') id: string) {
     await this.facilityService.delete(id, req.tenantContext.getTenantId());
     return { success: true };
+  }
+
+  @Post('web/facilities/:id/generate-locations')
+  @UseGuards(CaslGuard)
+  @CheckAbility({ action: 'create', subject: 'StorageLocation' })
+  async generateLocations(@Req() req: any, @Param('id') id: string, @Body() dto: GenerateLocationsDto) {
+    return this.facilityService.generateLocations(id, dto, req.tenantContext.getTenantId());
   }
 
   @Get('rf/facilities')

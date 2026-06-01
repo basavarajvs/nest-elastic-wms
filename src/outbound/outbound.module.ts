@@ -13,6 +13,7 @@ import { ReconcileAllocationsProcessor } from './reconcile-allocations.processor
 import { AllocationOverrideGuard } from './allocation-override.guard';
 import { OutboundWebController } from './web/outbound.controller';
 import { OutboundRfController } from './rf/outbound.controller';
+import { OrderLineWebController } from './web/order-line.controller';
 
 @Module({
   imports: [
@@ -23,7 +24,7 @@ import { OutboundRfController } from './rf/outbound.controller';
       { name: 'reconcile-allocations' },
     ),
   ],
-  controllers: [OutboundWebController, OutboundRfController],
+  controllers: [OutboundWebController, OutboundRfController, OrderLineWebController],
   providers: [
     OrderService,
     AllocationService,

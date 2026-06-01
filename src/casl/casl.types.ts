@@ -78,6 +78,7 @@ export type WmsSubjects =
   | 'WmsRule'
   | 'WmsBpmnProcess'
   | 'WmsExecutionInstance'
+  | 'Replenishment'
   | 'Integration'
   | 'Barcode'
   | 'ExternalEntityMapping'

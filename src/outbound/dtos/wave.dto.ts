@@ -10,4 +10,10 @@ export class CreateWaveDto {
   @ApiProperty({ required: false })
   @IsObject()
   selectionCriteria?: Record<string, any>;
+
+  @IsOptional()
+  @ApiProperty({ type: [String], required: false, description: 'Specific order IDs to include in this wave' })
+  @IsArray()
+  @IsUUID('4', { each: true })
+  orderIds?: string[];
 }
