@@ -9,5 +9,7 @@ import type { CreateWaveDtoSelectionCriteria } from './createWaveDtoSelectionCri
 
 export interface CreateWaveDto {
   facilityId: string;
+  /** Specific order IDs to include in this wave */
+  orderIds?: string[];
   selectionCriteria?: CreateWaveDtoSelectionCriteria;
 }

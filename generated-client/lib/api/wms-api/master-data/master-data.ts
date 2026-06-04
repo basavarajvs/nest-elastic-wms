@@ -23,6 +23,7 @@ import type {
   CreateFacilityDto,
   CreateLocationDto,
   CreateZoneDto,
+  GenerateLocationsDto,
   StorageLocationControllerFindByCodeRfParams,
   StorageLocationControllerFindByCodeWebParams,
   UpdateFacilityDto,
@@ -1071,6 +1072,92 @@ export function useWarehouseFacilityControllerDelete<TData = Awaited<ReturnType<
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getWarehouseFacilityControllerDeleteQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+export type WarehouseFacilityController_generateLocationsResponse201 = {
+  data: void
+  status: 201
+}
+
+export type WarehouseFacilityController_generateLocationsResponseSuccess = (WarehouseFacilityController_generateLocationsResponse201) & {
+  headers: Headers;
+};
+;
+
+export type WarehouseFacilityController_generateLocationsResponse = (WarehouseFacilityController_generateLocationsResponseSuccess)
+
+export const getWarehouseFacilityControllerGenerateLocationsUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/wms/web/facilities/${id}/generate-locations`
+}
+
+export const WarehouseFacilityController_generateLocations = async (id: string,
+    generateLocationsDto: GenerateLocationsDto, options?: RequestInit): Promise<WarehouseFacilityController_generateLocationsResponse> => {
+
+  return customInstance<WarehouseFacilityController_generateLocationsResponse>(getWarehouseFacilityControllerGenerateLocationsUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(generateLocationsDto)
+  }
+);}
+
+
+
+
+
+export const getWarehouseFacilityControllerGenerateLocationsQueryKey = (id: string,
+    generateLocationsDto?: GenerateLocationsDto,) => {
+    return [
+    'POST', `/api/v1/wms/web/facilities/${id}/generate-locations`, generateLocationsDto
+    ] as const;
+    }
+
+
+export const getWarehouseFacilityControllerGenerateLocationsQueryOptions = <TData = Awaited<ReturnType<typeof WarehouseFacilityController_generateLocations>>, TError = unknown>(id: string,
+    generateLocationsDto: GenerateLocationsDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof WarehouseFacilityController_generateLocations>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getWarehouseFacilityControllerGenerateLocationsQueryKey(id,generateLocationsDto);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof WarehouseFacilityController_generateLocations>>> = ({ signal }) => WarehouseFacilityController_generateLocations(id,generateLocationsDto, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof WarehouseFacilityController_generateLocations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type WarehouseFacilityControllerGenerateLocationsQueryResult = NonNullable<Awaited<ReturnType<typeof WarehouseFacilityController_generateLocations>>>
+export type WarehouseFacilityControllerGenerateLocationsQueryError = unknown
+
+
+
+export function useWarehouseFacilityControllerGenerateLocations<TData = Awaited<ReturnType<typeof WarehouseFacilityController_generateLocations>>, TError = unknown>(
+ id: string,
+    generateLocationsDto: GenerateLocationsDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof WarehouseFacilityController_generateLocations>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getWarehouseFacilityControllerGenerateLocationsQueryOptions(id,generateLocationsDto,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

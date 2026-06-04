@@ -5,13 +5,16 @@
  * Warehouse Management System API - Web, RF, and Integration endpoints
  * OpenAPI spec version: 1.0.0
  */
+import type { CreateHoldDtoHoldType } from './createHoldDtoHoldType.js';
 
 export interface CreateHoldDto {
   expiresAt?: string;
   facilityId: string;
-  holdType: string;
+  holdType: CreateHoldDtoHoldType;
   locationId?: string;
   lotId?: string;
+  notes?: string;
   productId?: string;
+  quantity?: number;
   reason?: string;
 }
