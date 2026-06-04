@@ -4,7 +4,7 @@ import Redis from 'ioredis';
 import { REDIS_CLIENT } from '../common/cache/redis.constants';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AllocationService } from './allocation.service';
-import { CreateWaveDto } from './dtos/wave.dto';
+import { CreateWaveDto, UpdateWaveStatusDto } from './dtos/wave.dto';
 
 @Injectable()
 export class WaveService {
@@ -145,6 +145,18 @@ export class WaveService {
 
     this.eventEmitter.emit('wave.released', { waveId, orders: orders.length, tasks: totalTasks, tenantId });
     return { waveId, ordersProcessed: orders.length, tasksGenerated: totalTasks };
+  }
+
+  async updateStatus(waveId: string, dto: UpdateWaveStatusDto, tenantId: string): Promise<any> {
+    const wave = await (this.prisma as any).pickingWave.findFirst({
+      where: { id: waveId, tenantId },
+    });
+    if (!wave) throw new BadRequestException('Wave not found');
+
+    return (this.prisma as any).pickingWave.update({
+      where: { id: waveId },
+      data: { status: dto.status },
+    });
   }
 
   async getBoard(tenantId: string, filters: {

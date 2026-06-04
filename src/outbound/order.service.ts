@@ -163,6 +163,30 @@ export class OrderService {
     return order;
   }
 
+  async updateStatus(orderId: string, dto: { status: string }, tenantId: string): Promise<any> {
+    const order = await (this.prisma as any).salesOrder.findFirst({
+      where: { id: orderId, tenantId },
+    });
+    if (!order) throw new BadRequestException('Order not found');
+
+    const updated = await (this.prisma as any).salesOrder.update({
+      where: { id: orderId },
+      data: { status: dto.status },
+    });
+
+    this.eventEmitter.emit('order.status_changed', {
+      orderId: updated.id,
+      orderNumber: updated.orderNumber || updated.id,
+      clientCode: updated.clientCode || '',
+      status: updated.status,
+      itemsCount: 0,
+      totalValue: updated.totalValue || 0,
+      tenantId: updated.tenantId,
+    });
+
+    return updated;
+  }
+
   async findById(orderId: string, tenantId: string): Promise<any> {
     const order = await (this.prisma as any).salesOrder.findFirst({
       where: { id: orderId, tenantId },

@@ -55,6 +55,49 @@ export class CompleteReplenishmentTaskDto {
   fulfilledQuantity: number;
 }
 
+export class CreateReplenishmentSuggestionDto {
+  @ApiProperty({ type: String })
+  @IsUUID()
+  productId: string;
+
+  @ApiProperty({ type: String })
+  @IsUUID()
+  fromLocationId: string;
+
+  @ApiProperty({ type: String })
+  @IsUUID()
+  toLocationId: string;
+
+  @ApiProperty({ type: Number })
+  @IsNumber()
+  @Min(1)
+  requestedQuantity: number;
+
+  @ApiPropertyOptional({ enum: ['LOW', 'MEDIUM', 'HIGH'] })
+  @IsOptional()
+  @IsString()
+  priority?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  notes?: string;
+}
+
+export class UpdateReplenishmentSuggestionDto {
+  @ApiPropertyOptional({ type: Number })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  replenishmentMinQty?: number;
+
+  @ApiPropertyOptional({ type: Number })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  replenishmentMaxQty?: number;
+}
+
 export class ReplenishmentFilterDto {
   @ApiPropertyOptional()
   @IsOptional()

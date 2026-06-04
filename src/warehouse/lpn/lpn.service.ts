@@ -256,6 +256,27 @@ export class LpnService {
       data: { locationId },
     });
 
+    try {
+      await (this.prisma as any).inventoryTransaction.create({
+        data: {
+          tenantId,
+          facilityId: lpn.facilityId,
+          productId: lpn.productId || '00000000-0000-0000-0000-000000000000',
+          locationId: lpn.locationId,
+          locationIdTo: locationId,
+          quantity: lpn.quantity || 0,
+          uomId: lpn.uomId,
+          transactionType: 'TRANSFER_OUT',
+          transactionStatus: 'COMPLETED',
+          referenceType: 'LPN',
+          referenceId: lpnId,
+          reasonCode: 'LPN_MOVE',
+        },
+      });
+    } catch (err: any) {
+      this.logger.warn(`Failed to record LPN movement transaction: ${err.message}`);
+    }
+
     this.eventEmitter.emit('lpn.moved', {
       lpnId, lpnNumber: lpn.lpnNumber,
       from: lpn.locationId, to: locationId, tenantId,
@@ -290,6 +311,20 @@ export class LpnService {
     const lpn = await this.findById(lpnId, tenantId);
     const children = await this.getChildren(lpnId, tenantId);
     return { ...lpn, children };
+  }
+
+  async getMovements(lpnId: string, tenantId: string) {
+    const lpn = await (this.prisma as any).lPN.findFirst({ where: { id: lpnId, tenantId } });
+    if (!lpn) throw new NotFoundException('LPN not found');
+
+    return (this.prisma as any).inventoryTransaction.findMany({
+      where: {
+        tenantId,
+        referenceType: 'LPN',
+        referenceId: lpnId,
+      },
+      orderBy: { transactionAt: 'desc' },
+    });
   }
 
   async delete(id: string, tenantId: string) {

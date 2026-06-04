@@ -1,6 +1,7 @@
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards, Req } from '@nestjs/common';
 import { LevelService } from '../services/level.service';
+import { CreateLevelDto, UpdateLevelDto } from '../dtos/hierarchy.dto';
 import { CheckAbility } from '../../../common/decorators/check-ability.decorator';
 import { CaslGuard } from '../../../common/guards/casl.guard';
 
@@ -20,15 +21,15 @@ export class LevelController {
   @Post()
   @CheckAbility({ action: 'create', subject: 'StorageLocation' })
   @ApiOperation({ summary: 'Create level' })
-  async create(@Req() req: any, @Body() body: { facilityId: string; zoneId: string; aisleId: string; bayId: string; rackId: string; levelCode: string; name?: string }) {
-    return this.levelService.create(req.tenantContext.getTenantId(), body.facilityId, body.zoneId, body.aisleId, body.bayId, body.rackId, body.levelCode, body.name);
+  async create(@Req() req: any, @Body() dto: CreateLevelDto) {
+    return this.levelService.create(req.tenantContext.getTenantId(), dto.facilityId, dto.zoneId, dto.aisleId, dto.bayId, dto.rackId, dto.levelCode, dto.name);
   }
 
   @Patch(':id')
   @CheckAbility({ action: 'update', subject: 'StorageLocation' })
   @ApiOperation({ summary: 'Update level' })
-  async update(@Req() req: any, @Param('id') id: string, @Body() body: { levelCode?: string; name?: string; isActive?: boolean }) {
-    return this.levelService.update(id, req.tenantContext.getTenantId(), body);
+  async update(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateLevelDto) {
+    return this.levelService.update(id, req.tenantContext.getTenantId(), dto);
   }
 
   @Delete(':id')

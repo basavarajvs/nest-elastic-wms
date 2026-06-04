@@ -79,6 +79,13 @@ export class LpnWebController {
     return this.lpnService.findById(id, req.tenantContext.getTenantId());
   }
 
+  @Get(':id/movements')
+  @CheckAbility({ action: 'read', subject: 'LPN' })
+  @ApiOperation({ summary: 'Get LPN movement history' })
+  async getMovements(@Req() req: any, @Param('id') id: string) {
+    return this.lpnService.getMovements(id, req.tenantContext.getTenantId());
+  }
+
   @Get(':id/hierarchy')
   @CheckAbility({ action: 'read', subject: 'LPN' })
   async getHierarchy(@Req() req: any, @Param('id') id: string) {

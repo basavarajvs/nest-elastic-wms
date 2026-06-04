@@ -1,13 +1,13 @@
 import { ApiTags } from '@nestjs/swagger';
-import { Controller, Get, Post, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
 import { OrderService } from '../order.service';
 import { AllocationService } from '../allocation.service';
 import { AllocationOverrideGuard } from '../allocation-override.guard';
 import { WaveService } from '../wave.service';
 import { PackingService } from '../packing.service';
 import { ShippingService } from '../shipping.service';
-import { CreateOrderDto } from '../dtos/order.dto';
-import { CreateWaveDto } from '../dtos/wave.dto';
+import { CreateOrderDto, UpdateOrderStatusDto } from '../dtos/order.dto';
+import { CreateWaveDto, UpdateWaveStatusDto } from '../dtos/wave.dto';
 import { GenerateManifestDto, ShipmentLoadDto } from '../dtos/shipping.dto';
 import { AllocationOverrideDto } from '../dtos/allocation.dto';
 import { CheckAbility } from '../../common/decorators/check-ability.decorator';
@@ -38,6 +38,12 @@ export class OutboundWebController {
   @CheckAbility({ action: 'read', subject: 'SalesOrder' })
   async getOrder(@Req() req: any, @Param('id') id: string) {
     return this.orderService.findById(id, req.tenantContext.getTenantId());
+  }
+
+  @Patch('/orders/:id/status')
+  @CheckAbility({ action: 'update', subject: 'SalesOrder' })
+  async updateOrderStatus(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateOrderStatusDto) {
+    return this.orderService.updateStatus(id, dto, req.tenantContext.getTenantId());
   }
 
   @Get('/orders')
@@ -79,6 +85,25 @@ export class OutboundWebController {
   @CheckAbility({ action: 'update', subject: 'PickingWave' })
   async generatePickTasks(@Req() req: any, @Param('id') id: string) {
     return this.waveService.releaseWave(id, req.tenantContext.getTenantId());
+  }
+
+  @Patch('/waves/:id/status')
+  @CheckAbility({ action: 'update', subject: 'PickingWave' })
+  async updateWaveStatus(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateWaveStatusDto) {
+    return this.waveService.updateStatus(id, dto, req.tenantContext.getTenantId());
+  }
+
+  @Get('/shipments')
+  @CheckAbility({ action: 'read', subject: 'OutboundShipment' })
+  async listShipments(
+    @Req() req: any,
+    @Query('status') status: string,
+    @Query('facilityId') facilityId: string,
+    @Query('loadId') loadId: string,
+    @Query('page') page: number,
+    @Query('limit') limit: number,
+  ) {
+    return this.shippingService.list(req.tenantContext.getTenantId(), { status, facilityId, loadId, page, limit });
   }
 
   @Post('/shipments/assign-to-load')

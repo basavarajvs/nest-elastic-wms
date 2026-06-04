@@ -60,3 +60,9 @@ export class CreateOrderDto {
   @Type(() => CreateOrderLineDto)
   lines: CreateOrderLineDto[];
 }
+
+export class UpdateOrderStatusDto {
+  @ApiProperty({ enum: ['CREATED', 'VALIDATED', 'ALLOCATED', 'WAVED', 'PICKED', 'PACKED', 'SHIPPED', 'CLOSED', 'CANCELLED', 'ON_HOLD'], description: 'New order status' })
+  @IsString()
+  status: string;
+}

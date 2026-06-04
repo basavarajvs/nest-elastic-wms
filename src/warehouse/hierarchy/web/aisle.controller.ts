@@ -1,6 +1,7 @@
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards, Req } from '@nestjs/common';
 import { AisleService } from '../services/aisle.service';
+import { CreateAisleDto, UpdateAisleDto } from '../dtos/hierarchy.dto';
 import { CheckAbility } from '../../../common/decorators/check-ability.decorator';
 import { CaslGuard } from '../../../common/guards/casl.guard';
 
@@ -20,15 +21,15 @@ export class AisleController {
   @Post()
   @CheckAbility({ action: 'create', subject: 'StorageLocation' })
   @ApiOperation({ summary: 'Create aisle' })
-  async create(@Req() req: any, @Body() body: { facilityId: string; zoneId: string; aisleCode: string; name?: string }) {
-    return this.aisleService.create(req.tenantContext.getTenantId(), body.facilityId, body.zoneId, body.aisleCode, body.name);
+  async create(@Req() req: any, @Body() dto: CreateAisleDto) {
+    return this.aisleService.create(req.tenantContext.getTenantId(), dto.facilityId, dto.zoneId, dto.aisleCode, dto.name);
   }
 
   @Patch(':id')
   @CheckAbility({ action: 'update', subject: 'StorageLocation' })
   @ApiOperation({ summary: 'Update aisle' })
-  async update(@Req() req: any, @Param('id') id: string, @Body() body: { aisleCode?: string; name?: string; isActive?: boolean }) {
-    return this.aisleService.update(id, req.tenantContext.getTenantId(), body);
+  async update(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateAisleDto) {
+    return this.aisleService.update(id, req.tenantContext.getTenantId(), dto);
   }
 
   @Delete(':id')

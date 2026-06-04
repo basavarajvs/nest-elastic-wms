@@ -1,7 +1,7 @@
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiCreatedResponse } from '@nestjs/swagger';
 import { Controller, Get, Post, Delete, Body, Param, Query, UseGuards, Req } from '@nestjs/common';
 import { ShippingLabelsService } from '../shipping-labels.service';
-import { GenerateLabelDto, PrintLabelDto } from '../dtos/shipping-label.dto';
+import { GenerateLabelDto, PrintLabelDto, ShippingLabelResponseDto } from '../dtos/shipping-label.dto';
 import { CheckAbility } from '../../../common/decorators/check-ability.decorator';
 import { CaslGuard } from '../../../common/guards/casl.guard';
 
@@ -14,6 +14,7 @@ export class ShippingLabelsWebController {
   @Post('/generate')
   @CheckAbility({ action: 'create', subject: 'ShippingLabel' })
   @ApiOperation({ summary: 'Generate shipping label' })
+  @ApiCreatedResponse({ type: ShippingLabelResponseDto })
   async generate(@Req() req: any, @Body() dto: GenerateLabelDto) {
     return this.service.generate(dto, req.tenantContext.getTenantId());
   }

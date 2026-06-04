@@ -1,6 +1,6 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateReplenishmentTaskDto, ReplenishmentFilterDto, ReplenishmentSuggestionDto } from './dtos/replenishment.dto';
+import { CreateReplenishmentTaskDto, CreateReplenishmentSuggestionDto, UpdateReplenishmentSuggestionDto, ReplenishmentFilterDto, ReplenishmentSuggestionDto } from './dtos/replenishment.dto';
 
 @Injectable()
 export class ReplenishmentService {
@@ -63,6 +63,69 @@ export class ReplenishmentService {
     }
 
     return suggestions;
+  }
+
+  async createSuggestion(dto: CreateReplenishmentSuggestionDto, tenantId: string, userId: string): Promise<any> {
+    const product = await (this.prisma as any).product.findFirst({
+      where: { id: dto.productId, tenantId },
+    });
+    if (!product) throw new NotFoundException('Product not found');
+
+    const fromLocation = await (this.prisma as any).storageLocation.findFirst({
+      where: { id: dto.fromLocationId, tenantId },
+    });
+    if (!fromLocation) throw new NotFoundException('Source location not found');
+
+    const toLocation = await (this.prisma as any).storageLocation.findFirst({
+      where: { id: dto.toLocationId, tenantId },
+    });
+    if (!toLocation) throw new NotFoundException('Destination location not found');
+
+    const taskNumber = `REPL-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+    return (this.prisma as any).replenishmentTask.create({
+      data: {
+        tenantId,
+        facilityId: fromLocation.facilityId,
+        taskNumber,
+        productId: dto.productId,
+        fromLocationId: dto.fromLocationId,
+        toLocationId: dto.toLocationId,
+        requestedQuantity: dto.requestedQuantity,
+        priority: dto.priority ?? 'MEDIUM',
+        notes: dto.notes,
+        assignedToUserId: userId,
+      },
+    });
+  }
+
+  async updateSuggestion(productId: string, dto: UpdateReplenishmentSuggestionDto, tenantId: string): Promise<any> {
+    const product = await (this.prisma as any).product.findFirst({
+      where: { id: productId, tenantId },
+    });
+    if (!product) throw new NotFoundException('Product not found');
+
+    const data: any = {};
+    if (dto.replenishmentMinQty !== undefined) data.replenishmentMinQty = dto.replenishmentMinQty;
+    if (dto.replenishmentMaxQty !== undefined) data.replenishmentMaxQty = dto.replenishmentMaxQty;
+
+    return (this.prisma as any).product.update({
+      where: { id: productId },
+      data,
+    });
+  }
+
+  async deleteSuggestion(productId: string, tenantId: string): Promise<any> {
+    const product = await (this.prisma as any).product.findFirst({
+      where: { id: productId, tenantId },
+    });
+    if (!product) throw new NotFoundException('Product not found');
+
+    await (this.prisma as any).product.update({
+      where: { id: productId },
+      data: { replenishmentMinQty: null, replenishmentMaxQty: null },
+    });
+    return { success: true };
   }
 
   private async findBulkLocation(tenantId: string, productId: string, facilityId?: string): Promise<any> {
@@ -137,6 +200,18 @@ export class ReplenishmentService {
         completedByUserId: userId,
         completedAt: new Date(),
       },
+    });
+  }
+
+  async cancelTask(taskId: string, tenantId: string): Promise<any> {
+    const task = await (this.prisma as any).replenishmentTask.findFirst({
+      where: { id: taskId, tenantId, status: { notIn: ['COMPLETED', 'CANCELLED'] } },
+    });
+    if (!task) throw new BadRequestException('Replenishment task not found or already completed/cancelled');
+
+    return (this.prisma as any).replenishmentTask.update({
+      where: { id: taskId },
+      data: { status: 'CANCELLED' },
     });
   }
 

@@ -1,6 +1,7 @@
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards, Req } from '@nestjs/common';
 import { BayService } from '../services/bay.service';
+import { CreateBayDto, UpdateBayDto } from '../dtos/hierarchy.dto';
 import { CheckAbility } from '../../../common/decorators/check-ability.decorator';
 import { CaslGuard } from '../../../common/guards/casl.guard';
 
@@ -20,15 +21,15 @@ export class BayController {
   @Post()
   @CheckAbility({ action: 'create', subject: 'StorageLocation' })
   @ApiOperation({ summary: 'Create bay' })
-  async create(@Req() req: any, @Body() body: { facilityId: string; zoneId: string; aisleId: string; bayCode: string; name?: string }) {
-    return this.bayService.create(req.tenantContext.getTenantId(), body.facilityId, body.zoneId, body.aisleId, body.bayCode, body.name);
+  async create(@Req() req: any, @Body() dto: CreateBayDto) {
+    return this.bayService.create(req.tenantContext.getTenantId(), dto.facilityId, dto.zoneId, dto.aisleId, dto.bayCode, dto.name);
   }
 
   @Patch(':id')
   @CheckAbility({ action: 'update', subject: 'StorageLocation' })
   @ApiOperation({ summary: 'Update bay' })
-  async update(@Req() req: any, @Param('id') id: string, @Body() body: { bayCode?: string; name?: string; isActive?: boolean }) {
-    return this.bayService.update(id, req.tenantContext.getTenantId(), body);
+  async update(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateBayDto) {
+    return this.bayService.update(id, req.tenantContext.getTenantId(), dto);
   }
 
   @Delete(':id')

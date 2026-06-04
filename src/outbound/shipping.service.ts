@@ -12,6 +12,32 @@ export class ShippingService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
+  async list(tenantId: string, filters: {
+    status?: string;
+    facilityId?: string;
+    loadId?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ data: any[]; total: number }> {
+    const where: any = { tenantId };
+    if (filters.status) where.status = filters.status;
+    if (filters.facilityId) where.facilityId = filters.facilityId;
+    if (filters.loadId) where.loadId = filters.loadId;
+
+    const page = filters.page || 1;
+    const limit = Math.min(filters.limit || 50, 200);
+    const [data, total] = await Promise.all([
+      (this.prisma as any).outboundShipment.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+      }),
+      (this.prisma as any).outboundShipment.count({ where }),
+    ]);
+    return { data, total };
+  }
+
   async assignToLoad(dto: ShipmentLoadDto, tenantId: string): Promise<any> {
     const shipment = await (this.prisma as any).outboundShipment.findFirst({
       where: { id: dto.shipmentId, tenantId },

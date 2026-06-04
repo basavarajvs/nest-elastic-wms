@@ -83,3 +83,50 @@ export class CountSummaryDto {
   @IsUUID()
   facilityId?: string;
 }
+
+export class CreateCycleCountLineDto {
+  @ApiProperty({ type: String })
+  @IsUUID()
+  countId: string;
+
+  @ApiProperty({ type: String })
+  @IsUUID()
+  productId: string;
+
+  @ApiProperty({ type: String })
+  @IsUUID()
+  locationId: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsUUID()
+  lotId?: string;
+
+  @ApiProperty({ type: String })
+  @IsUUID()
+  uomId: string;
+
+  @ApiPropertyOptional({ type: Number })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  systemQuantity?: number;
+}
+
+export class UpdateCycleCountLineDto {
+  @ApiPropertyOptional({ type: Number })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  countedQuantity?: number;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsString()
+  status?: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsUUID()
+  lotId?: string;
+}

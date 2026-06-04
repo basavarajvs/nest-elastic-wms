@@ -116,6 +116,30 @@ export class CreateTransferDto {
   lines: TransferLineDto[];
 }
 
+export class CreateTransferLineDto {
+  @ApiProperty({ type: String, required: true })
+  @IsUUID()
+  transferId: string;
+
+  @ApiProperty({ type: String, required: true })
+  @IsUUID()
+  productId: string;
+
+  @IsOptional()
+  @ApiProperty({ type: String, required: false })
+  @IsUUID()
+  lotId?: string;
+
+  @ApiProperty({ type: Number, required: true })
+  @IsNumber()
+  @Min(0.001)
+  quantityRequested: number;
+
+  @ApiProperty({ type: String, required: true })
+  @IsUUID()
+  uomId: string;
+}
+
 export class ReceiveLpnTransferDto {
   @ApiProperty({ type: String, required: true })
   @IsUUID()

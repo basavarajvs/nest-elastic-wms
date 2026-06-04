@@ -1,6 +1,7 @@
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards, Req } from '@nestjs/common';
 import { RackService } from '../services/rack.service';
+import { CreateRackDto, UpdateRackDto } from '../dtos/hierarchy.dto';
 import { CheckAbility } from '../../../common/decorators/check-ability.decorator';
 import { CaslGuard } from '../../../common/guards/casl.guard';
 
@@ -20,15 +21,15 @@ export class RackController {
   @Post()
   @CheckAbility({ action: 'create', subject: 'StorageLocation' })
   @ApiOperation({ summary: 'Create rack' })
-  async create(@Req() req: any, @Body() body: { facilityId: string; zoneId: string; aisleId: string; bayId: string; rackCode: string; name?: string }) {
-    return this.rackService.create(req.tenantContext.getTenantId(), body.facilityId, body.zoneId, body.aisleId, body.bayId, body.rackCode, body.name);
+  async create(@Req() req: any, @Body() dto: CreateRackDto) {
+    return this.rackService.create(req.tenantContext.getTenantId(), dto.facilityId, dto.zoneId, dto.aisleId, dto.bayId, dto.rackCode, dto.name);
   }
 
   @Patch(':id')
   @CheckAbility({ action: 'update', subject: 'StorageLocation' })
   @ApiOperation({ summary: 'Update rack' })
-  async update(@Req() req: any, @Param('id') id: string, @Body() body: { rackCode?: string; name?: string; isActive?: boolean }) {
-    return this.rackService.update(id, req.tenantContext.getTenantId(), body);
+  async update(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateRackDto) {
+    return this.rackService.update(id, req.tenantContext.getTenantId(), dto);
   }
 
   @Delete(':id')
