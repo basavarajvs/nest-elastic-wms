@@ -3421,6 +3421,31 @@
         ]
       }
     },
+    "/api/v1/wms/web/lpns/{id}/movements": {
+      "get": {
+        "operationId": "LpnWebController_getMovements",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get LPN movement history",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
     "/api/v1/wms/web/lpns/{id}/hierarchy": {
       "get": {
         "operationId": "LpnWebController_getHierarchy",
@@ -5763,7 +5788,14 @@
         },
         "responses": {
           "201": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShippingLabelResponseDto"
+                }
+              }
+            }
           }
         },
         "summary": "Generate shipping label",
@@ -7402,6 +7434,40 @@
         ]
       }
     },
+    "/api/v1/wms/web/outbound/orders/{id}/status": {
+      "patch": {
+        "operationId": "OutboundWebController_updateOrderStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOrderStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
     "/api/v1/wms/web/outbound/allocations/pending": {
       "get": {
         "operationId": "OutboundWebController_getPendingAllocations",
@@ -7498,6 +7564,96 @@
         ],
         "responses": {
           "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/outbound/waves/{id}/status": {
+      "patch": {
+        "operationId": "OutboundWebController_updateWaveStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWaveStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
+    "/api/v1/wms/web/outbound/shipments": {
+      "get": {
+        "operationId": "OutboundWebController_listShipments",
+        "parameters": [
+          {
+            "name": "status",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "facilityId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "loadId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
             "description": ""
           }
         },
@@ -9844,6 +10000,31 @@
         ]
       }
     },
+    "/api/v1/wms/web/replenishment/tasks/{id}/cancel": {
+      "patch": {
+        "operationId": "ReplenishmentWebController_cancelTask",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Cancel a replenishment task",
+        "tags": [
+          "WMS-WEB",
+          "Operations"
+        ]
+      }
+    },
     "/api/v1/wms/web/aisles": {
       "get": {
         "operationId": "AisleController_list",
@@ -9871,6 +10052,16 @@
       "post": {
         "operationId": "AisleController_create",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAisleDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -9896,6 +10087,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAisleDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -9958,6 +10159,16 @@
       "post": {
         "operationId": "BayController_create",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBayDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -9983,6 +10194,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBayDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -10045,6 +10266,16 @@
       "post": {
         "operationId": "RackController_create",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRackDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -10070,6 +10301,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRackDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -10132,6 +10373,16 @@
       "post": {
         "operationId": "LevelController_create",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLevelDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": ""
@@ -10157,6 +10408,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLevelDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": ""
@@ -12102,6 +12363,68 @@
           "labelType"
         ]
       },
+      "ShippingLabelResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          },
+          "facilityId": {
+            "type": "string"
+          },
+          "shipmentId": {
+            "type": "string"
+          },
+          "containerId": {
+            "type": "string"
+          },
+          "labelType": {
+            "type": "string"
+          },
+          "labelUrl": {
+            "type": "string"
+          },
+          "trackingNumber": {
+            "type": "string"
+          },
+          "carrierCode": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "printedCount": {
+            "type": "number"
+          },
+          "lastPrintedAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tenantId",
+          "facilityId",
+          "shipmentId",
+          "labelType",
+          "labelUrl",
+          "status",
+          "printedCount",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
       "PrintLabelDto": {
         "type": "object",
         "properties": {
@@ -12694,6 +13017,30 @@
           "clientCode"
         ]
       },
+      "UpdateOrderStatusDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "CREATED",
+              "VALIDATED",
+              "ALLOCATED",
+              "WAVED",
+              "PICKED",
+              "PACKED",
+              "SHIPPED",
+              "CLOSED",
+              "CANCELLED",
+              "ON_HOLD"
+            ],
+            "description": "New order status"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
       "CreateWaveDto": {
         "type": "object",
         "properties": {
@@ -12713,6 +13060,25 @@
         },
         "required": [
           "facilityId"
+        ]
+      },
+      "UpdateWaveStatusDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "PLANNED",
+              "RELEASED",
+              "IN_PROGRESS",
+              "COMPLETED",
+              "CANCELLED"
+            ],
+            "description": "New wave status"
+          }
+        },
+        "required": [
+          "status"
         ]
       },
       "ShipmentLoadDto": {
@@ -13399,6 +13765,174 @@
         "required": [
           "fulfilledQuantity"
         ]
+      },
+      "CreateAisleDto": {
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string"
+          },
+          "zoneId": {
+            "type": "string"
+          },
+          "aisleCode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "facilityId",
+          "zoneId",
+          "aisleCode"
+        ]
+      },
+      "UpdateAisleDto": {
+        "type": "object",
+        "properties": {
+          "aisleCode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateBayDto": {
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string"
+          },
+          "zoneId": {
+            "type": "string"
+          },
+          "aisleId": {
+            "type": "string"
+          },
+          "bayCode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "facilityId",
+          "zoneId",
+          "aisleId",
+          "bayCode"
+        ]
+      },
+      "UpdateBayDto": {
+        "type": "object",
+        "properties": {
+          "bayCode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateRackDto": {
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string"
+          },
+          "zoneId": {
+            "type": "string"
+          },
+          "aisleId": {
+            "type": "string"
+          },
+          "bayId": {
+            "type": "string"
+          },
+          "rackCode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "facilityId",
+          "zoneId",
+          "aisleId",
+          "bayId",
+          "rackCode"
+        ]
+      },
+      "UpdateRackDto": {
+        "type": "object",
+        "properties": {
+          "rackCode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateLevelDto": {
+        "type": "object",
+        "properties": {
+          "facilityId": {
+            "type": "string"
+          },
+          "zoneId": {
+            "type": "string"
+          },
+          "aisleId": {
+            "type": "string"
+          },
+          "bayId": {
+            "type": "string"
+          },
+          "rackId": {
+            "type": "string"
+          },
+          "levelCode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "facilityId",
+          "zoneId",
+          "aisleId",
+          "bayId",
+          "rackId",
+          "levelCode"
+        ]
+      },
+      "UpdateLevelDto": {
+        "type": "object",
+        "properties": {
+          "levelCode": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
       }
     }
   }

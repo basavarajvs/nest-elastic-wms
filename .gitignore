@@ -2,6 +2,8 @@
 /dist
 /node_modules
 
+graphify*
+
 # Logs
 logs
 *.log

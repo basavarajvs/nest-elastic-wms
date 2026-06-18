@@ -35,8 +35,10 @@ import type {
   CountWebControllerListParams,
   CountWebControllerSummaryParams,
   CreateAdjustmentDto,
+  CreateAisleDto,
   CreateAsnDto,
   CreateAsnLineDto,
+  CreateBayDto,
   CreateBrandDto,
   CreateCarrierDto,
   CreateCarrierRateDto,
@@ -51,6 +53,7 @@ import type {
   CreateGrnFromAsnDto,
   CreateGrnLineDto,
   CreateHoldDto,
+  CreateLevelDto,
   CreateLoadDto,
   CreateLoadingDockDto,
   CreateLpnDto,
@@ -64,6 +67,7 @@ import type {
   CreateProductSupplierDto,
   CreatePurchaseOrderDto,
   CreatePurchaseOrderLineDto,
+  CreateRackDto,
   CreateReplenishmentSuggestionDto,
   CreateReplenishmentTaskDto,
   CreateReservationDto,
@@ -104,6 +108,7 @@ import type {
   OutboundWebControllerGetPendingAllocationsParams,
   OutboundWebControllerGetWaveBoardParams,
   OutboundWebControllerListOrdersParams,
+  OutboundWebControllerListShipmentsParams,
   PrintLabelDto,
   ProductPackagingWebControllerConvertParams,
   ProductPackagingWebControllerFindAllParams,
@@ -123,12 +128,15 @@ import type {
   ReportsControllerDownloadLiveParams,
   ScheduleCountDto,
   ShipmentLoadDto,
+  ShippingLabelResponseDto,
   ShippingLabelsWebControllerFindAllParams,
   TransferLineWebControllerFindAllParams,
   TransferWebControllerListLinesParams,
   TransferWebControllerListParams,
+  UpdateAisleDto,
   UpdateAsnLineDto,
   UpdateAsnStatusDto,
+  UpdateBayDto,
   UpdateBrandDto,
   UpdateCarrierDto,
   UpdateCategoryDto,
@@ -139,11 +147,13 @@ import type {
   UpdateCycleCountLineDto,
   UpdateExceptionDto,
   UpdateGrnLineDto,
+  UpdateLevelDto,
   UpdateLoadDto,
   UpdateLoadingDockDto,
   UpdateLpnDto,
   UpdateNcrDto,
   UpdateOrderLineDto,
+  UpdateOrderStatusDto,
   UpdatePackagingDto,
   UpdatePackingStationDto,
   UpdateProductClientAssignmentDto,
@@ -152,6 +162,7 @@ import type {
   UpdatePurchaseOrderDto,
   UpdatePurchaseOrderLineDto,
   UpdatePutawayTaskStatusDto,
+  UpdateRackDto,
   UpdateReplenishmentSuggestionDto,
   UpdateReservationDto,
   UpdateReturnItemStandaloneDto,
@@ -160,6 +171,7 @@ import type {
   UpdateVendorAddressDto,
   UpdateVendorContactDto,
   UpdateVendorDto,
+  UpdateWaveStatusDto,
   UpsertPolicyDto,
   VasExecutionWebControllerFindAllParams,
   WebReceiveTransferDto
@@ -6170,7 +6182,88 @@ export function useLpnWebControllerDelete<TData = Awaited<ReturnType<typeof LpnW
 
 
 
-export type LpnWebController_getHierarchyResponse200 = {
+export type LpnWebController_getMovementsResponse200 = {
+  data: void
+  status: 200
+}
+
+export type LpnWebController_getMovementsResponseSuccess = (LpnWebController_getMovementsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type LpnWebController_getMovementsResponse = (LpnWebController_getMovementsResponseSuccess)
+
+export const getLpnWebControllerGetMovementsUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/wms/web/lpns/${id}/movements`
+}
+
+/**
+ * @summary Get LPN movement history
+ */
+export const LpnWebController_getMovements = async (id: string, options?: RequestInit): Promise<LpnWebController_getMovementsResponse> => {
+
+  return customInstance<LpnWebController_getMovementsResponse>(getLpnWebControllerGetMovementsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+export const getLpnWebControllerGetMovementsMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof LpnWebController_getMovements>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof LpnWebController_getMovements>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['lpnWebControllerGetMovements'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof LpnWebController_getMovements>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  LpnWebController_getMovements(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LpnWebControllerGetMovementsMutationResult = NonNullable<Awaited<ReturnType<typeof LpnWebController_getMovements>>>
+
+    export type LpnWebControllerGetMovementsMutationError = unknown
+
+    /**
+ * @summary Get LPN movement history
+ */
+export const useLpnWebControllerGetMovements = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof LpnWebController_getMovements>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof LpnWebController_getMovements>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getLpnWebControllerGetMovementsMutationOptions(options));
+    }
+    export type LpnWebController_getHierarchyResponse200 = {
   data: void
   status: 200
 }
@@ -13582,7 +13675,7 @@ export function useInventoryReservationsWebControllerRelease<TData = Awaited<Ret
 
 
 export type ShippingLabelsWebController_generateResponse201 = {
-  data: void
+  data: ShippingLabelResponseDto
   status: 201
 }
 
@@ -18337,7 +18430,93 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getOutboundWebControllerGetOrderMutationOptions(options));
     }
-    export type OutboundWebController_getPendingAllocationsResponse200 = {
+    export type OutboundWebController_updateOrderStatusResponse200 = {
+  data: void
+  status: 200
+}
+
+export type OutboundWebController_updateOrderStatusResponseSuccess = (OutboundWebController_updateOrderStatusResponse200) & {
+  headers: Headers;
+};
+;
+
+export type OutboundWebController_updateOrderStatusResponse = (OutboundWebController_updateOrderStatusResponseSuccess)
+
+export const getOutboundWebControllerUpdateOrderStatusUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/wms/web/outbound/orders/${id}/status`
+}
+
+export const OutboundWebController_updateOrderStatus = async (id: string,
+    updateOrderStatusDto: UpdateOrderStatusDto, options?: RequestInit): Promise<OutboundWebController_updateOrderStatusResponse> => {
+
+  return customInstance<OutboundWebController_updateOrderStatusResponse>(getOutboundWebControllerUpdateOrderStatusUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateOrderStatusDto)
+  }
+);}
+
+
+
+
+
+export const getOutboundWebControllerUpdateOrderStatusQueryKey = (id: string,
+    updateOrderStatusDto?: UpdateOrderStatusDto,) => {
+    return [
+    'PATCH', `/api/v1/wms/web/outbound/orders/${id}/status`, updateOrderStatusDto
+    ] as const;
+    }
+
+
+export const getOutboundWebControllerUpdateOrderStatusQueryOptions = <TData = Awaited<ReturnType<typeof OutboundWebController_updateOrderStatus>>, TError = unknown>(id: string,
+    updateOrderStatusDto: UpdateOrderStatusDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof OutboundWebController_updateOrderStatus>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getOutboundWebControllerUpdateOrderStatusQueryKey(id,updateOrderStatusDto);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof OutboundWebController_updateOrderStatus>>> = ({ signal }) => OutboundWebController_updateOrderStatus(id,updateOrderStatusDto, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof OutboundWebController_updateOrderStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type OutboundWebControllerUpdateOrderStatusQueryResult = NonNullable<Awaited<ReturnType<typeof OutboundWebController_updateOrderStatus>>>
+export type OutboundWebControllerUpdateOrderStatusQueryError = unknown
+
+
+
+export function useOutboundWebControllerUpdateOrderStatus<TData = Awaited<ReturnType<typeof OutboundWebController_updateOrderStatus>>, TError = unknown>(
+ id: string,
+    updateOrderStatusDto: UpdateOrderStatusDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof OutboundWebController_updateOrderStatus>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getOutboundWebControllerUpdateOrderStatusQueryOptions(id,updateOrderStatusDto,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+export type OutboundWebController_getPendingAllocationsResponse200 = {
   data: void
   status: 200
 }
@@ -18665,7 +18844,175 @@ export function useOutboundWebControllerGeneratePickTasks<TData = Awaited<Return
 
 
 
-export type OutboundWebController_assignShipmentToLoadResponse201 = {
+export type OutboundWebController_updateWaveStatusResponse200 = {
+  data: void
+  status: 200
+}
+
+export type OutboundWebController_updateWaveStatusResponseSuccess = (OutboundWebController_updateWaveStatusResponse200) & {
+  headers: Headers;
+};
+;
+
+export type OutboundWebController_updateWaveStatusResponse = (OutboundWebController_updateWaveStatusResponseSuccess)
+
+export const getOutboundWebControllerUpdateWaveStatusUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/wms/web/outbound/waves/${id}/status`
+}
+
+export const OutboundWebController_updateWaveStatus = async (id: string,
+    updateWaveStatusDto: UpdateWaveStatusDto, options?: RequestInit): Promise<OutboundWebController_updateWaveStatusResponse> => {
+
+  return customInstance<OutboundWebController_updateWaveStatusResponse>(getOutboundWebControllerUpdateWaveStatusUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateWaveStatusDto)
+  }
+);}
+
+
+
+
+
+export const getOutboundWebControllerUpdateWaveStatusQueryKey = (id: string,
+    updateWaveStatusDto?: UpdateWaveStatusDto,) => {
+    return [
+    'PATCH', `/api/v1/wms/web/outbound/waves/${id}/status`, updateWaveStatusDto
+    ] as const;
+    }
+
+
+export const getOutboundWebControllerUpdateWaveStatusQueryOptions = <TData = Awaited<ReturnType<typeof OutboundWebController_updateWaveStatus>>, TError = unknown>(id: string,
+    updateWaveStatusDto: UpdateWaveStatusDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof OutboundWebController_updateWaveStatus>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getOutboundWebControllerUpdateWaveStatusQueryKey(id,updateWaveStatusDto);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof OutboundWebController_updateWaveStatus>>> = ({ signal }) => OutboundWebController_updateWaveStatus(id,updateWaveStatusDto, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof OutboundWebController_updateWaveStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type OutboundWebControllerUpdateWaveStatusQueryResult = NonNullable<Awaited<ReturnType<typeof OutboundWebController_updateWaveStatus>>>
+export type OutboundWebControllerUpdateWaveStatusQueryError = unknown
+
+
+
+export function useOutboundWebControllerUpdateWaveStatus<TData = Awaited<ReturnType<typeof OutboundWebController_updateWaveStatus>>, TError = unknown>(
+ id: string,
+    updateWaveStatusDto: UpdateWaveStatusDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof OutboundWebController_updateWaveStatus>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getOutboundWebControllerUpdateWaveStatusQueryOptions(id,updateWaveStatusDto,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+export type OutboundWebController_listShipmentsResponse200 = {
+  data: void
+  status: 200
+}
+
+export type OutboundWebController_listShipmentsResponseSuccess = (OutboundWebController_listShipmentsResponse200) & {
+  headers: Headers;
+};
+;
+
+export type OutboundWebController_listShipmentsResponse = (OutboundWebController_listShipmentsResponseSuccess)
+
+export const getOutboundWebControllerListShipmentsUrl = (params: OutboundWebControllerListShipmentsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/wms/web/outbound/shipments?${stringifiedParams}` : `/api/v1/wms/web/outbound/shipments`
+}
+
+export const OutboundWebController_listShipments = async (params: OutboundWebControllerListShipmentsParams, options?: RequestInit): Promise<OutboundWebController_listShipmentsResponse> => {
+
+  return customInstance<OutboundWebController_listShipmentsResponse>(getOutboundWebControllerListShipmentsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+export const getOutboundWebControllerListShipmentsMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof OutboundWebController_listShipments>>, TError,{params: OutboundWebControllerListShipmentsParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof OutboundWebController_listShipments>>, TError,{params: OutboundWebControllerListShipmentsParams}, TContext> => {
+
+const mutationKey = ['outboundWebControllerListShipments'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof OutboundWebController_listShipments>>, {params: OutboundWebControllerListShipmentsParams}> = (props) => {
+          const {params} = props ?? {};
+
+          return  OutboundWebController_listShipments(params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type OutboundWebControllerListShipmentsMutationResult = NonNullable<Awaited<ReturnType<typeof OutboundWebController_listShipments>>>
+
+    export type OutboundWebControllerListShipmentsMutationError = unknown
+
+    export const useOutboundWebControllerListShipments = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof OutboundWebController_listShipments>>, TError,{params: OutboundWebControllerListShipmentsParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof OutboundWebController_listShipments>>,
+        TError,
+        {params: OutboundWebControllerListShipmentsParams},
+        TContext
+      > => {
+      return useMutation(getOutboundWebControllerListShipmentsMutationOptions(options));
+    }
+    export type OutboundWebController_assignShipmentToLoadResponse201 = {
   data: void
   status: 201
 }
@@ -22698,6 +23045,94 @@ export function useReplenishmentWebControllerCompleteTask<TData = Awaited<Return
 
 
 
+export type ReplenishmentWebController_cancelTaskResponse200 = {
+  data: void
+  status: 200
+}
+
+export type ReplenishmentWebController_cancelTaskResponseSuccess = (ReplenishmentWebController_cancelTaskResponse200) & {
+  headers: Headers;
+};
+;
+
+export type ReplenishmentWebController_cancelTaskResponse = (ReplenishmentWebController_cancelTaskResponseSuccess)
+
+export const getReplenishmentWebControllerCancelTaskUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/wms/web/replenishment/tasks/${id}/cancel`
+}
+
+/**
+ * @summary Cancel a replenishment task
+ */
+export const ReplenishmentWebController_cancelTask = async (id: string, options?: RequestInit): Promise<ReplenishmentWebController_cancelTaskResponse> => {
+
+  return customInstance<ReplenishmentWebController_cancelTaskResponse>(getReplenishmentWebControllerCancelTaskUrl(id),
+  {
+    ...options,
+    method: 'PATCH'
+
+
+  }
+);}
+
+
+
+
+
+export const getReplenishmentWebControllerCancelTaskQueryKey = (id: string,) => {
+    return [
+    'PATCH', `/api/v1/wms/web/replenishment/tasks/${id}/cancel`
+    ] as const;
+    }
+
+
+export const getReplenishmentWebControllerCancelTaskQueryOptions = <TData = Awaited<ReturnType<typeof ReplenishmentWebController_cancelTask>>, TError = unknown>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof ReplenishmentWebController_cancelTask>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getReplenishmentWebControllerCancelTaskQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof ReplenishmentWebController_cancelTask>>> = ({ signal }) => ReplenishmentWebController_cancelTask(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof ReplenishmentWebController_cancelTask>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ReplenishmentWebControllerCancelTaskQueryResult = NonNullable<Awaited<ReturnType<typeof ReplenishmentWebController_cancelTask>>>
+export type ReplenishmentWebControllerCancelTaskQueryError = unknown
+
+
+/**
+ * @summary Cancel a replenishment task
+ */
+
+export function useReplenishmentWebControllerCancelTask<TData = Awaited<ReturnType<typeof ReplenishmentWebController_cancelTask>>, TError = unknown>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof ReplenishmentWebController_cancelTask>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getReplenishmentWebControllerCancelTaskQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 export type AisleController_listResponse200 = {
   data: void
   status: 200
@@ -22809,14 +23244,14 @@ export const getAisleControllerCreateUrl = () => {
 /**
  * @summary Create aisle
  */
-export const AisleController_create = async ( options?: RequestInit): Promise<AisleController_createResponse> => {
+export const AisleController_create = async (createAisleDto: CreateAisleDto, options?: RequestInit): Promise<AisleController_createResponse> => {
 
   return customInstance<AisleController_createResponse>(getAisleControllerCreateUrl(),
   {
     ...options,
-    method: 'POST'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createAisleDto)
   }
 );}
 
@@ -22824,23 +23259,23 @@ export const AisleController_create = async ( options?: RequestInit): Promise<Ai
 
 
 
-export const getAisleControllerCreateQueryKey = () => {
+export const getAisleControllerCreateQueryKey = (createAisleDto?: CreateAisleDto,) => {
     return [
-    'POST', `/api/v1/wms/web/aisles`
+    'POST', `/api/v1/wms/web/aisles`, createAisleDto
     ] as const;
     }
 
 
-export const getAisleControllerCreateQueryOptions = <TData = Awaited<ReturnType<typeof AisleController_create>>, TError = unknown>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof AisleController_create>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+export const getAisleControllerCreateQueryOptions = <TData = Awaited<ReturnType<typeof AisleController_create>>, TError = unknown>(createAisleDto: CreateAisleDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof AisleController_create>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getAisleControllerCreateQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getAisleControllerCreateQueryKey(createAisleDto);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof AisleController_create>>> = ({ signal }) => AisleController_create({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof AisleController_create>>> = ({ signal }) => AisleController_create(createAisleDto, { signal, ...requestOptions });
 
 
 
@@ -22858,11 +23293,11 @@ export type AisleControllerCreateQueryError = unknown
  */
 
 export function useAisleControllerCreate<TData = Awaited<ReturnType<typeof AisleController_create>>, TError = unknown>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof AisleController_create>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+ createAisleDto: CreateAisleDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof AisleController_create>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getAisleControllerCreateQueryOptions(options)
+  const queryOptions = getAisleControllerCreateQueryOptions(createAisleDto,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -22897,14 +23332,15 @@ export const getAisleControllerUpdateUrl = (id: string,) => {
 /**
  * @summary Update aisle
  */
-export const AisleController_update = async (id: string, options?: RequestInit): Promise<AisleController_updateResponse> => {
+export const AisleController_update = async (id: string,
+    updateAisleDto: UpdateAisleDto, options?: RequestInit): Promise<AisleController_updateResponse> => {
 
   return customInstance<AisleController_updateResponse>(getAisleControllerUpdateUrl(id),
   {
     ...options,
-    method: 'PATCH'
-
-
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateAisleDto)
   }
 );}
 
@@ -22912,23 +23348,25 @@ export const AisleController_update = async (id: string, options?: RequestInit):
 
 
 
-export const getAisleControllerUpdateQueryKey = (id: string,) => {
+export const getAisleControllerUpdateQueryKey = (id: string,
+    updateAisleDto?: UpdateAisleDto,) => {
     return [
-    'PATCH', `/api/v1/wms/web/aisles/${id}`
+    'PATCH', `/api/v1/wms/web/aisles/${id}`, updateAisleDto
     ] as const;
     }
 
 
-export const getAisleControllerUpdateQueryOptions = <TData = Awaited<ReturnType<typeof AisleController_update>>, TError = unknown>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof AisleController_update>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+export const getAisleControllerUpdateQueryOptions = <TData = Awaited<ReturnType<typeof AisleController_update>>, TError = unknown>(id: string,
+    updateAisleDto: UpdateAisleDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof AisleController_update>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getAisleControllerUpdateQueryKey(id);
+  const queryKey =  queryOptions?.queryKey ?? getAisleControllerUpdateQueryKey(id,updateAisleDto);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof AisleController_update>>> = ({ signal }) => AisleController_update(id, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof AisleController_update>>> = ({ signal }) => AisleController_update(id,updateAisleDto, { signal, ...requestOptions });
 
 
 
@@ -22946,11 +23384,12 @@ export type AisleControllerUpdateQueryError = unknown
  */
 
 export function useAisleControllerUpdate<TData = Awaited<ReturnType<typeof AisleController_update>>, TError = unknown>(
- id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof AisleController_update>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+ id: string,
+    updateAisleDto: UpdateAisleDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof AisleController_update>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getAisleControllerUpdateQueryOptions(id,options)
+  const queryOptions = getAisleControllerUpdateQueryOptions(id,updateAisleDto,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -23161,14 +23600,14 @@ export const getBayControllerCreateUrl = () => {
 /**
  * @summary Create bay
  */
-export const BayController_create = async ( options?: RequestInit): Promise<BayController_createResponse> => {
+export const BayController_create = async (createBayDto: CreateBayDto, options?: RequestInit): Promise<BayController_createResponse> => {
 
   return customInstance<BayController_createResponse>(getBayControllerCreateUrl(),
   {
     ...options,
-    method: 'POST'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createBayDto)
   }
 );}
 
@@ -23176,23 +23615,23 @@ export const BayController_create = async ( options?: RequestInit): Promise<BayC
 
 
 
-export const getBayControllerCreateQueryKey = () => {
+export const getBayControllerCreateQueryKey = (createBayDto?: CreateBayDto,) => {
     return [
-    'POST', `/api/v1/wms/web/bays`
+    'POST', `/api/v1/wms/web/bays`, createBayDto
     ] as const;
     }
 
 
-export const getBayControllerCreateQueryOptions = <TData = Awaited<ReturnType<typeof BayController_create>>, TError = unknown>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof BayController_create>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+export const getBayControllerCreateQueryOptions = <TData = Awaited<ReturnType<typeof BayController_create>>, TError = unknown>(createBayDto: CreateBayDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof BayController_create>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getBayControllerCreateQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getBayControllerCreateQueryKey(createBayDto);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof BayController_create>>> = ({ signal }) => BayController_create({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof BayController_create>>> = ({ signal }) => BayController_create(createBayDto, { signal, ...requestOptions });
 
 
 
@@ -23210,11 +23649,11 @@ export type BayControllerCreateQueryError = unknown
  */
 
 export function useBayControllerCreate<TData = Awaited<ReturnType<typeof BayController_create>>, TError = unknown>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof BayController_create>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+ createBayDto: CreateBayDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof BayController_create>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getBayControllerCreateQueryOptions(options)
+  const queryOptions = getBayControllerCreateQueryOptions(createBayDto,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -23249,14 +23688,15 @@ export const getBayControllerUpdateUrl = (id: string,) => {
 /**
  * @summary Update bay
  */
-export const BayController_update = async (id: string, options?: RequestInit): Promise<BayController_updateResponse> => {
+export const BayController_update = async (id: string,
+    updateBayDto: UpdateBayDto, options?: RequestInit): Promise<BayController_updateResponse> => {
 
   return customInstance<BayController_updateResponse>(getBayControllerUpdateUrl(id),
   {
     ...options,
-    method: 'PATCH'
-
-
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateBayDto)
   }
 );}
 
@@ -23264,23 +23704,25 @@ export const BayController_update = async (id: string, options?: RequestInit): P
 
 
 
-export const getBayControllerUpdateQueryKey = (id: string,) => {
+export const getBayControllerUpdateQueryKey = (id: string,
+    updateBayDto?: UpdateBayDto,) => {
     return [
-    'PATCH', `/api/v1/wms/web/bays/${id}`
+    'PATCH', `/api/v1/wms/web/bays/${id}`, updateBayDto
     ] as const;
     }
 
 
-export const getBayControllerUpdateQueryOptions = <TData = Awaited<ReturnType<typeof BayController_update>>, TError = unknown>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof BayController_update>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+export const getBayControllerUpdateQueryOptions = <TData = Awaited<ReturnType<typeof BayController_update>>, TError = unknown>(id: string,
+    updateBayDto: UpdateBayDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof BayController_update>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getBayControllerUpdateQueryKey(id);
+  const queryKey =  queryOptions?.queryKey ?? getBayControllerUpdateQueryKey(id,updateBayDto);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof BayController_update>>> = ({ signal }) => BayController_update(id, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof BayController_update>>> = ({ signal }) => BayController_update(id,updateBayDto, { signal, ...requestOptions });
 
 
 
@@ -23298,11 +23740,12 @@ export type BayControllerUpdateQueryError = unknown
  */
 
 export function useBayControllerUpdate<TData = Awaited<ReturnType<typeof BayController_update>>, TError = unknown>(
- id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof BayController_update>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+ id: string,
+    updateBayDto: UpdateBayDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof BayController_update>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getBayControllerUpdateQueryOptions(id,options)
+  const queryOptions = getBayControllerUpdateQueryOptions(id,updateBayDto,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -23513,14 +23956,14 @@ export const getRackControllerCreateUrl = () => {
 /**
  * @summary Create rack
  */
-export const RackController_create = async ( options?: RequestInit): Promise<RackController_createResponse> => {
+export const RackController_create = async (createRackDto: CreateRackDto, options?: RequestInit): Promise<RackController_createResponse> => {
 
   return customInstance<RackController_createResponse>(getRackControllerCreateUrl(),
   {
     ...options,
-    method: 'POST'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createRackDto)
   }
 );}
 
@@ -23528,23 +23971,23 @@ export const RackController_create = async ( options?: RequestInit): Promise<Rac
 
 
 
-export const getRackControllerCreateQueryKey = () => {
+export const getRackControllerCreateQueryKey = (createRackDto?: CreateRackDto,) => {
     return [
-    'POST', `/api/v1/wms/web/racks`
+    'POST', `/api/v1/wms/web/racks`, createRackDto
     ] as const;
     }
 
 
-export const getRackControllerCreateQueryOptions = <TData = Awaited<ReturnType<typeof RackController_create>>, TError = unknown>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof RackController_create>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+export const getRackControllerCreateQueryOptions = <TData = Awaited<ReturnType<typeof RackController_create>>, TError = unknown>(createRackDto: CreateRackDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof RackController_create>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getRackControllerCreateQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getRackControllerCreateQueryKey(createRackDto);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof RackController_create>>> = ({ signal }) => RackController_create({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof RackController_create>>> = ({ signal }) => RackController_create(createRackDto, { signal, ...requestOptions });
 
 
 
@@ -23562,11 +24005,11 @@ export type RackControllerCreateQueryError = unknown
  */
 
 export function useRackControllerCreate<TData = Awaited<ReturnType<typeof RackController_create>>, TError = unknown>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof RackController_create>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+ createRackDto: CreateRackDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof RackController_create>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getRackControllerCreateQueryOptions(options)
+  const queryOptions = getRackControllerCreateQueryOptions(createRackDto,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -23601,14 +24044,15 @@ export const getRackControllerUpdateUrl = (id: string,) => {
 /**
  * @summary Update rack
  */
-export const RackController_update = async (id: string, options?: RequestInit): Promise<RackController_updateResponse> => {
+export const RackController_update = async (id: string,
+    updateRackDto: UpdateRackDto, options?: RequestInit): Promise<RackController_updateResponse> => {
 
   return customInstance<RackController_updateResponse>(getRackControllerUpdateUrl(id),
   {
     ...options,
-    method: 'PATCH'
-
-
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateRackDto)
   }
 );}
 
@@ -23616,23 +24060,25 @@ export const RackController_update = async (id: string, options?: RequestInit): 
 
 
 
-export const getRackControllerUpdateQueryKey = (id: string,) => {
+export const getRackControllerUpdateQueryKey = (id: string,
+    updateRackDto?: UpdateRackDto,) => {
     return [
-    'PATCH', `/api/v1/wms/web/racks/${id}`
+    'PATCH', `/api/v1/wms/web/racks/${id}`, updateRackDto
     ] as const;
     }
 
 
-export const getRackControllerUpdateQueryOptions = <TData = Awaited<ReturnType<typeof RackController_update>>, TError = unknown>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof RackController_update>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+export const getRackControllerUpdateQueryOptions = <TData = Awaited<ReturnType<typeof RackController_update>>, TError = unknown>(id: string,
+    updateRackDto: UpdateRackDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof RackController_update>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getRackControllerUpdateQueryKey(id);
+  const queryKey =  queryOptions?.queryKey ?? getRackControllerUpdateQueryKey(id,updateRackDto);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof RackController_update>>> = ({ signal }) => RackController_update(id, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof RackController_update>>> = ({ signal }) => RackController_update(id,updateRackDto, { signal, ...requestOptions });
 
 
 
@@ -23650,11 +24096,12 @@ export type RackControllerUpdateQueryError = unknown
  */
 
 export function useRackControllerUpdate<TData = Awaited<ReturnType<typeof RackController_update>>, TError = unknown>(
- id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof RackController_update>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+ id: string,
+    updateRackDto: UpdateRackDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof RackController_update>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getRackControllerUpdateQueryOptions(id,options)
+  const queryOptions = getRackControllerUpdateQueryOptions(id,updateRackDto,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -23865,14 +24312,14 @@ export const getLevelControllerCreateUrl = () => {
 /**
  * @summary Create level
  */
-export const LevelController_create = async ( options?: RequestInit): Promise<LevelController_createResponse> => {
+export const LevelController_create = async (createLevelDto: CreateLevelDto, options?: RequestInit): Promise<LevelController_createResponse> => {
 
   return customInstance<LevelController_createResponse>(getLevelControllerCreateUrl(),
   {
     ...options,
-    method: 'POST'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(createLevelDto)
   }
 );}
 
@@ -23880,23 +24327,23 @@ export const LevelController_create = async ( options?: RequestInit): Promise<Le
 
 
 
-export const getLevelControllerCreateQueryKey = () => {
+export const getLevelControllerCreateQueryKey = (createLevelDto?: CreateLevelDto,) => {
     return [
-    'POST', `/api/v1/wms/web/levels`
+    'POST', `/api/v1/wms/web/levels`, createLevelDto
     ] as const;
     }
 
 
-export const getLevelControllerCreateQueryOptions = <TData = Awaited<ReturnType<typeof LevelController_create>>, TError = unknown>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof LevelController_create>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+export const getLevelControllerCreateQueryOptions = <TData = Awaited<ReturnType<typeof LevelController_create>>, TError = unknown>(createLevelDto: CreateLevelDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof LevelController_create>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getLevelControllerCreateQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getLevelControllerCreateQueryKey(createLevelDto);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof LevelController_create>>> = ({ signal }) => LevelController_create({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof LevelController_create>>> = ({ signal }) => LevelController_create(createLevelDto, { signal, ...requestOptions });
 
 
 
@@ -23914,11 +24361,11 @@ export type LevelControllerCreateQueryError = unknown
  */
 
 export function useLevelControllerCreate<TData = Awaited<ReturnType<typeof LevelController_create>>, TError = unknown>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof LevelController_create>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+ createLevelDto: CreateLevelDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof LevelController_create>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getLevelControllerCreateQueryOptions(options)
+  const queryOptions = getLevelControllerCreateQueryOptions(createLevelDto,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -23953,14 +24400,15 @@ export const getLevelControllerUpdateUrl = (id: string,) => {
 /**
  * @summary Update level
  */
-export const LevelController_update = async (id: string, options?: RequestInit): Promise<LevelController_updateResponse> => {
+export const LevelController_update = async (id: string,
+    updateLevelDto: UpdateLevelDto, options?: RequestInit): Promise<LevelController_updateResponse> => {
 
   return customInstance<LevelController_updateResponse>(getLevelControllerUpdateUrl(id),
   {
     ...options,
-    method: 'PATCH'
-
-
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updateLevelDto)
   }
 );}
 
@@ -23968,23 +24416,25 @@ export const LevelController_update = async (id: string, options?: RequestInit):
 
 
 
-export const getLevelControllerUpdateQueryKey = (id: string,) => {
+export const getLevelControllerUpdateQueryKey = (id: string,
+    updateLevelDto?: UpdateLevelDto,) => {
     return [
-    'PATCH', `/api/v1/wms/web/levels/${id}`
+    'PATCH', `/api/v1/wms/web/levels/${id}`, updateLevelDto
     ] as const;
     }
 
 
-export const getLevelControllerUpdateQueryOptions = <TData = Awaited<ReturnType<typeof LevelController_update>>, TError = unknown>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof LevelController_update>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+export const getLevelControllerUpdateQueryOptions = <TData = Awaited<ReturnType<typeof LevelController_update>>, TError = unknown>(id: string,
+    updateLevelDto: UpdateLevelDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof LevelController_update>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getLevelControllerUpdateQueryKey(id);
+  const queryKey =  queryOptions?.queryKey ?? getLevelControllerUpdateQueryKey(id,updateLevelDto);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof LevelController_update>>> = ({ signal }) => LevelController_update(id, { signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof LevelController_update>>> = ({ signal }) => LevelController_update(id,updateLevelDto, { signal, ...requestOptions });
 
 
 
@@ -24002,11 +24452,12 @@ export type LevelControllerUpdateQueryError = unknown
  */
 
 export function useLevelControllerUpdate<TData = Awaited<ReturnType<typeof LevelController_update>>, TError = unknown>(
- id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof LevelController_update>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+ id: string,
+    updateLevelDto: UpdateLevelDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof LevelController_update>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getLevelControllerUpdateQueryOptions(id,options)
+  const queryOptions = getLevelControllerUpdateQueryOptions(id,updateLevelDto,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

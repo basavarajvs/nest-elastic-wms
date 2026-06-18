@@ -1,41 +1,60 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, IsOptional, IsUUID, IsInt, Min, IsBoolean } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
+
+/**
+ * Transforms an empty-string query param to `undefined` so that
+ * @IsOptional() skips validation (class-validator only considers
+ * `undefined` / `null` as absent).
+ */
+const emptyToUndefined = ({ value }: { value: unknown }) =>
+  value === '' ? undefined : value;
+
+/**
+ * Transforms a boolean query-string value (`"true"` / `"false"`) into an
+ * actual boolean, and also treats empty strings as absent.
+ */
+const booleanString = ({ value }: { value: unknown }) => {
+  if (value === '') return undefined;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  return value;
+};
 
 export class StockFilterDto {
   @IsOptional()
-  @ApiProperty({ type: String, required: false })
   @IsUUID()
+  @Transform(emptyToUndefined)
   facilityId?: string;
 
   @IsOptional()
-  @ApiProperty({ type: String, required: false })
   @IsUUID()
+  @Transform(emptyToUndefined)
   productId?: string;
 
   @IsOptional()
-  @ApiProperty({ type: String, required: false })
   @IsUUID()
+  @Transform(emptyToUndefined)
   locationId?: string;
 
   @IsOptional()
-  @ApiProperty({ type: String, required: false })
   @IsUUID()
+  @Transform(emptyToUndefined)
   lotId?: string;
 
   @IsOptional()
-  @ApiProperty({ type: String, required: false })
   @IsString()
+  @Transform(emptyToUndefined)
   productSku?: string;
 
   @IsOptional()
-  @ApiProperty({ type: String, required: false })
   @IsString()
+  @Transform(emptyToUndefined)
   productName?: string;
 
   @IsOptional()
-  @ApiProperty({ type: Boolean, required: false })
   @IsBoolean()
+  @Transform(booleanString)
   lowStock?: boolean;
 
   @IsOptional()
