@@ -2,6 +2,14 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { AllocationOverrideDto } from './dtos/allocation.dto';
+import { AllocationRulesService } from '../inventory/allocation-rules/allocation-rules.service';
+
+const RULE_ORDER_BY: Record<string, string> = {
+  FIFO: 'ioh.created_at ASC',
+  FEFO: 'ioh.lot_expiry ASC NULLS LAST',
+  LIFO: 'ioh.created_at DESC',
+  NEAREST_LOCATION: 'ioh.travel_distance ASC NULLS LAST',
+};
 
 @Injectable()
 export class AllocationService {
@@ -10,6 +18,7 @@ export class AllocationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly allocationRulesService: AllocationRulesService,
   ) {}
 
   async softAllocate(orderId: string, tenantId: string): Promise<any[]> {
@@ -23,6 +32,19 @@ export class AllocationService {
     for (const line of order.lines) {
       if (line.status !== 'ALLOCATED' && line.status !== 'CREATED') continue;
 
+      const evalResult = await this.allocationRulesService.evaluate({
+        productId: line.productId,
+        facilityId: order.facilityId,
+        clientId: order.clientId || undefined,
+        zoneId: undefined,
+      }, tenantId);
+
+      const orderBy = RULE_ORDER_BY[evalResult.recommendedStrategy] || 'ioh.created_at ASC';
+      const locationIds = evalResult.matchedRules.flatMap((r: any) => r.locationIds);
+      const locationFilter = locationIds.length > 0
+        ? `AND ioh.location_id IN (${locationIds.map((id: string) => `'${id}'::uuid`).join(',')})`
+        : '';
+
       const availableStock = await (this.prisma as any).$queryRawUnsafe(`
         SELECT
           ioh.id,
@@ -33,7 +55,8 @@ export class AllocationService {
           ioh.quantity_allocated,
           ioh.quantity_reserved,
           ioh.uom_id,
-          (ioh.quantity_on_hand - ioh.quantity_allocated - ioh.quantity_reserved) as available
+          (ioh.quantity_on_hand - ioh.quantity_allocated - ioh.quantity_reserved) as available,
+          ioh.created_at
         FROM multitenant.inventory_on_hand ioh
         WHERE ioh.tenant_id = $1::uuid
           AND ioh.facility_id = $2::uuid
@@ -47,7 +70,8 @@ export class AllocationService {
               AND (itl.location_id = ioh.location_id OR it.to_location_id = ioh.location_id)
               AND it.status IN ('DISPATCHED', 'IN_TRANSIT')
           )
-        ORDER BY ioh.created_at ASC
+          ${locationFilter}
+        ORDER BY ${orderBy}
       `, tenantId, order.facilityId, line.productId);
 
       let remaining = line.requestedQuantity;

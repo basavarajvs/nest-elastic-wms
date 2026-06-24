@@ -69,6 +69,12 @@ export const WMS_ROLE_DEFINITIONS: WmsRoleDefinition[] = [
       { action: WmsAction.Manage, subject: 'WmsBpmnProcess' },
       { action: WmsAction.Manage, subject: 'WmsExecutionInstance' },
       { action: WmsAction.Manage, subject: 'Replenishment' },
+      { action: WmsAction.Manage, subject: 'VasServiceCatalog' },
+      { action: WmsAction.Manage, subject: 'VasWorkstation' },
+      { action: WmsAction.Manage, subject: 'QualityInspection' },
+      { action: WmsAction.Manage, subject: 'ComplianceRequirement' },
+      { action: WmsAction.Manage, subject: 'ComplianceAudit' },
+      { action: WmsAction.Manage, subject: 'HazmatMaterial' },
       { action: WmsAction.OverrideApproval, subject: 'AdjustmentApproval' },
     ],
   },
@@ -230,6 +236,12 @@ export const ALL_WMS_SUBJECTS: WmsSubjects[] = [
   'WmsBpmnProcess',
   'WmsExecutionInstance',
   'Replenishment',
+  'VasServiceCatalog',
+  'VasWorkstation',
+  'QualityInspection',
+  'ComplianceRequirement',
+  'ComplianceAudit',
+  'HazmatMaterial',
 ];
 
 export const ALL_WMS_ACTIONS: WmsAction[] = Object.values(WmsAction);

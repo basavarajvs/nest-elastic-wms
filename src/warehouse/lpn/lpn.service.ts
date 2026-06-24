@@ -6,6 +6,7 @@ import { CreateLpnDto } from './dtos/create-lpn.dto';
 import { UpdateLpnDto } from './dtos/update-lpn.dto';
 import { LpnFilterDto } from './dtos/lpn-filter.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { LpnTransactionService } from './lpn-transaction.service';
 
 const LPN_TYPE_RANK: Record<string, number> = {
   PALLET: 5, CARTON: 4, CASE: 3, MIXED: 2, EACH: 1,
@@ -19,6 +20,7 @@ export class LpnService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly lpnTransactionService: LpnTransactionService,
   ) {}
 
   async create(dto: CreateLpnDto, tenantId: string) {
@@ -44,6 +46,13 @@ export class LpnService {
     });
 
     this.logger.log(`LPN created: ${dto.lpnNumber}`);
+    await this.lpnTransactionService.log({
+      tenantId, facilityId: dto.facilityId, lpnId: lpn.id,
+      transactionType: 'CREATE',
+      toLocationId: dto.locationId,
+      quantityAfter: dto.quantity ?? 0,
+      quantityChange: dto.quantity ?? 0,
+    });
     return lpn;
   }
 
@@ -177,11 +186,34 @@ export class LpnService {
       });
     }
 
+    const quantityChanged = dto.quantity !== undefined && dto.quantity !== lpn.quantity;
+    const locationChanged = dto.locationId !== undefined && dto.locationId !== lpn.locationId;
+    const productChanged = dto.productId !== undefined && dto.productId !== lpn.productId;
+    const lotChanged = dto.lotNumber !== undefined && dto.lotNumber !== lpn.lotNumber;
+    const statusChanged = dto.status !== undefined && dto.status !== lpn.status;
+
+    if (statusChanged || quantityChanged || locationChanged || productChanged || lotChanged) {
+      let txType = 'ADJUST';
+      if (statusChanged && locationChanged) txType = 'MOVE';
+      else if (statusChanged) txType = 'STATUS_CHANGE';
+      else if (locationChanged) txType = 'MOVE';
+
+      await this.lpnTransactionService.log({
+        tenantId, facilityId: lpn.facilityId, lpnId: id,
+        transactionType: txType,
+        fromLocationId: locationChanged ? lpn.locationId : undefined,
+        toLocationId: locationChanged ? dto.locationId : undefined,
+        quantityBefore: quantityChanged ? lpn.quantity : undefined,
+        quantityAfter: quantityChanged ? dto.quantity : undefined,
+        quantityChange: quantityChanged ? (dto.quantity ?? 0) - (lpn.quantity ?? 0) : undefined,
+      });
+    }
+
     return updated;
   }
 
   async nestLpn(childLpnId: string, parentLpnId: string, tenantId: string) {
-    return (this.prisma as any).$transaction(async (tx: any) => {
+    const result = await (this.prisma as any).$transaction(async (tx: any) => {
       const child = await tx.lPN.findFirst({ where: { id: childLpnId, tenantId } });
       if (!child) throw new BadRequestException('Child LPN not found');
 
@@ -229,6 +261,15 @@ export class LpnService {
         data: { parentLpnId, status: 'NESTED', locationId: parent.locationId },
       });
     });
+
+    await this.lpnTransactionService.log({
+      tenantId, facilityId: result.facilityId, lpnId: childLpnId,
+      transactionType: 'NEST',
+      toLocationId: result.locationId,
+      referenceType: 'PARENT_LPN',
+      referenceId: parentLpnId,
+    });
+    return result;
   }
 
   async unnestLpn(lpnId: string, tenantId: string) {
@@ -244,6 +285,13 @@ export class LpnService {
     });
 
     this.eventEmitter.emit('lpn.unnested', { lpnId, lpnNumber: lpn.lpnNumber, tenantId });
+    await this.lpnTransactionService.log({
+      tenantId, facilityId: lpn.facilityId, lpnId,
+      transactionType: 'UNNEST',
+      fromLocationId: lpn.locationId,
+      referenceType: 'PARENT_LPN',
+      referenceId: lpn.parentLpnId!,
+    });
     return updated;
   }
 
@@ -276,6 +324,15 @@ export class LpnService {
     } catch (err: any) {
       this.logger.warn(`Failed to record LPN movement transaction: ${err.message}`);
     }
+
+    await this.lpnTransactionService.log({
+      tenantId, facilityId: lpn.facilityId, lpnId,
+      transactionType: 'MOVE',
+      fromLocationId: lpn.locationId,
+      toLocationId: locationId,
+      referenceType: 'LPN_MOVE',
+      referenceId: lpnId,
+    });
 
     this.eventEmitter.emit('lpn.moved', {
       lpnId, lpnNumber: lpn.lpnNumber,
@@ -340,5 +397,12 @@ export class LpnService {
 
     await (this.prisma as any).lPN.delete({ where: { id } });
     this.logger.log(`LPN deleted: ${lpn.lpnNumber}`);
+    await this.lpnTransactionService.log({
+      tenantId, facilityId: lpn.facilityId, lpnId: id,
+      transactionType: 'DELETE',
+      quantityBefore: lpn.quantity ?? 0,
+      referenceType: 'LPN',
+      referenceId: id,
+    });
   }
 }

@@ -26,6 +26,7 @@ import { BrandModule } from './master-data/brands/brand.module';
 import { CategoryModule } from './master-data/categories/category.module';
 import { VendorModule } from './master-data/vendors/vendor.module';
 import { ClientModule } from './master-data/clients/client.module';
+import { CustomersModule } from './master-data/customers/customers.module';
 import { InventoryReservationsModule } from './inventory/inventory-reservations/inventory-reservations.module';
 import { ShippingLabelsModule } from './outbound/shipping-labels/shipping-labels.module';
 import { ProductPackagingModule } from './master-data/product-packaging/product-packaging.module';
@@ -34,7 +35,10 @@ import { ProductClientAssignmentsModule } from './master-data/product-client-ass
 import { ExceptionManagementModule } from './master-data/exception-management/exception-management.module';
 import { LoadingDocksModule } from './outbound/loading-docks/loading-docks.module';
 import { NonConformanceReportsModule } from './quality/non-conformance-reports/non-conformance-reports.module';
+import { QualityInspectionsModule } from './quality/quality-inspections/quality-inspections.module';
+import { ComplianceModule } from './quality/compliance/compliance.module';
 import { VasExecutionModule } from './outbound/vas-execution/vas-execution.module';
+import { VasCatalogModule } from './outbound/vas-catalog/vas-catalog.module';
 import { CarrierRateShoppingModule } from './outbound/carrier-rate-shopping/carrier-rate-shopping.module';
 import { OutboundModule } from './outbound/outbound.module';
 import { PackingStationsModule } from './outbound/packing-stations/packing-stations.module';
@@ -52,6 +56,7 @@ import { SecurityModule } from './security/security.module';
 import { LifecycleModule } from './lifecycle/lifecycle.module';
 import { ReplenishmentModule } from './inventory/replenishment/replenishment.module';
 import { HierarchyModule } from './warehouse/hierarchy/hierarchy.module';
+import { AllocationRulesModule } from './inventory/allocation-rules/allocation-rules.module';
 import { validationSchema } from './config/app.config';
 import { ShutdownDrainMiddleware } from './common/middleware/shutdown-drain.middleware';
 import { TraceContextMiddleware } from './observability/trace-context.middleware';
@@ -115,6 +120,7 @@ import { validatePermissionRegistry } from './casl/permission-registry.bootstrap
     CategoryModule,
     VendorModule,
     ClientModule,
+    CustomersModule,
     InventoryReservationsModule,
     ShippingLabelsModule,
     ProductPackagingModule,
@@ -123,7 +129,10 @@ import { validatePermissionRegistry } from './casl/permission-registry.bootstrap
     ExceptionManagementModule,
     LoadingDocksModule,
     NonConformanceReportsModule,
+    QualityInspectionsModule,
+    ComplianceModule,
     VasExecutionModule,
+    VasCatalogModule,
     CarrierRateShoppingModule,
     OutboundModule,
     PackingStationsModule,
@@ -141,6 +150,7 @@ import { validatePermissionRegistry } from './casl/permission-registry.bootstrap
     LifecycleModule,
     ReplenishmentModule,
     HierarchyModule,
+    AllocationRulesModule,
   ],
   controllers: [AppController],
   providers: [

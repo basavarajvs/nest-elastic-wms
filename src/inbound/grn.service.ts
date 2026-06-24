@@ -5,6 +5,7 @@ import { REDIS_CLIENT } from '../common/cache/redis.constants';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { CreateGrnAdHocDto, RfReceiveDto } from './dtos/grn.dto';
 import { InventoryTransactionService } from '../inventory/inventory-transaction.service';
+import { LpnTransactionService } from '../warehouse/lpn/lpn-transaction.service';
 
 @Injectable()
 export class GrnService {
@@ -15,6 +16,7 @@ export class GrnService {
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
     private readonly eventEmitter: EventEmitter2,
     private readonly txnService: InventoryTransactionService,
+    private readonly lpnTransactionService: LpnTransactionService,
   ) {}
 
   async createFromAsn(asnNumber: string, tenantId: string): Promise<any> {
@@ -127,6 +129,20 @@ export class GrnService {
           quantity: dto.quantity,
           uomId: line.uomId,
           grnLineId: line.id,
+        },
+      });
+
+      await tx.lpnTransaction.create({
+        data: {
+          tenantId,
+          facilityId: line.facilityId,
+          lpnId: lpn.id,
+          transactionType: 'RECEIVE',
+          toLocationId: dto.locationId || line.receipt.facilityId,
+          quantityChange: dto.quantity,
+          quantityAfter: lpn.quantity,
+          referenceType: 'GRN_LINE',
+          referenceId: line.id,
         },
       });
 

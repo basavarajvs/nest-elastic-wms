@@ -1,6 +1,7 @@
-import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { VasCatalogService } from '../vas-catalog/vas-catalog.service';
 import { CreateVasTaskDto, UpdateVasTaskDto } from './dtos/create-vas-task.dto';
 
 @Injectable()
@@ -10,18 +11,36 @@ export class VasExecutionService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
+    @Inject(forwardRef(() => VasCatalogService))
+    private readonly catalogService: VasCatalogService,
   ) {}
 
   async createTask(dto: CreateVasTaskDto, tenantId: string): Promise<any> {
-    const count = await (this.prisma as any).vasExecutionTask.count({ where: { tenantId } });
+    const count = await this.prisma.vasExecutionTask.count({ where: { tenantId } });
     const taskNumber = `VAS-${(count + 1).toString().padStart(6, '0')}`;
 
-    const task = await (this.prisma as any).vasExecutionTask.create({
+    let ratePerUnit = dto.ratePerUnit;
+    let totalCharge: number | undefined;
+
+    if (dto.serviceId) {
+      const services = await this.catalogService.findServicesByIds([dto.serviceId], tenantId);
+      if (services.length === 0) throw new BadRequestException('VAS service not found in catalog');
+
+      const rate = await this.catalogService.lookupRate(dto.serviceId, dto.clientId, tenantId);
+      if (rate.ratePerUnit !== null) {
+        ratePerUnit = rate.ratePerUnit;
+        totalCharge = (dto.quantityRequired ?? 0) * rate.ratePerUnit;
+      }
+    }
+
+    const task = await this.prisma.vasExecutionTask.create({
       data: {
         tenantId,
         facilityId: dto.facilityId,
         taskNumber,
         taskType: dto.taskType,
+        serviceId: dto.serviceId,
+        clientId: dto.clientId,
         orderId: dto.orderId,
         shipmentId: dto.shipmentId,
         productId: dto.productId,
@@ -30,7 +49,8 @@ export class VasExecutionService {
         status: dto.status ?? 'PENDING',
         priority: dto.priority ?? 5,
         assignedToUserId: dto.assignedToUserId,
-        ratePerUnit: dto.ratePerUnit,
+        ratePerUnit: ratePerUnit ?? undefined,
+        totalCharge,
         notes: dto.notes,
       },
     });
@@ -43,14 +63,14 @@ export class VasExecutionService {
     const where: any = { tenantId };
     if (filters?.status) where.status = filters.status;
     if (filters?.facilityId) where.facilityId = filters.facilityId;
-    return (this.prisma as any).vasExecutionTask.findMany({
+    return this.prisma.vasExecutionTask.findMany({
       where,
       orderBy: [{ priority: 'asc' }, { createdAt: 'desc' }],
     });
   }
 
   async findById(id: string, tenantId: string): Promise<any> {
-    const task = await (this.prisma as any).vasExecutionTask.findFirst({ where: { id, tenantId } });
+    const task = await this.prisma.vasExecutionTask.findFirst({ where: { id, tenantId } });
     if (!task) throw new NotFoundException('VAS task not found');
     return task;
   }
@@ -63,12 +83,17 @@ export class VasExecutionService {
       if (dto.status === 'IN_PROGRESS') updateData.startedAt = new Date();
       if (dto.status === 'COMPLETED') updateData.completedAt = new Date();
     }
-    if (dto.quantityCompleted !== undefined) updateData.quantityCompleted = dto.quantityCompleted;
+    if (dto.quantityCompleted !== undefined) {
+      updateData.quantityCompleted = dto.quantityCompleted;
+      if (task.ratePerUnit) {
+        updateData.totalCharge = Number(dto.quantityCompleted) * Number(task.ratePerUnit);
+      }
+    }
     if (dto.priority !== undefined) updateData.priority = dto.priority;
     if (dto.assignedToUserId !== undefined) updateData.assignedToUserId = dto.assignedToUserId;
     if (dto.notes !== undefined) updateData.notes = dto.notes;
 
-    const updated = await (this.prisma as any).vasExecutionTask.update({
+    const updated = await this.prisma.vasExecutionTask.update({
       where: { id },
       data: updateData,
     });
@@ -79,12 +104,12 @@ export class VasExecutionService {
 
   async deleteTask(id: string, tenantId: string): Promise<void> {
     await this.findById(id, tenantId);
-    await (this.prisma as any).vasExecutionTask.delete({ where: { id } });
+    await this.prisma.vasExecutionTask.delete({ where: { id } });
   }
 
   async addEvent(taskId: string, eventType: string, payload: string, userId: string | undefined, tenantId: string): Promise<any> {
     await this.findById(taskId, tenantId);
-    return (this.prisma as any).vasTaskEvent.create({
+    return this.prisma.vasTaskEvent.create({
       data: {
         tenantId,
         vasTaskId: taskId,
@@ -97,7 +122,7 @@ export class VasExecutionService {
 
   async getEvents(taskId: string, tenantId: string): Promise<any> {
     await this.findById(taskId, tenantId);
-    return (this.prisma as any).vasTaskEvent.findMany({
+    return this.prisma.vasTaskEvent.findMany({
       where: { vasTaskId: taskId, tenantId },
       orderBy: { recordedAt: 'asc' },
     });

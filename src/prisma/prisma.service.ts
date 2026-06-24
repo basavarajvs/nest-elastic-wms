@@ -159,6 +159,18 @@ export class PrismaService
       'WarehouseFacility',
       'WarehouseZone',
       'StorageLocation',
+      'Customer',
+      'ClientFacilityAssignment',
+      'InventoryAllocationRule',
+      'InventoryAllocationRuleConstraint',
+      'InventoryAllocationRuleLocation',
+      'PackingSession',
+      'PackingContainer',
+      'PackingSessionStatusHistory',
+      'ShipmentStatusHistory',
+      'LpnTransaction',
+      'CountAccuracyHistory',
+      'CycleCountMetrics',
     ];
     return wmsModels.includes(model);
   }

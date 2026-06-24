@@ -53,8 +53,9 @@ src/
 ├── master-data/       (brands/, carriers/, clients/, products/, product-packaging/, product-suppliers/, vendors/)
 ├── notifications/     (web/, rf/, guards/, listeners/)
 ├── observability/
-├── outbound/          (loads/, shipping-labels/, web/, rf/, dtos/)
+├── outbound/          (loads/, shipping-labels/, vas-catalog/, vas-execution/, web/, rf/, dtos/)
 ├── prisma/
+├── quality/           (non-conformance-reports/, quality-inspections/, compliance/)
 ├── quota/
 ├── reports/           (web/, dtos/)
 ├── rf/
@@ -82,7 +83,26 @@ src/
 - **E2E tests** (`pnpm run test:e2e`): Requires `E2E_TEST_DB_URL` (dedicated test database schema) — not set in current env; pre-existing infra need
 
 ## Current Known Issues
-- (none known — app starts cleanly, Swagger UI at `/api/docs`, 124+ OpenAPI paths, health endpoints respond 200, unit tests pass)
+- (none known — app starts cleanly, Swagger UI at `/api/docs`, 130+ OpenAPI paths, health endpoints respond 200, unit tests pass (16 new quality tests))
+
+## Phase 5 — Quality (2026-06-24)
+- **New models**: `quality_inspections`, `quality_inspection_results`, `quality_inspection_events`, `compliance_requirements`, `compliance_audits`, `hazmat_materials`
+- **New modules**: `src/quality/quality-inspections/`, `src/quality/compliance/`
+- **Web endpoints**: Quality inspections CRUD + results + events timeline; compliance requirements + audits; hazmat material registration
+- **RF endpoints**: `POST /rf/quality/inspections/my-tasks`, `POST /rf/quality/inspections/:id/record-result`
+- **Migration**: `0023_add_quality_compliance_hazmat` (applied to DB)
+- **CASL**: Added `QualityInspection`, `ComplianceRequirement`, `ComplianceAudit`, `HazmatMaterial` subjects; granted `Manage` to `WAREHOUSE_ADMIN`
+- **Tests**: 16 unit tests (quality-inspections: 9, compliance: 7), all passing
+
+## Phase 6 — VAS Catalog & Client Rates (2026-06-24)
+- **New models**: `vas_services`, `vas_service_client_rates`, `vas_workstations`; added `service_id`, `client_id` to `vas_execution_tasks`
+- **New module**: `src/outbound/vas-catalog/`
+- **Web endpoints**: Services CRUD, client rate management, workstation CRUD
+- **RF endpoints**: `GET /rf/vas/workstations`, `POST /rf/vas/workstations/:id/check-in`, `POST /rf/vas/workstations/:id/check-out`
+- **VasExecutionService wiring**: Service validation against catalog on task creation; rate auto-lookup from `VasServiceClientRate` with fallback to `VasService.defaultRate`; populates `ratePerUnit` and `totalCharge`
+- **Migration**: `0024_add_vas_catalog_workstations` (applied to DB)
+- **CASL**: Added `VasServiceCatalog`, `VasWorkstation` subjects; granted `Manage` to `WAREHOUSE_ADMIN`
+- **Tests**: 12 unit tests (vas-catalog service), all passing
 
 ## graphify
 

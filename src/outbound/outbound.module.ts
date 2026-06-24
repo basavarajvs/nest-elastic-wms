@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
+import { AllocationRulesModule } from '../inventory/allocation-rules/allocation-rules.module';
 import { OrderService } from './order.service';
 import { AllocationService } from './allocation.service';
 import { WaveService } from './wave.service';
@@ -17,6 +18,7 @@ import { OrderLineWebController } from './web/order-line.controller';
 
 @Module({
   imports: [
+    AllocationRulesModule,
     BullModule.registerQueue(
       { name: 'allocation-engine' },
       { name: 'wave-planner' },

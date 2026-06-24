@@ -36,6 +36,11 @@ export class CreateOrderDto {
   orderType?: string;
 
   @IsOptional()
+  @ApiProperty({ type: String, required: false })
+  @IsUUID()
+  customerId?: string;
+
+  @IsOptional()
   @ApiProperty({ type: Number, required: false })
   @IsNumber()
   priority?: number;

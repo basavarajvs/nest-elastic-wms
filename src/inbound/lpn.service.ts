@@ -2,6 +2,7 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NestLpnDto, MoveLpnDto } from './dtos/lpn.dto';
+import { LpnTransactionService } from '../warehouse/lpn/lpn-transaction.service';
 
 // LPN type hierarchy: PALLET(5) > CARTON(4) > CASE(3) > MIXED(2) > EACH(1)
 const LPN_TYPE_RANK: Record<string, number> = {
@@ -20,6 +21,7 @@ export class LpnService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly lpnTransactionService: LpnTransactionService,
   ) {}
 
   async findByNumber(lpnNumber: string, tenantId: string): Promise<any> {
@@ -33,7 +35,7 @@ export class LpnService {
   }
 
   async nestLpn(dto: NestLpnDto, tenantId: string): Promise<any> {
-    return (this.prisma as any).$transaction(async (tx: any) => {
+    const result = await (this.prisma as any).$transaction(async (tx: any) => {
       const child = await tx.lPN.findFirst({
         where: { id: dto.childLpnId, tenantId },
       });
@@ -92,6 +94,17 @@ export class LpnService {
         },
       });
     });
+
+    if (result) {
+      await this.lpnTransactionService.log({
+        tenantId, facilityId: result.facilityId, lpnId: dto.childLpnId,
+        transactionType: 'NEST',
+        toLocationId: result.locationId,
+        referenceType: 'PARENT_LPN',
+        referenceId: dto.parentLpnId,
+      });
+    }
+    return result;
   }
 
   async moveLpn(lpnId: string, dto: MoveLpnDto, tenantId: string): Promise<any> {
@@ -105,6 +118,14 @@ export class LpnService {
       data: { locationId: dto.locationId },
     });
     this.eventEmitter.emit('lpn.moved', { lpnId, from: lpn.locationId, to: dto.locationId, tenantId });
+    await this.lpnTransactionService.log({
+      tenantId, facilityId: lpn.facilityId, lpnId,
+      transactionType: 'MOVE',
+      fromLocationId: lpn.locationId,
+      toLocationId: dto.locationId,
+      referenceType: 'LPN_MOVE',
+      referenceId: lpnId,
+    });
     return result;
   }
 

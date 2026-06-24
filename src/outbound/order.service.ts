@@ -37,6 +37,7 @@ export class OrderService {
         clientCode: dto.clientCode,
         orderType: dto.orderType || 'STANDARD',
         priority: dto.priority ?? 10,
+        customerId: dto.customerId || undefined,
         deliveryAddress: dto.deliveryAddress || undefined,
         requestedDeliveryDate: dto.requestedDeliveryDate ? new Date(dto.requestedDeliveryDate) : null,
         notes: dto.notes,
@@ -70,7 +71,7 @@ export class OrderService {
       const product = await (this.prisma as any).product.findFirst({
         where: { id: line.productId, tenantId },
       });
-      if (!product || product.status === 'DISCONTINUED') {
+      if (!product || !product.isActive) {
         throw new BadRequestException(`Product ${line.productId} is not active`);
       }
     }
@@ -134,10 +135,10 @@ export class OrderService {
     try {
       const line = await (this.prisma as any).salesOrderLine.findFirst({
         where: { id: payload.orderLineId, tenantId: payload.tenantId },
-        select: { salesOrderId: true },
+        select: { orderId: true },
       });
       if (line) {
-        await this.syncStatusFromLines(line.salesOrderId, payload.tenantId);
+        await this.syncStatusFromLines(line.orderId, payload.tenantId);
       }
     } catch (err: any) {
       this.logger.error(`syncStatusFromLines on picking completed failed: ${err.message}`);
@@ -156,7 +157,7 @@ export class OrderService {
       clientCode: order.clientCode || '',
       status: order.status,
       itemsCount: 0,
-      totalValue: order.totalValue || 0,
+      totalValue: order.totalOrderValue || 0,
       tenantId: order.tenantId,
     });
 
@@ -180,7 +181,7 @@ export class OrderService {
       clientCode: updated.clientCode || '',
       status: updated.status,
       itemsCount: 0,
-      totalValue: updated.totalValue || 0,
+      totalValue: updated.totalOrderValue || 0,
       tenantId: updated.tenantId,
     });
 

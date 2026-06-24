@@ -51,6 +51,16 @@ export class CreateVasTaskDto {
   @IsUUID()
   assignedToUserId?: string;
 
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsUUID()
+  serviceId?: string;
+
+  @ApiPropertyOptional({ type: String })
+  @IsOptional()
+  @IsUUID()
+  clientId?: string;
+
   @ApiPropertyOptional({ type: Number })
   @IsOptional()
   @IsNumber()

@@ -15,6 +15,7 @@ import { GrnLineWebController } from './web/grn-line.controller';
 import { QualityWebController } from './web/quality.controller';
 import { QualityService } from './quality.service';
 import { InventoryModule } from '../inventory/inventory.module';
+import { LpnModule } from '../warehouse/lpn/lpn.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { InventoryModule } from '../inventory/inventory.module';
       { name: 'putaway-generator' },
     ),
     InventoryModule,
+    LpnModule,
   ],
   controllers: [InboundWebController, InboundRfController, AsnLineWebController, GrnLineWebController, QualityWebController],
   providers: [
