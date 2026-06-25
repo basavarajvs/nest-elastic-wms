@@ -171,6 +171,14 @@ export class PrismaService
       'LpnTransaction',
       'CountAccuracyHistory',
       'CycleCountMetrics',
+      'WarehouseEvent',
+      'SystemAuditLog',
+      'DailyKpiMetric',
+      'LocationPickHeatmap',
+      'FulfillmentWorkflowEvent',
+      'FulfillmentWorkflowTransition',
+      'FulfillmentBillingRun',
+      'FulfillmentBillingEvent',
     ];
     return wmsModels.includes(model);
   }

@@ -57,6 +57,11 @@ import { LifecycleModule } from './lifecycle/lifecycle.module';
 import { ReplenishmentModule } from './inventory/replenishment/replenishment.module';
 import { HierarchyModule } from './warehouse/hierarchy/hierarchy.module';
 import { AllocationRulesModule } from './inventory/allocation-rules/allocation-rules.module';
+import { BillingModule } from './billing/billing.module';
+import { DockYardModule } from './outbound/dock-yard/dock-yard.module';
+import { LaborModule } from './labor/labor.module';
+import { EquipmentModule } from './equipment/equipment.module';
+import { WorkOrdersModule } from './work-orders/work-orders.module';
 import { validationSchema } from './config/app.config';
 import { ShutdownDrainMiddleware } from './common/middleware/shutdown-drain.middleware';
 import { TraceContextMiddleware } from './observability/trace-context.middleware';
@@ -65,6 +70,8 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
 import { PiiRedactorInterceptor } from './common/interceptors/pii-redactor.interceptor';
 import { RequestSemaphoreInterceptor } from './common/interceptors/request-semaphore.interceptor';
 import { IdempotencyInterceptor } from './common/interceptors/idempotency.interceptor';
+import { AnalyticsModule } from './analytics/analytics.module';
+import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -151,6 +158,12 @@ import { validatePermissionRegistry } from './casl/permission-registry.bootstrap
     ReplenishmentModule,
     HierarchyModule,
     AllocationRulesModule,
+    BillingModule,
+    DockYardModule,
+    LaborModule,
+    EquipmentModule,
+    WorkOrdersModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -175,6 +188,10 @@ import { validatePermissionRegistry } from './casl/permission-registry.bootstrap
     {
       provide: APP_INTERCEPTOR,
       useClass: IdempotencyInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditInterceptor,
     },
   ],
 })

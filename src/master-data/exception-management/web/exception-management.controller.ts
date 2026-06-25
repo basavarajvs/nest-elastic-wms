@@ -3,19 +3,24 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { CaslGuard } from '../../../common/guards/casl.guard';
 import { CheckAbility } from '../../../common/decorators/check-ability.decorator';
 import { ExceptionManagementService } from '../exception-management.service';
+import { ExceptionCommentService } from '../exception-comment.service';
 import { CreateExceptionDto, UpdateExceptionDto } from '../dtos/create-exception.dto';
+import { CreateCommentDto } from '../dtos/comment.dto';
 
 @ApiTags('WMS-WEB', 'Operations')
 @Controller('web/exceptions')
 @UseGuards(CaslGuard)
 export class ExceptionManagementWebController {
-  constructor(private readonly service: ExceptionManagementService) {}
+  constructor(
+    private readonly service: ExceptionManagementService,
+    private readonly commentService: ExceptionCommentService,
+  ) {}
 
   @Post()
   @CheckAbility({ action: 'create', subject: 'ExceptionManagement' })
   @ApiOperation({ summary: 'Report an exception' })
   async create(@Body() dto: CreateExceptionDto, @Req() req: any) {
-    return this.service.create(dto, req.tenantContext.getTenantId());
+    return this.service.create(dto, req.tenantContext.getTenantId(), req.user?.id);
   }
 
   @Get()
@@ -45,5 +50,31 @@ export class ExceptionManagementWebController {
   async delete(@Param('id') id: string, @Req() req: any) {
     await this.service.delete(id, req.tenantContext.getTenantId());
     return { deleted: true };
+  }
+
+  @Post(':id/comments')
+  @CheckAbility({ action: 'update', subject: 'ExceptionManagement' })
+  @ApiOperation({ summary: 'Add a comment to an exception' })
+  async addComment(
+    @Param('id') id: string,
+    @Body() dto: CreateCommentDto,
+    @Req() req: any,
+  ) {
+    return this.commentService.addComment(
+      id,
+      dto,
+      req.tenantContext.getTenantId(),
+      req.user?.id,
+    );
+  }
+
+  @Get(':id/comments')
+  @CheckAbility({ action: 'read', subject: 'ExceptionManagement' })
+  @ApiOperation({ summary: 'List comments on an exception' })
+  async listComments(@Param('id') id: string, @Req() req: any) {
+    return this.commentService.listComments(
+      id,
+      req.tenantContext.getTenantId(),
+    );
   }
 }

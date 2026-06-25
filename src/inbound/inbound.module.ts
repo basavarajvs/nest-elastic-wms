@@ -12,8 +12,6 @@ import { InboundWebController } from './web/inbound.controller';
 import { InboundRfController } from './rf/inbound.controller';
 import { AsnLineWebController } from './web/asn-line.controller';
 import { GrnLineWebController } from './web/grn-line.controller';
-import { QualityWebController } from './web/quality.controller';
-import { QualityService } from './quality.service';
 import { InventoryModule } from '../inventory/inventory.module';
 import { LpnModule } from '../warehouse/lpn/lpn.module';
 
@@ -25,14 +23,13 @@ import { LpnModule } from '../warehouse/lpn/lpn.module';
     InventoryModule,
     LpnModule,
   ],
-  controllers: [InboundWebController, InboundRfController, AsnLineWebController, GrnLineWebController, QualityWebController],
+  controllers: [InboundWebController, InboundRfController, AsnLineWebController, GrnLineWebController],
   providers: [
     AsnService,
     GrnService,
     LpnService,
     PutawayService,
     QcService,
-    QualityService,
     PutawayGeneratorProcessor,
     PutawayReconciliationJob,
     ZoneCapacityValidator,

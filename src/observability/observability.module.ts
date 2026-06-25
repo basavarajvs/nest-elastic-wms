@@ -9,6 +9,9 @@ import { WorkerHeapMonitor } from './worker-heap-monitor';
 import { EventLeakDetectorService } from './event-leak-detector.service';
 import { DynamicListenerRegistry } from './dynamic-listener-registry';
 import { BackpressureService } from './backpressure.service';
+import { AuditModule } from './audit/audit.module';
+import { AuditService } from './audit/audit.service';
+import { WarehouseEventService } from './audit/warehouse-event.service';
 
 @Global()
 @Module({
@@ -20,6 +23,7 @@ import { BackpressureService } from './backpressure.service';
         config: { prefix: 'wms_' },
       },
     }),
+    AuditModule,
   ],
   providers: [
     WmsMetricsService,
@@ -40,6 +44,8 @@ import { BackpressureService } from './backpressure.service';
     EventLeakDetectorService,
     DynamicListenerRegistry,
     BackpressureService,
+    AuditService,
+    WarehouseEventService,
   ],
 })
 export class ObservabilityModule {}

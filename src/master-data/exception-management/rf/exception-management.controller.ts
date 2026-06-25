@@ -21,12 +21,12 @@ export class ExceptionManagementRfController {
     @Body('notes') notes: string,
   ) {
     return this.service.create({
-      facilityId: '',
+      facilityId: req.facilityId ?? '',
       exceptionType,
       locationId: locationId || undefined,
       productId: productId || undefined,
       notes: notes || undefined,
-    }, req.tenantContext.getTenantId());
+    }, req.tenantContext.getTenantId(), req.user?.id);
   }
 
   @Get('/my-reports')

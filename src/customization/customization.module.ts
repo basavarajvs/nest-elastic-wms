@@ -15,6 +15,10 @@ import { WmsStateMachineController } from './web/state-machine.controller';
 import { WmsRuleController } from './web/rule.controller';
 import { WmsBpmnController } from './web/bpmn.controller';
 import { ExecutionController } from './web/execution.controller';
+import { FulfillmentWorkflowService } from './fulfillment/fulfillment-workflow.service';
+import { FulfillmentBillingService } from './billing/fulfillment-billing.service';
+import { FulfillmentWorkflowController } from './web/fulfillment-workflow.controller';
+import { FulfillmentBillingController } from './web/fulfillment-billing.controller';
 
 @Module({
   imports: [
@@ -28,6 +32,8 @@ import { ExecutionController } from './web/execution.controller';
     WmsRuleController,
     WmsBpmnController,
     ExecutionController,
+    FulfillmentWorkflowController,
+    FulfillmentBillingController,
   ],
   providers: [
     StateMachineService,
@@ -40,6 +46,8 @@ import { ExecutionController } from './web/execution.controller';
     BpmnRecoveryJob,
     StateMachineAuditInterceptor,
     EngineResourceGuard,
+    FulfillmentWorkflowService,
+    FulfillmentBillingService,
   ],
   exports: [
     StateMachineService,
@@ -48,6 +56,8 @@ import { ExecutionController } from './web/execution.controller';
     WorkflowOrchestratorService,
     BpmnStateSerializer,
     ContextTrimmerService,
+    FulfillmentWorkflowService,
+    FulfillmentBillingService,
   ],
 })
 export class CustomizationModule implements OnModuleInit {

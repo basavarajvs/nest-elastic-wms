@@ -1,6 +1,7 @@
 import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ExceptionEscalationService } from './exception-escalation.service';
 import { CreateExceptionDto, UpdateExceptionDto } from './dtos/create-exception.dto';
 
 @Injectable()
@@ -10,9 +11,10 @@ export class ExceptionManagementService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly escalationService: ExceptionEscalationService,
   ) {}
 
-  async create(dto: CreateExceptionDto, tenantId: string): Promise<any> {
+  async create(dto: CreateExceptionDto, tenantId: string, reportedByUserId?: string): Promise<any> {
     const count = await (this.prisma as any).exceptionManagement.count({
       where: { tenantId, facilityId: dto.facilityId },
     });
@@ -31,12 +33,16 @@ export class ExceptionManagementService {
         locationId: dto.locationId,
         productId: dto.productId,
         lotId: dto.lotId,
+        reportedByUserId: reportedByUserId ?? null,
         assignedToUserId: dto.assignedToUserId,
         notes: dto.notes,
       },
     });
 
     this.eventEmitter.emit('exception.created', { exceptionId: exception.id, tenantId });
+    this.escalationService.checkEscalation(exception.id, tenantId).catch(err => {
+      this.logger.error(`Escalation check failed for ${exception.id}: ${err.message}`);
+    });
     return exception;
   }
 
@@ -80,6 +86,11 @@ export class ExceptionManagementService {
 
     if (dto.status && dto.status !== exception.status) {
       this.eventEmitter.emit('exception.status_changed', { exceptionId: id, status: dto.status, tenantId });
+      if (dto.status !== 'RESOLVED' && dto.status !== 'CLOSED') {
+        this.escalationService.checkEscalation(id, tenantId).catch(err => {
+          this.logger.error(`Escalation check failed for ${id}: ${err.message}`);
+        });
+      }
     }
 
     return updated;
