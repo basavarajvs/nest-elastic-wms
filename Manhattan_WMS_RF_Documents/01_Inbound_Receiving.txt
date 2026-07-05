@@ -1,0 +1,46 @@
+# Document 1: Inbound - Receiving (ASN Directed Receive)
+
+**Context:** A truck arrives at the dock. The operator uses the RF device to receive inventory against an Advance Ship Notice (ASN). The goal is to convert physical goods into system-tracked LPNs (License Plate Numbers) sitting in a staging location.
+
+### Sequence of Events
+1. **Login & Door Assignment:** Operator logs in and scans the Dock Door barcode to assign the inbound trailer to a specific door.
+2. **Scan Trailer/ASN:** Operator scans the trailer license plate or the ASN barcode (e.g., SSCC-18).
+3. **System Validation:** System validates the ASN exists, is routed to this door, and has open receipt lines.
+4. **Item Scanning:** Operator scans the first item barcode on the pallet.
+5. **UOM & Quantity Entry:** System prompts for Unit of Measure (e.g., PALLET, CASE, EACH) and quantity.
+6. **LPN Generation:** System generates a unique LPN, links it to the ASN line, and assigns it to the staging location.
+7. **Completion:** Operator confirms if more items remain on the ASN or closes the receipt.
+
+### API & Backend Interactions
+| Component | Details |
+| :--- | :--- |
+| **Logical API Call** | `POST /api/mobile/inbound/receipts/asn` <br> `POST /api/mobile/inbound/receipts/lpns` |
+| **Expected API Response** | Success payload returning generated `lpn_nbr`, `stg_locn` (Staging Location), and `rcpt_line_nbr`. |
+| **Next Screen Prompt** | "Scan next Item" OR "Receipt Complete (Y/N)" |
+| **Backend Entities Updated** | **`rcpt_hdr` / `rcpt_line`:** Status updates to `RCVD` (Received). <br> **`lpn`:** New record created. Status = `RCVD`. <br> **`invn`:** New inventory record created at the Dock/Staging Location. |
+| **Data Status Changes** | ASN Line Status: `OPEN` → `RCVD`. <br> LPN Status: `00` (New) → `RCVD` (Received). |
+
+---
+
+# Document 2: Inbound - Quality Inspection (QC)
+
+**Context:** Post-receiving, inventory may be routed to a QC hold area. A QC inspector uses the RF device to audit the received LPN before releasing it to general inventory.
+
+### Sequence of Events
+1. **Menu Navigation:** Operator selects `Inbound` → `Quality Control` → `Inspect LPN`.
+2. **Scan LPN:** Operator scans the LPN barcode of the pallet/carton sitting in the QC area.
+3. **System Retrieval:** System fetches the LPN details, ASN source, and required QC checklist (e.g., check for damage, verify temperature, count sample).
+4. **Defect Entry (If any):** Operator inputs defect codes (e.g., `DMG-01` for crushed boxes) and quantity affected.
+5. **Disposition Decision:** Operator selects `Pass` (release to putaway) or `Fail` (return to vendor / destroy).
+6. **Confirmation:** System updates the LPN status based on the disposition.
+
+### API & Backend Interactions
+| Component | Details |
+| :--- | :--- |
+| **Logical API Call** | `POST /api/mobile/qc/inspect` <br> `PUT /api/mobile/inventory/lpns/{lpn}/status` |
+| **Expected API Response** | Success payload confirming QC audit logged and new inventory status applied. |
+| **Next Screen Prompt** | "Scan Next LPN" OR "QC Menu" |
+| **Backend Entities Updated** | **`qc_audit`:** New record created with user ID, timestamp, defect codes. <br> **`lpn`:** Status updated based on pass/fail. <br> **`invn`:** Status code updated (e.g., from `H` (Hold) to `A` (Available)). |
+| **Data Status Changes** | LPN Status: `QC_HOLD` → `PUTAWAY_PND` (Pass) OR `REJECT` (Fail). |
+
+---

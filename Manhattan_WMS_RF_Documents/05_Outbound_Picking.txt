@@ -1,0 +1,1920 @@
+# Document 5: Outbound - Picking after wave allocation
+
+=== Start ===
+verify if this is correct
+In Manhattan WMS, once a wave is released and inventory is allocated, the **picker** takes over.
+
+The picker's job is to:
+
+* Get next task from system
+* Travel to pick faces
+* Scan location check-digits
+* Pick items and confirm quantities
+* Scan items into destination totes/pallets
+* Handle short picks
+
+---
+
+# Before Picker Starts
+
+System already has:
+
+```text
+Sales Order
+   ↓
+Wave Released
+   ↓
+Inventory Allocated
+   ↓
+Pick Tasks Generated
+```
+
+Order status may be something like:
+
+```text
+Allocated
+```
+
+or
+
+```text
+Ready for Pick
+```
+
+---
+
+# What Picker Sees
+
+RF Menu:
+
+```text
+Outbound
+   → Picking
+   → Get Work
+```
+
+---
+
+# Step 1: Get Task & Scan Cart
+
+Operator presses:
+
+```text
+Get Work
+```
+
+System assigns:
+
+```text
+Pick Task
+Locn: P-05-A-01
+```
+
+Operator scans their empty tote:
+
+```text
+TOTE-999
+```
+
+---
+
+# Step 2: Travel & Scan Check-Digit
+
+Operator drives to location.
+
+RF asks:
+
+```text
+Scan Location Check-Digit
+```
+
+Operator scans:
+
+```text
+CHK-8839
+```
+
+System validates they are at the exact correct bin.
+
+---
+
+# Step 3: Scan Item & Enter Qty
+
+RF asks:
+
+```text
+Scan Item
+```
+
+Operator scans:
+
+```text
+ITEM1001
+```
+
+RF:
+
+```text
+Pick Qty = 5
+
+Enter Picked Qty
+```
+
+Operator enters:
+
+```text
+5
+```
+
+---
+
+# What Manhattan Validates
+
+System checks:
+
+* Correct check-digit for location
+* Correct SKU scanned
+* Quantity picked <= Quantity allocated
+* Destination Tote is valid for this order/wave
+
+If wrong item scanned:
+
+```text
+ERROR
+
+Item not expected at this location
+```
+
+---
+
+# Step 4: Exception Handling (Short Pick)
+
+Example:
+
+Expected:
+
+```text
+5 Shirts
+```
+
+Actual:
+
+```text
+4 Shirts (Bin is empty)
+```
+
+Operator enters:
+
+```text
+Picked Qty = 4
+```
+
+RF prompts:
+
+```text
+Short Pick Reason?
+1. Empty
+2. Damaged
+```
+
+Operator selects `1`. System triggers replenishment task.
+
+---
+
+# Manhattan Transactions Created
+
+Behind the scenes:
+
+```text
+Task Confirmation (task_dtl)
+Inventory Deduction (invn table)
+Order Line Update (ord_line table)
+Short Pick / Replenishment Task Creation
+```
+
+---
+
+# Example RF Flow
+
+### Screen 1
+
+```text
+GET WORK
+
+Scan Tote:
+__________
+```
+
+---
+
+### Screen 2
+
+```text
+Go To: P-05-A-01
+
+Scan Check-Digit:
+__________
+```
+
+---
+
+### Screen 3
+
+```text
+ITEM1001
+
+Pick Qty: 5
+
+Enter Picked:
+__
+```
+
+---
+
+### Screen 4
+
+```text
+PICK COMPLETE
+
+Next Task? Y/N
+```
+
+---
+
+# Resulting Inventory/LPN State
+
+```text
+Allocated (Rack)
+        ↓
+
+Pick Confirmed
+        ↓
+
+DEDUCTED (Rack)
+        ↓
+
+ADDED (TOTE-999)
+        ↓
+
+PICKED (Ready for Pack)
+```
+
+So from the warehouse operator's perspective, the picking flow is essentially:
+
+```text
+Get Task
+    ↓
+Scan Tote
+    ↓
+Scan Location
+    ↓
+Scan Item & Qty
+    ↓
+Confirm / Short Pick
+```
+
+After this, the next warehouse process in Manhattan is typically **Packing**, where totes are consolidated into shipping cartons.
+
+---
+
+# Document 6: Outbound - Packing
+
+=== Start ===
+verify if this is correct
+In Manhattan WMS, once **wave picking is completed**, inventory is usually sitting in a tote, carton, or pallet at a packing station. The picker is done. Now the **packer** takes over.
+
+The packer's job is very different from the picker's:
+
+* Verify picked items
+* Handle shortages/exceptions
+* Select carton
+* Pack items
+* Generate shipping labels
+* Close carton/LPN
+* Move shipment to staging
+
+---
+
+# Before Packer Starts
+
+System already has:
+
+```text
+Sales Order
+   ↓
+Wave Released
+   ↓
+Allocation
+   ↓
+Picking Completed
+   ↓
+Inventory moved to Packing Station
+```
+
+Order status may be something like:
+
+```text
+Ready for Packing
+```
+
+or
+
+```text
+Packed Pending
+```
+
+depending on configuration.
+
+---
+
+# What Packer Sees
+
+RF Menu:
+
+```text
+Outbound
+   → Packing
+```
+
+or on a workstation:
+
+```text
+Pack Workbench
+```
+
+Many Manhattan sites use a PC workstation with barcode scanner because packing involves labels, dimensions, weight, etc.
+
+---
+
+# Step 1: Scan Tote / Carton / Pick LPN
+
+Packer receives:
+
+```text
+Tote T000123
+```
+
+or
+
+```text
+Carton C000456
+```
+
+RF displays:
+
+```text
+Scan Pick Container
+```
+
+Packer scans:
+
+```text
+T000123
+```
+
+System retrieves:
+
+```text
+Order SO10045
+```
+
+and displays:
+
+```text
+Order: SO10045
+
+Expected:
+2 × Shirt
+1 × Jacket
+```
+
+---
+
+# Step 2: Verify Items
+
+RF asks:
+
+```text
+Scan Item
+```
+
+Packer scans:
+
+```text
+ITEM1001
+```
+
+RF:
+
+```text
+Expected Qty = 2
+
+Enter Packed Qty
+```
+
+Packer enters:
+
+```text
+2
+```
+
+Then scans next item.
+
+```text
+ITEM2001
+Qty = 1
+```
+
+---
+
+# What Manhattan Validates
+
+System checks:
+
+* Correct SKU
+* Correct quantity
+* Correct order
+* Correct inventory ownership
+* Lot/Serial if applicable
+
+If wrong item scanned:
+
+```text
+ERROR
+
+Item not expected
+```
+
+---
+
+# Step 3: Exception Handling
+
+Example:
+
+Expected:
+
+```text
+2 Shirts
+```
+
+Actual:
+
+```text
+1 Shirt
+```
+
+Packer enters:
+
+```text
+Packed Qty = 1
+```
+
+Manhattan may create:
+
+```text
+Short Pick
+```
+
+or
+
+```text
+Replenishment Needed
+```
+
+depending on configuration.
+
+---
+
+# Step 4: Select Carton
+
+Many facilities use cartonization.
+
+System suggests:
+
+```text
+Suggested Carton
+
+BOX-MEDIUM
+```
+
+RF displays:
+
+```text
+Use Carton:
+BOX-MEDIUM
+
+Y/N
+```
+
+or
+
+```text
+Scan Carton Type
+```
+
+Packer scans:
+
+```text
+BOX-MEDIUM
+```
+
+---
+
+# Step 5: Create Packing LPN
+
+Manhattan creates a shipping container.
+
+Example:
+
+```text
+Pick Tote:
+T000123
+```
+
+becomes:
+
+```text
+Shipping LPN:
+SHP000567
+```
+
+This LPN represents the actual shipped carton.
+
+---
+
+# Step 6: Pack Confirmation
+
+RF displays:
+
+```text
+Confirm Pack
+```
+
+Packer confirms.
+
+Inventory now moves:
+
+```text
+Picked
+   ↓
+Packed
+```
+
+---
+
+# Step 7: Weigh Carton
+
+Many sites have integrated scales.
+
+Scale returns:
+
+```text
+5.2 KG
+```
+
+System records weight.
+
+RF:
+
+```text
+Weight Accepted
+```
+
+---
+
+# Step 8: Print Shipping Label
+
+Manhattan communicates with carrier software.
+
+Examples:
+
+* UPS
+* FedEx
+* DHL
+
+Label generated.
+
+Printer produces:
+
+```text
+Carrier Label
+```
+
+and often:
+
+```text
+Packing Slip
+```
+
+---
+
+# Step 9: Close Carton
+
+RF:
+
+```text
+Close LPN
+
+LPN:
+SHP000567
+
+Enter
+```
+
+Packer confirms.
+
+System updates:
+
+```text
+LPN Status = Packed
+```
+
+---
+
+# Step 10: Move to Shipping Lane
+
+RF displays:
+
+```text
+Move Carton To:
+DOOR-05
+```
+
+or
+
+```text
+STAGE-LANE-03
+```
+
+Packer places carton in staging lane.
+
+---
+
+# Manhattan Transactions Created
+
+Behind the scenes:
+
+```text
+Pick Confirmation
+Pack Confirmation
+Carton Creation
+Weight Capture
+Label Generation
+Shipment Update
+Inventory Movement
+```
+
+---
+
+# Example RF Flow
+
+### Screen 1
+
+```text
+PACK ORDER
+
+Scan Tote:
+_________
+```
+
+---
+
+### Screen 2
+
+```text
+ORDER: SO10045
+
+Scan Item
+_________
+```
+
+---
+
+### Screen 3
+
+```text
+ITEM1001
+
+Expected: 2
+
+Packed Qty:
+__
+```
+
+---
+
+### Screen 4
+
+```text
+Carton:
+BOX-MEDIUM
+
+Confirm?
+Y/N
+```
+
+---
+
+### Screen 5
+
+```text
+Weight:
+5.2 KG
+
+Accept?
+Y/N
+```
+
+---
+
+### Screen 6
+
+```text
+Printing Label...
+```
+
+---
+
+### Screen 7
+
+```text
+PACK COMPLETE
+
+Move To:
+STAGE-03
+```
+
+---
+
+# Resulting Inventory/LPN State
+
+```text
+Pick LPN
+(T000123)
+        ↓
+
+Shipping LPN
+(SHP000567)
+        ↓
+
+PACKED
+        ↓
+
+STAGED
+        ↓
+
+READY FOR LOADING
+```
+
+So from the warehouse operator's perspective, the packing flow is essentially:
+
+```text
+Scan Tote
+    ↓
+Verify Items
+    ↓
+Confirm Quantities
+    ↓
+Select/Suggest Carton
+    ↓
+Pack Items
+    ↓
+Capture Weight
+    ↓
+Print Shipping Label
+    ↓
+Close Carton (Shipping LPN)
+    ↓
+Move To Shipping Lane
+```
+
+After this, the next warehouse process in Manhattan is typically **Shipping/Staging/Load Truck**, where loaders scan packed cartons or pallets onto a trailer and confirm shipment departure.
+
+---
+
+# Document 7: Outbound - Shipping
+
+=== Start ===
+verify if this is correct
+In Manhattan WMS, once cartons are packed and staged at the outbound doors, the **loader/shipper** takes over.
+
+The loader's job is to:
+
+* Verify the correct trailer is at the door
+* Scan shipping LPNs as they are loaded
+* Prevent "Wrong Truck" errors
+* Seal the trailer
+* Close the load/manifest
+
+---
+
+# Before Loader Starts
+
+System already has:
+
+```text
+Packing Completed
+   ↓
+Cartons Staged at Door
+   ↓
+Load / Manifest Created
+   ↓
+Trailer Assigned to Door
+```
+
+Order status may be something like:
+
+```text
+Staged
+```
+
+or
+
+```text
+Ready to Load
+```
+
+---
+
+# What Loader Sees
+
+RF Menu:
+
+```text
+Outbound
+   → Shipping
+   → Load Trailer
+```
+
+---
+
+# Step 1: Scan Door & Trailer
+
+Loader receives:
+
+```text
+Trailer TR-889
+```
+
+RF displays:
+
+```text
+Scan Dock Door
+```
+
+Loader scans:
+
+```text
+DOOR-05
+```
+
+RF displays:
+
+```text
+Scan Trailer ID
+```
+
+Loader scans:
+
+```text
+TR-889
+```
+
+---
+
+# Step 2: Scan Shipping LPN
+
+As cartons are placed on the truck:
+
+RF asks:
+
+```text
+Scan Carton LPN
+```
+
+Loader scans:
+
+```text
+SHP000567
+```
+
+System validates:
+
+```text
+Accepted
+```
+
+---
+
+# What Manhattan Validates
+
+System checks:
+
+* Scanned LPN belongs to the Load/Manifest assigned to this specific Trailer/Door
+* LPN is in `PACKED` or `STAGED` status
+* LPN has not already been loaded on another trailer
+
+If wrong carton scanned:
+
+```text
+ALARM!
+
+WRONG TRUCK
+LPN belongs to DOOR-02
+```
+
+---
+
+# Step 3: Exception Handling
+
+If a carton is damaged during loading:
+
+RF allows:
+
+```text
+Damage LPN
+SHP000567
+```
+
+System removes it from the manifest and triggers a repack task.
+
+---
+
+# Step 4: Close Trailer & Seal
+
+Once truck is full:
+
+RF displays:
+
+```text
+Load Complete?
+Y/N
+```
+
+Loader presses `Y`.
+
+RF asks:
+
+```text
+Enter Seal Number
+```
+
+Loader enters physical bolt seal:
+
+```text
+SL-993827
+```
+
+System updates:
+
+```text
+Trailer Closed
+```
+
+---
+
+# Manhattan Transactions Created
+
+Behind the scenes:
+
+```text
+Load Confirmation (load_dtl)
+Trailer Status Update (trlr table)
+LPN Status Update (lpn table)
+Order Status Update (ord_hdr table)
+Manifest / Bill of Lading Finalization
+```
+
+---
+
+# Example RF Flow
+
+### Screen 1
+
+```text
+LOAD TRAILER
+
+Scan Door:
+__________
+```
+
+---
+
+### Screen 2
+
+```text
+Scan Trailer:
+__________
+```
+
+---
+
+### Screen 3
+
+```text
+Scan Carton LPN:
+__________
+```
+
+---
+
+### Screen 4
+
+```text
+Load Complete?
+Y/N
+```
+
+---
+
+### Screen 5
+
+```text
+Enter Seal #:
+__________
+```
+
+---
+
+# Resulting Inventory/LPN State
+
+```text
+Staged (Door)
+        ↓
+
+Scan & Load
+        ↓
+
+LOADED (Trailer)
+        ↓
+
+Trailer Sealed
+        ↓
+
+SHIPPED
+```
+
+So from the warehouse operator's perspective, the shipping flow is essentially:
+
+```text
+Scan Door
+    ↓
+Scan Trailer
+    ↓
+Scan Cartons (Load)
+    ↓
+Handle Wrong Truck Alarms
+    ↓
+Close Trailer
+    ↓
+Enter Seal Number
+```
+
+After this, the inventory leaves the four walls of the warehouse, and the Manhattan WMS lifecycle for that order is **Complete**.
+
+### USER
+can you create a downloadable zip of all these as documents
+
+### ASSISTANT
+As an AI text model, I do not have a native "file hosting" feature to provide a direct download button. However, I have prepared a **simple Python script** for you. 
+
+If you run this script on your computer, it will instantly generate a `.zip` file named `Manhattan_WMS_RF_Documents.zip` containing all 7 perfectly formatted Markdown documents.
+
+### How to use:
+1. Ensure you have Python installed on your computer.
+2. Copy the code block below.
+3. Save it as a file named `generate_docs.py` on your desktop.
+4. Run it from your terminal or command prompt (`python generate_docs.py`).
+5. The ZIP file will appear in the same folder!
+
+```python
+import zipfile
+import os
+
+# Dictionary containing all 7 Manhattan WMS RF Flow documents
+documents = {
+    "01_Inbound_Receiving.md": '''=== Start ===
+verify if this is correct
+In Manhattan WMS, once a truck arrives at the dock, the **receiving operator** takes over. The system expects the goods based on an ASN (Advance Ship Notice) or Purchase Order (PO). 
+
+The receiver's job is to:
+* Verify the trailer and dock door
+* Scan the ASN/PO barcode
+* Scan items and verify quantities
+* Generate LPNs (License Plate Numbers) for pallets/cartons
+* Apply LPN labels
+* Move inventory to a staging location
+
+---
+# Before Receiver Starts
+System already has:
+```text
+Purchase Order / ASN
+   ↓
+Truck Arrives at Dock
+   ↓
+Door Assigned in WMS
+   ↓
+Inventory Status = Expected
+```
+Order status may be something like: `ASN Open` or `PO Open` depending on configuration.
+
+---
+# What Receiver Sees
+RF Menu:
+```text
+Inbound
+   → Receiving
+   → ASN Directed Receive
+```
+
+---
+# Step 1: Scan Dock Door & Trailer
+Operator receives: `Trailer TR0099`
+RF displays: `Scan Dock Door`
+Operator scans: `DOOR-01`
+RF displays: `Scan Trailer / ASN`
+Operator scans: `ASN10045`
+
+---
+# Step 2: Scan Item
+RF asks: `Scan Item`
+Operator scans: `ITEM1001`
+RF: `Expected Qty = 100 \n Enter Received Qty`
+Operator enters: `100`
+
+---
+# What Manhattan Validates
+System checks:
+* Correct Dock Door assignment
+* Valid ASN/PO exists and is open
+* Correct SKU matches ASN line
+* Quantity does not exceed ASN tolerance limits
+
+If wrong item scanned: `ERROR \n Item not on ASN`
+
+---
+# Step 3: Exception Handling
+Example: Expected `100 Shirts`, Actual `90 Shirts`
+Operator enters: `Received Qty = 90`
+Manhattan may create: `Short Receipt` and prompt for a reason code (e.g., `DMG-IN-TRANSIT`).
+
+---
+# Step 4: Create LPN
+Manhattan creates a tracking container.
+Example: `Item: ITEM1001 \n Qty: 90 \n Generate LPN? Y/N`
+Operator presses `Y`.
+System prints: `LPN: P000123456`
+
+---
+# Step 5: Move to Staging
+RF displays: `Move LPN P000123456 \n To Location: STAGE-01`
+Operator moves the pallet to the staging lane.
+
+---
+# Manhattan Transactions Created
+Behind the scenes:
+```text
+Receipt Creation (rcpt_hdr / rcpt_line)
+LPN Generation (lpn table)
+Inventory Movement (invn table)
+ASN Line Update (asn_line table)
+```
+
+---
+# Resulting Inventory/LPN State
+```text
+ASN Expected
+        ↓
+Physical Receipt
+        ↓
+LPN Created (P000123456)
+        ↓
+RECEIVED
+        ↓
+STAGED (Putaway Pending)
+```
+So from the warehouse operator's perspective, the receiving flow is essentially:
+```text
+Scan Door
+    ↓
+Scan ASN
+    ↓
+Scan Item & Enter Qty
+    ↓
+Generate LPN
+    ↓
+Move To Staging
+```
+After this, the next warehouse process in Manhattan is typically **Quality Inspection** or **Putaway**, where operators move the staged inventory to storage or audit it for defects.
+''',
+
+    "02_Inbound_QC.md": '''=== Start ===
+verify if this is correct
+In Manhattan WMS, once inventory is received, certain items may be routed to a **Quality Control (QC)** hold area. The **QC Inspector** takes over.
+
+The inspector's job is to:
+* Inspect items for damage or compliance
+* Verify specifications (weight, temp, dimensions)
+* Record defects or sample counts
+* Pass or Fail the LPN
+* Release inventory to Putaway or Reject
+
+---
+# Before Inspector Starts
+System already has:
+```text
+Receiving Completed
+   ↓
+LPN Created
+   ↓
+Routed to QC Area
+   ↓
+Inventory Status = QC Hold
+```
+Order status may be something like: `QC Pending`
+
+---
+# What Inspector Sees
+RF Menu:
+```text
+Inbound
+   → Quality Inspection
+   → Inspect LPN
+```
+
+---
+# Step 1: Scan QC LPN
+Inspector receives: `Pallet P000123456`
+RF displays: `Scan LPN`
+Inspector scans: `P000123456`
+System retrieves: `LPN: P000123456 \n Item: ITEM1001`
+
+---
+# Step 2: Review Checklist
+RF asks: `QC Checklist \n 1. Check for Crush Damage \n 2. Verify Temp < 40F`
+Inspector physically checks the pallet.
+
+---
+# Step 3: Record Defects
+If damage is found:
+RF asks: `Enter Defect Code`
+Inspector enters: `DMG-01 (Crushed)`
+RF asks: `Qty Affected?`
+Inspector enters: `10`
+
+---
+# What Manhattan Validates
+System checks:
+* LPN is in QC Hold status
+* User has QC permissions
+* Defect codes are valid
+* Affected Qty <= Total Qty on LPN
+
+---
+# Step 4: Disposition
+RF asks: `Disposition? \n 1. Pass (Release) \n 2. Fail (Reject/Return)`
+Inspector selects `1`.
+System updates: `LPN Status = Putaway Pending`
+
+---
+# Manhattan Transactions Created
+Behind the scenes:
+```text
+QC Audit Record (qc_audit)
+Inventory Status Update (invn table)
+Defect Logging (invn_adj or qc_dtl)
+```
+
+---
+# Resulting Inventory/LPN State
+```text
+QC Hold
+        ↓
+Inspect & Audit
+        ↓
+PASS
+        ↓
+PUTAWAY PENDING
+```
+So from the warehouse operator's perspective, the QC flow is essentially:
+```text
+Scan LPN
+    ↓
+Perform Checks
+    ↓
+Record Defects (if any)
+    ↓
+Pass / Fail
+    ↓
+Release to Putaway
+```
+After this, the next warehouse process in Manhattan is typically **Putaway**, where the passed inventory is moved to a storage rack.
+''',
+
+    "03_Inbound_Putaway.md": '''=== Start ===
+verify if this is correct
+In Manhattan WMS, once receiving and QC are completed, inventory is sitting in a staging area. The **putaway operator** takes over.
+
+The operator's job is to:
+* Move inventory from staging to storage
+* Scan LPNs
+* Follow system-directed locations
+* Scan rack locations to confirm drop
+* Optimize travel paths
+
+---
+# Before Operator Starts
+System already has:
+```text
+Receiving & QC Completed
+   ↓
+LPN in Staging Area
+   ↓
+Putaway Strategy Evaluated
+   ↓
+Inventory Status = Putaway Pending
+```
+
+---
+# What Operator Sees
+RF Menu:
+```text
+Inbound
+   → Directed Putaway
+```
+or 
+```text
+Task Management
+   → Get Work
+```
+
+---
+# Step 1: Scan Source LPN
+Operator receives: `Pallet P000123456`
+RF displays: `Scan LPN`
+Operator scans: `P000123456`
+
+---
+# Step 2: System Suggests Location
+System calculates best location.
+RF displays: `Move LPN P000123456 \n To Location: A-01-02-03 \n Press Enter`
+Operator drives to location.
+
+---
+# Step 3: Scan Destination Location
+RF asks: `Scan Location`
+Operator scans: `A-01-02-03`
+RF verifies location matches system directive.
+
+---
+# What Manhattan Validates
+System checks:
+* LPN exists and is pending putaway
+* Scanned location matches directed location (or allowed overflow)
+* Location has capacity/cube available
+* Item is allowed in this zone (e.g., Hazmat, Cold Chain)
+
+---
+# Step 4: Confirm Deposit
+RF asks: `Confirm LPN`
+Operator rescans pallet: `P000123456`
+System updates: `Putaway Complete`
+
+---
+# Manhattan Transactions Created
+Behind the scenes:
+```text
+Task Completion (task_dtl)
+Inventory Movement (invn table)
+LPN Status Update (lpn table)
+Location Capacity Update (locn table)
+```
+
+---
+# Resulting Inventory/LPN State
+```text
+Putaway Pending (Staging)
+        ↓
+System Directed
+        ↓
+Scan Location
+        ↓
+STORED (Rack)
+```
+So from the warehouse operator's perspective, the putaway flow is essentially:
+```text
+Scan LPN
+    ↓
+Read Destination
+    ↓
+Travel
+    ↓
+Scan Location
+    ↓
+Confirm Drop
+```
+After this, the inventory is fully **Stored** and available for Outbound Picking.
+''',
+
+    "04_Inventory_Cycle_Count.md": '''=== Start ===
+verify if this is correct
+In Manhattan WMS, to maintain inventory accuracy, routine audits are performed. The **cycle counter** takes over.
+
+The counter's job is to:
+* Travel to assigned locations
+* Scan location check-digits
+* Count items blindly (without seeing system qty)
+* Report variances
+* Perform recounts if necessary
+
+---
+# Before Counter Starts
+System already has:
+```text
+Cycle Count Plan Generated
+   ↓
+Locations Assigned to Users
+   ↓
+Tasks Created
+   ↓
+Inventory Status = Active
+```
+
+---
+# What Counter Sees
+RF Menu:
+```text
+Inventory
+   → Cycle Count
+   → Blind Count
+```
+
+---
+# Step 1: Scan Location
+Operator travels to rack.
+RF displays: `Scan Location`
+Operator scans: `A-01-02-03`
+
+---
+# Step 2: Scan LPN/Item
+RF asks: `Scan LPN / Item`
+Operator scans: `ITEM1001`
+System hides the expected quantity.
+
+---
+# Step 3: Enter Count
+RF asks: `Enter Qty Counted`
+Operator physically counts and enters: `50`
+
+---
+# What Manhattan Validates
+System checks:
+* Location is valid and part of the count plan
+* LPN/Item exists at that location
+* User has count permissions
+
+If count matches backend: `Count Accepted`
+If count varies: `Variance Detected \n Recount Required`
+
+---
+# Step 4: Exception Handling
+If variance is found, system may prompt: `Enter Reason Code`
+Operator enters: `MISSING`
+System flags for supervisor approval.
+
+---
+# Manhattan Transactions Created
+Behind the scenes:
+```text
+Cycle Count Record (cnt_hdr / cnt_dtl)
+Inventory Adjustment (invn_adj) - if approved
+Task Completion (task_dtl)
+```
+
+---
+# Resulting Inventory/LPN State
+```text
+Count Task Active
+        ↓
+Blind Count Entered
+        ↓
+Variance Check
+        ↓
+Inventory Updated (if approved)
+```
+So from the warehouse operator's perspective, the cycle count flow is essentially:
+```text
+Scan Location
+    ↓
+Scan Item
+    ↓
+Enter Physical Qty
+    ↓
+Confirm / Recount
+```
+After this, the inventory records are reconciled and accurate for **Order Allocation**.
+''',
+
+    "05_Outbound_Picking.md": '''=== Start ===
+verify if this is correct
+In Manhattan WMS, once a wave is released and inventory is allocated, the **picker** takes over.
+
+The picker's job is to:
+* Get next task from system
+* Travel to pick faces
+* Scan location check-digits
+* Pick items and confirm quantities
+* Scan items into destination totes/pallets
+* Handle short picks
+
+---
+# Before Picker Starts
+System already has:
+```text
+Sales Order
+   ↓
+Wave Released
+   ↓
+Inventory Allocated
+   ↓
+Pick Tasks Generated
+```
+Order status may be something like: `Allocated` or `Ready for Pick`
+
+---
+# What Picker Sees
+RF Menu:
+```text
+Outbound
+   → Picking
+   → Get Work
+```
+
+---
+# Step 1: Get Task & Scan Cart
+Operator presses: `Get Work`
+System assigns: `Pick Task \n Locn: P-05-A-01`
+Operator scans their empty tote: `TOTE-999`
+
+---
+# Step 2: Travel & Scan Check-Digit
+Operator drives to location.
+RF asks: `Scan Location Check-Digit`
+Operator scans: `CHK-8839`
+System validates they are at the exact correct bin.
+
+---
+# Step 3: Scan Item & Enter Qty
+RF asks: `Scan Item`
+Operator scans: `ITEM1001`
+RF: `Pick Qty = 5 \n Enter Picked Qty`
+Operator enters: `5`
+
+---
+# What Manhattan Validates
+System checks:
+* Correct check-digit for location
+* Correct SKU scanned
+* Quantity picked <= Quantity allocated
+* Destination Tote is valid for this order/wave
+
+If wrong item scanned: `ERROR \n Item not expected at this location`
+
+---
+# Step 4: Exception Handling (Short Pick)
+Example: Expected `5 Shirts`, Actual `4 Shirts (Bin is empty)`
+Operator enters: `Picked Qty = 4`
+RF prompts: `Short Pick Reason? \n 1. Empty \n 2. Damaged`
+Operator selects `1`. System triggers replenishment task.
+
+---
+# Manhattan Transactions Created
+Behind the scenes:
+```text
+Task Confirmation (task_dtl)
+Inventory Deduction (invn table)
+Order Line Update (ord_line table)
+Short Pick / Replenishment Task Creation
+```
+
+---
+# Resulting Inventory/LPN State
+```text
+Allocated (Rack)
+        ↓
+Pick Confirmed
+        ↓
+DEDUCTED (Rack)
+        ↓
+ADDED (TOTE-999)
+        ↓
+PICKED (Ready for Pack)
+```
+So from the warehouse operator's perspective, the picking flow is essentially:
+```text
+Get Task
+    ↓
+Scan Tote
+    ↓
+Scan Location
+    ↓
+Scan Item & Qty
+    ↓
+Confirm / Short Pick
+```
+After this, the next warehouse process in Manhattan is typically **Packing**, where totes are consolidated into shipping cartons.
+''',
+
+    "06_Outbound_Packing.md": '''=== Start ===
+verify if this is correct
+In Manhattan WMS, once **wave picking is completed**, inventory is usually sitting in a tote, carton, or pallet at a packing station. The picker is done. Now the **packer** takes over.
+
+The packer's job is very different from the picker's:
+* Verify picked items
+* Handle shortages/exceptions
+* Select carton
+* Pack items
+* Generate shipping labels
+* Close carton/LPN
+* Move shipment to staging
+
+---
+# Before Packer Starts
+System already has:
+```text
+Sales Order
+   ↓
+Wave Released
+   ↓
+Allocation
+   ↓
+Picking Completed
+   ↓
+Inventory moved to Packing Station
+```
+Order status may be something like: `Ready for Packing` or `Packed Pending` depending on configuration.
+
+---
+# What Packer Sees
+RF Menu:
+```text
+Outbound
+   → Packing
+```
+or on a workstation: `Pack Workbench`
+Many Manhattan sites use a PC workstation with barcode scanner because packing involves labels, dimensions, weight, etc.
+
+---
+# Step 1: Scan Tote / Carton / Pick LPN
+Packer receives: `Tote T000123` or `Carton C000456`
+RF displays: `Scan Pick Container`
+Packer scans: `T000123`
+System retrieves: `Order SO10045`
+and displays: `Order: SO10045 \n Expected: \n 2 × Shirt \n 1 × Jacket`
+
+---
+# Step 2: Verify Items
+RF asks: `Scan Item`
+Packer scans: `ITEM1001`
+RF: `Expected Qty = 2 \n Enter Packed Qty`
+Packer enters: `2`
+Then scans next item. `ITEM2001 \n Qty = 1`
+
+---
+# What Manhattan Validates
+System checks:
+* Correct SKU
+* Correct quantity
+* Correct order
+* Correct inventory ownership
+* Lot/Serial if applicable
+
+If wrong item scanned: `ERROR \n Item not expected`
+
+---
+# Step 3: Exception Handling
+Example: Expected `2 Shirts`, Actual `1 Shirt`
+Packer enters: `Packed Qty = 1`
+Manhattan may create: `Short Pick` or `Replenishment Needed` depending on configuration.
+
+---
+# Step 4: Select Carton
+Many facilities use cartonization.
+System suggests: `Suggested Carton \n BOX-MEDIUM`
+RF displays: `Use Carton: BOX-MEDIUM \n Y/N` or `Scan Carton Type`
+Packer scans: `BOX-MEDIUM`
+
+---
+# Step 5: Create Packing LPN
+Manhattan creates a shipping container.
+Example: `Pick Tote: T000123` becomes `Shipping LPN: SHP000567`
+This LPN represents the actual shipped carton.
+
+---
+# Step 6: Pack Confirmation
+RF displays: `Confirm Pack`
+Packer confirms.
+Inventory now moves: `Picked ↓ Packed`
+
+---
+# Step 7: Weigh Carton
+Many sites have integrated scales.
+Scale returns: `5.2 KG`
+System records weight.
+RF: `Weight Accepted`
+
+---
+# Step 8: Print Shipping Label
+Manhattan communicates with carrier software. Examples: UPS, FedEx, DHL
+Label generated.
+Printer produces: `Carrier Label` and often `Packing Slip`
+
+---
+# Step 9: Close Carton
+RF: `Close LPN \n LPN: SHP000567 \n Enter`
+Packer confirms.
+System updates: `LPN Status = Packed`
+
+---
+# Step 10: Move to Shipping Lane
+RF displays: `Move Carton To: DOOR-05` or `STAGE-LANE-03`
+Packer places carton in staging lane.
+
+---
+# Manhattan Transactions Created
+Behind the scenes:
+```text
+Pick Confirmation
+Pack Confirmation
+Carton Creation
+Weight Capture
+Label Generation
+Shipment Update
+Inventory Movement
+```
+
+---
+# Resulting Inventory/LPN State
+```text
+Pick LPN (T000123)
+        ↓
+Shipping LPN (SHP000567)
+        ↓
+PACKED
+        ↓
+STAGED
+        ↓
+READY FOR LOADING
+```
+So from the warehouse operator's perspective, the packing flow is essentially:
+```text
+Scan Tote
+    ↓
+Verify Items
+    ↓
+Confirm Quantities
+    ↓
+Select/Suggest Carton
+    ↓
+Pack Items
+    ↓
+Capture Weight
+    ↓
+Print Shipping Label
+    ↓
+Close Carton (Shipping LPN)
+    ↓
+Move To Shipping Lane
+```
+After this, the next warehouse process in Manhattan is typically **Shipping/Staging/Load Truck**, where loaders scan packed cartons or pallets onto a trailer and confirm shipment departure.
+''',
+
+    "07_Outbound_Shipping.md": '''=== Start ===
+verify if this is correct
+In Manhattan WMS, once cartons are packed and staged at the outbound doors, the **loader/shipper** takes over.
+
+The loader's job is to:
+* Verify the correct trailer is at the door
+* Scan shipping LPNs as they are loaded
+* Prevent "Wrong Truck" errors
+* Seal the trailer
+* Close the load/manifest
+
+---
+# Before Loader Starts
+System already has:
+```text
+Packing Completed
+   ↓
+Cartons Staged at Door
+   ↓
+Load / Manifest Created
+   ↓
+Trailer Assigned to Door
+```
+Order status may be something like: `Staged` or `Ready to Load`
+
+---
+# What Loader Sees
+RF Menu:
+```text
+Outbound
+   → Shipping
+   → Load Trailer
+```
+
+---
+# Step 1: Scan Door & Trailer
+Loader receives: `Trailer TR-889`
+RF displays: `Scan Dock Door`
+Loader scans: `DOOR-05`
+RF displays: `Scan Trailer ID`
+Loader scans: `TR-889`
+
+---
+# Step 2: Scan Shipping LPN
+As cartons are placed on the truck:
+RF asks: `Scan Carton LPN`
+Loader scans: `SHP000567`
+System validates: `Accepted`
+
+---
+# What Manhattan Validates
+System checks:
+* Scanned LPN belongs to the Load/Manifest assigned to this specific Trailer/Door
+* LPN is in `PACKED` or `STAGED` status
+* LPN has not already been loaded on another trailer
+
+If wrong carton scanned: `ALARM! \n WRONG TRUCK \n LPN belongs to DOOR-02`
+
+---
+# Step 3: Exception Handling
+If a carton is damaged during loading:
+RF allows: `Damage LPN \n SHP000567`
+System removes it from the manifest and triggers a repack task.
+
+---
+# Step 4: Close Trailer & Seal
+Once truck is full:
+RF displays: `Load Complete? \n Y/N`
+Loader presses `Y`.
+RF asks: `Enter Seal Number`
+Loader enters physical bolt seal: `SL-993827`
+System updates: `Trailer Closed`
+
+---
+# Manhattan Transactions Created
+Behind the scenes:
+```text
+Load Confirmation (load_dtl)
+Trailer Status Update (trlr table)
+LPN Status Update (lpn table)
+Order Status Update (ord_hdr table)
+Manifest / Bill of Lading Finalization
+```
+
+---
+# Resulting Inventory/LPN State
+```text
+Staged (Door)
+        ↓
+Scan & Load
+        ↓
+LOADED (Trailer)
+        ↓
+Trailer Sealed
+        ↓
+SHIPPED
+```
+So from the warehouse operator's perspective, the shipping flow is essentially:
+```text
+Scan Door
+    ↓
+Scan Trailer
+    ↓
+Scan Cartons (Load)
+    ↓
+Handle Wrong Truck Alarms
+    ↓
+Close Trailer
+    ↓
+Enter Seal Number
+```
+After this, the inventory leaves the four walls of the warehouse, and the Manhattan WMS lifecycle for that order is **Complete**.
+'''
+}
+
+zip_filename = "Manhattan_WMS_RF_Documents.zip"
+
+# Create the ZIP file
+with zipfile.ZipFile(zip_filename, 'w') as zipf:
+    for filename, content in documents.items():
+        zipf.writestr(filename, content)
+
+print(f"Successfully created '{zip_filename}' in {os.getcwd()}")
+print("You can now find the ZIP file in the same folder where you ran this script.")
+```
+
+### Alternative (No Python Required)
+If you prefer not to use Python, you can simply highlight the text from my previous response, copy it, and paste it directly into a workspace like **Notion**, **Obsidian**, or **Microsoft Word**. From there, you can easily export the pages as PDFs or separate documents!

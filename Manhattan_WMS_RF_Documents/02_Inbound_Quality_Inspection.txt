@@ -1,0 +1,472 @@
+# Document 2: Inbound Quality Inspection
+
+=== Start ===
+verify if this is correct
+In Manhattan WMS, once inventory is received, certain items may be routed to a **Quality Control (QC)** hold area. The **QC Inspector** takes over.
+
+The inspector's job is to:
+
+* Inspect items for damage or compliance
+* Verify specifications (weight, temp, dimensions)
+* Record defects or sample counts
+* Pass or Fail the LPN
+* Release inventory to Putaway or Reject
+
+---
+
+# Before Inspector Starts
+
+System already has:
+
+```text
+Receiving Completed
+   ↓
+LPN Created
+   ↓
+Routed to QC Area
+   ↓
+Inventory Status = QC Hold
+```
+
+Order status may be something like:
+
+```text
+QC Pending
+```
+
+---
+
+# What Inspector Sees
+
+RF Menu:
+
+```text
+Inbound
+   → Quality Inspection
+   → Inspect LPN
+```
+
+---
+
+# Step 1: Scan QC LPN
+
+Inspector receives:
+
+```text
+Pallet P000123456
+```
+
+RF displays:
+
+```text
+Scan LPN
+```
+
+Inspector scans:
+
+```text
+P000123456
+```
+
+System retrieves:
+
+```text
+LPN: P000123456
+Item: ITEM1001
+```
+
+---
+
+# Step 2: Review Checklist
+
+RF asks:
+
+```text
+QC Checklist
+
+1. Check for Crush Damage
+2. Verify Temp < 40F
+```
+
+Inspector physically checks the pallet.
+
+---
+
+# Step 3: Record Defects
+
+If damage is found:
+
+RF asks:
+
+```text
+Enter Defect Code
+```
+
+Inspector enters:
+
+```text
+DMG-01 (Crushed)
+```
+
+RF asks:
+
+```text
+Qty Affected?
+```
+
+Inspector enters:
+
+```text
+10
+```
+
+---
+
+# What Manhattan Validates
+
+System checks:
+
+* LPN is in QC Hold status
+* User has QC permissions
+* Defect codes are valid
+* Affected Qty <= Total Qty on LPN
+
+---
+
+# Step 4: Disposition
+
+RF asks:
+
+```text
+Disposition?
+
+1. Pass (Release)
+2. Fail (Reject/Return)
+```
+
+Inspector selects `1`.
+
+System updates:
+
+```text
+LPN Status = Putaway Pending
+```
+
+---
+
+# Manhattan Transactions Created
+
+Behind the scenes:
+
+```text
+QC Audit Record (qc_audit)
+Inventory Status Update (invn table)
+Defect Logging (invn_adj or qc_dtl)
+```
+
+---
+
+# Example RF Flow
+
+### Screen 1
+
+```text
+QC INSPECTION
+
+Scan LPN:
+__________
+```
+
+---
+
+### Screen 2
+
+```text
+LPN: P000123456
+
+Check Temp?
+Y/N
+```
+
+---
+
+### Screen 3
+
+```text
+Defect Found?
+Y/N
+```
+
+---
+
+### Screen 4
+
+```text
+Disposition:
+PASS / FAIL
+```
+
+---
+
+# Resulting Inventory/LPN State
+
+```text
+QC Hold
+        ↓
+
+Inspect & Audit
+        ↓
+
+PASS
+        ↓
+
+PUTAWAY PENDING
+```
+
+So from the warehouse operator's perspective, the QC flow is essentially:
+
+```text
+Scan LPN
+    ↓
+Perform Checks
+    ↓
+Record Defects (if any)
+    ↓
+Pass / Fail
+    ↓
+Release to Putaway
+```
+
+After this, the next warehouse process in Manhattan is typically **Putaway**, where the passed inventory is moved to a storage rack.
+
+---
+
+# Document 3: Inbound - Putaway
+
+=== Start ===
+verify if this is correct
+In Manhattan WMS, once receiving and QC are completed, inventory is sitting in a staging area. The **putaway operator** takes over.
+
+The operator's job is to:
+
+* Move inventory from staging to storage
+* Scan LPNs
+* Follow system-directed locations
+* Scan rack locations to confirm drop
+* Optimize travel paths
+
+---
+
+# Before Operator Starts
+
+System already has:
+
+```text
+Receiving & QC Completed
+   ↓
+LPN in Staging Area
+   ↓
+Putaway Strategy Evaluated
+   ↓
+Inventory Status = Putaway Pending
+```
+
+---
+
+# What Operator Sees
+
+RF Menu:
+
+```text
+Inbound
+   → Directed Putaway
+```
+
+or 
+
+```text
+Task Management
+   → Get Work
+```
+
+---
+
+# Step 1: Scan Source LPN
+
+Operator receives:
+
+```text
+Pallet P000123456
+```
+
+RF displays:
+
+```text
+Scan LPN
+```
+
+Operator scans:
+
+```text
+P000123456
+```
+
+---
+
+# Step 2: System Suggests Location
+
+System calculates best location.
+
+RF displays:
+
+```text
+Move LPN P000123456
+
+To Location:
+A-01-02-03
+
+Press Enter
+```
+
+Operator drives to location.
+
+---
+
+# Step 3: Scan Destination Location
+
+RF asks:
+
+```text
+Scan Location
+```
+
+Operator scans:
+
+```text
+A-01-02-03
+```
+
+RF verifies location matches system directive.
+
+---
+
+# What Manhattan Validates
+
+System checks:
+
+* LPN exists and is pending putaway
+* Scanned location matches directed location (or allowed overflow)
+* Location has capacity/cube available
+* Item is allowed in this zone (e.g., Hazmat, Cold Chain)
+
+---
+
+# Step 4: Confirm Deposit
+
+RF asks:
+
+```text
+Confirm LPN
+```
+
+Operator rescans pallet.
+
+```text
+P000123456
+```
+
+System updates:
+
+```text
+Putaway Complete
+```
+
+---
+
+# Manhattan Transactions Created
+
+Behind the scenes:
+
+```text
+Task Completion (task_dtl)
+Inventory Movement (invn table)
+LPN Status Update (lpn table)
+Location Capacity Update (locn table)
+```
+
+---
+
+# Example RF Flow
+
+### Screen 1
+
+```text
+DIRECTED PUTAWAY
+
+Scan LPN:
+__________
+```
+
+---
+
+### Screen 2
+
+```text
+Move To:
+A-01-02-03
+
+ENTER=CONTINUE
+```
+
+---
+
+### Screen 3
+
+```text
+Scan Location:
+__________
+```
+
+---
+
+### Screen 4
+
+```text
+Confirm LPN:
+__________
+```
+
+---
+
+# Resulting Inventory/LPN State
+
+```text
+Putaway Pending (Staging)
+        ↓
+
+System Directed
+        ↓
+
+Scan Location
+        ↓
+
+STORED (Rack)
+```
+
+So from the warehouse operator's perspective, the putaway flow is essentially:
+
+```text
+Scan LPN
+    ↓
+Read Destination
+    ↓
+Travel
+    ↓
+Scan Location
+    ↓
+Confirm Drop
+```
+
+After this, the inventory is fully **Stored** and available for Outbound Picking.
+
+---

@@ -1,0 +1,219 @@
+# Document 4: Inventory -> Cycle Count
+
+=== Start ===
+verify if this is correct
+In Manhattan WMS, to maintain inventory accuracy, routine audits are performed. The **cycle counter** takes over.
+
+The counter's job is to:
+
+* Travel to assigned locations
+* Scan location check-digits
+* Count items blindly (without seeing system qty)
+* Report variances
+* Perform recounts if necessary
+
+---
+
+# Before Counter Starts
+
+System already has:
+
+```text
+Cycle Count Plan Generated
+   ↓
+Locations Assigned to Users
+   ↓
+Tasks Created
+   ↓
+Inventory Status = Active
+```
+
+---
+
+# What Counter Sees
+
+RF Menu:
+
+```text
+Inventory
+   → Cycle Count
+   → Blind Count
+```
+
+---
+
+# Step 1: Scan Location
+
+Operator travels to rack.
+
+RF displays:
+
+```text
+Scan Location
+```
+
+Operator scans:
+
+```text
+A-01-02-03
+```
+
+---
+
+# Step 2: Scan LPN/Item
+
+RF asks:
+
+```text
+Scan LPN / Item
+```
+
+Operator scans:
+
+```text
+ITEM1001
+```
+
+System hides the expected quantity.
+
+---
+
+# Step 3: Enter Count
+
+RF asks:
+
+```text
+Enter Qty Counted
+```
+
+Operator physically counts and enters:
+
+```text
+50
+```
+
+---
+
+# What Manhattan Validates
+
+System checks:
+
+* Location is valid and part of the count plan
+* LPN/Item exists at that location
+* User has count permissions
+
+If count matches backend:
+
+```text
+Count Accepted
+```
+
+If count varies:
+
+```text
+Variance Detected
+Recount Required
+```
+
+---
+
+# Step 4: Exception Handling
+
+If variance is found, system may prompt:
+
+```text
+Enter Reason Code
+```
+
+Operator enters:
+
+```text
+MISSING
+```
+
+System flags for supervisor approval.
+
+---
+
+# Manhattan Transactions Created
+
+Behind the scenes:
+
+```text
+Cycle Count Record (cnt_hdr / cnt_dtl)
+Inventory Adjustment (invn_adj) - if approved
+Task Completion (task_dtl)
+```
+
+---
+
+# Example RF Flow
+
+### Screen 1
+
+```text
+CYCLE COUNT
+
+Scan Location:
+__________
+```
+
+---
+
+### Screen 2
+
+```text
+Scan Item / LPN:
+__________
+```
+
+---
+
+### Screen 3
+
+```text
+Enter Qty:
+__
+```
+
+---
+
+### Screen 4
+
+```text
+Variance!
+Recount? Y/N
+```
+
+---
+
+# Resulting Inventory/LPN State
+
+```text
+Count Task Active
+        ↓
+
+Blind Count Entered
+        ↓
+
+Variance Check
+        ↓
+
+Inventory Updated (if approved)
+```
+
+So from the warehouse operator's perspective, the cycle count flow is essentially:
+
+```text
+Scan Location
+    ↓
+Scan Item
+    ↓
+Enter Physical Qty
+    ↓
+Confirm / Recount
+```
+
+After this, the inventory records are reconciled and accurate for **Order Allocation**.
+
+---

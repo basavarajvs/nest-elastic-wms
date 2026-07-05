@@ -1,0 +1,864 @@
+# Document 7: Outbound - Shipping (Trailer Loading & Dispatch)
+
+**Context:** Packed shipping cartons or palletized orders are moved to the shipping dock. The loader uses the RF device to load the trailer and seal it for departure.
+
+### Sequence of Events
+1. **Scan Dock Door:** Operator scans the outbound dock door barcode to initialize the loading session.
+2. **Scan Trailer ID:** Operator scans the physical Trailer ID or OBLN (Order Bill of Lading Number).
+3. **Scan Shipping LPN:** Operator scans each Shipping LPN (Carton or Pallet SSCC-18 label) as it is physically placed onto the truck.
+4. **System Validation:** System verifies the scanned LPN belongs to the route/carrier assigned to this specific trailer. If an LPN belongs to a different truck, the RF alarms (Wrong Truck).
+5. **Load Verification:** Operator views the "Load Progress" (e.g., 45/50 cartons loaded).
+6. **Close Trailer:** Once the truck is full, the operator selects `Close Trailer` and enters the physical Seal Number (e.g., metal bolt seal).
+
+### API & Backend Interactions
+| Component | Details |
+| :--- | :--- |
+| **Logical API Call** | `POST /api/mobile/shipping/loading/scan` <br> `POST /api/mobile/shipping/trailers/{trailer_id}/close` |
+| **Expected API Response** | Returns `validation_status` (Success/Alarm). On close, returns confirmation and updates manifest. |
+| **Next Screen Prompt** | "Scan Next LPN" OR "Trailer Closed - Print Manifest" |
+| **Backend Entities Updated** | **`trlr` (Trailer):** Updates status and records seal number. <br> **`lpn`:** Shipping LPNs are linked to the Trailer ID. <br> **`ord_hdr`:** Final status update to `SHIPPED` (or `LOAD_PND` until dispatch). <br> **`stop`:** Updates the route stop as loaded. |
+| **Data Status Changes** | Trailer Status: `OPEN` → `CLOSED` / `SEALED`. <br> LPN Status: `PACKED` → `LOADED` → `SHIPPED`. <br> Order Status: `PACKED` → `SHIPPED`. |
+
+---
+
+### Summary of Core Manhattan RF Principles Demonstrated:
+1. **Scan-Confirm-Execute:** The RF user almost never types an LPN or Location manually; they *must* scan a barcode. The system uses **Check Digits** on location barcodes to prevent scanning the wrong rack.
+2. **Exception-Driven UI:** The RF screen only prompts for data entry when there is an exception (e.g., a short pick, a damaged item, or a blind cycle count). Standard flows are 1-touch confirmations.
+3. **Task Interleaving:** Notice how in Putaway, Picking, and Cycle Count, the operator doesn't search for work; they press `Get Next Task`. The Manhattan Task Management engine dynamically queues work based on user proximity, equipment type, and priority.
+
+### USER
+I needed each to also include something in this format 
+
+=== Start ===
+verify if this is correct
+In Manhattan WMS, once **wave picking is completed**, inventory is usually sitting in a tote, carton, or pallet at a packing station. The picker is done. Now the **packer** takes over.
+
+The packer's job is very different from the picker's:
+
+* Verify picked items
+* Handle shortages/exceptions
+* Select carton
+* Pack items
+* Generate shipping labels
+* Close carton/LPN
+* Move shipment to staging
+
+---
+
+# Before Packer Starts
+
+System already has:
+
+```text
+Sales Order
+   ↓
+Wave Released
+   ↓
+Allocation
+   ↓
+Picking Completed
+   ↓
+Inventory moved to Packing Station
+```
+
+Order status may be something like:
+
+```text
+Ready for Packing
+```
+
+or
+
+```text
+Packed Pending
+```
+
+depending on configuration.
+
+---
+
+# What Packer Sees
+
+RF Menu:
+
+```text
+Outbound
+   → Packing
+```
+
+or on a workstation:
+
+```text
+Pack Workbench
+```
+
+Many Manhattan sites use a PC workstation with barcode scanner because packing involves labels, dimensions, weight, etc.
+
+---
+
+# Step 1: Scan Tote / Carton / Pick LPN
+
+Packer receives:
+
+```text
+Tote T000123
+```
+
+or
+
+```text
+Carton C000456
+```
+
+RF displays:
+
+```text
+Scan Pick Container
+```
+
+Packer scans:
+
+```text
+T000123
+```
+
+System retrieves:
+
+```text
+Order SO10045
+```
+
+and displays:
+
+```text
+Order: SO10045
+
+Expected:
+2 × Shirt
+1 × Jacket
+```
+
+---
+
+# Step 2: Verify Items
+
+RF asks:
+
+```text
+Scan Item
+```
+
+Packer scans:
+
+```text
+ITEM1001
+```
+
+RF:
+
+```text
+Expected Qty = 2
+
+Enter Packed Qty
+```
+
+Packer enters:
+
+```text
+2
+```
+
+Then scans next item.
+
+```text
+ITEM2001
+Qty = 1
+```
+
+---
+
+# What Manhattan Validates
+
+System checks:
+
+* Correct SKU
+* Correct quantity
+* Correct order
+* Correct inventory ownership
+* Lot/Serial if applicable
+
+If wrong item scanned:
+
+```text
+ERROR
+
+Item not expected
+```
+
+---
+
+# Step 3: Exception Handling
+
+Example:
+
+Expected:
+
+```text
+2 Shirts
+```
+
+Actual:
+
+```text
+1 Shirt
+```
+
+Packer enters:
+
+```text
+Packed Qty = 1
+```
+
+Manhattan may create:
+
+```text
+Short Pick
+```
+
+or
+
+```text
+Replenishment Needed
+```
+
+depending on configuration.
+
+---
+
+# Step 4: Select Carton
+
+Many facilities use cartonization.
+
+System suggests:
+
+```text
+Suggested Carton
+
+BOX-MEDIUM
+```
+
+RF displays:
+
+```text
+Use Carton:
+BOX-MEDIUM
+
+Y/N
+```
+
+or
+
+```text
+Scan Carton Type
+```
+
+Packer scans:
+
+```text
+BOX-MEDIUM
+```
+
+---
+
+# Step 5: Create Packing LPN
+
+Manhattan creates a shipping container.
+
+Example:
+
+```text
+Pick Tote:
+T000123
+```
+
+becomes:
+
+```text
+Shipping LPN:
+SHP000567
+```
+
+This LPN represents the actual shipped carton.
+
+---
+
+# Step 6: Pack Confirmation
+
+RF displays:
+
+```text
+Confirm Pack
+```
+
+Packer confirms.
+
+Inventory now moves:
+
+```text
+Picked
+   ↓
+Packed
+```
+
+---
+
+# Step 7: Weigh Carton
+
+Many sites have integrated scales.
+
+Scale returns:
+
+```text
+5.2 KG
+```
+
+System records weight.
+
+RF:
+
+```text
+Weight Accepted
+```
+
+---
+
+# Step 8: Print Shipping Label
+
+Manhattan communicates with carrier software.
+
+Examples:
+
+* UPS
+* FedEx
+* DHL
+
+Label generated.
+
+Printer produces:
+
+```text
+Carrier Label
+```
+
+and often:
+
+```text
+Packing Slip
+```
+
+---
+
+# Step 9: Close Carton
+
+RF:
+
+```text
+Close LPN
+
+LPN:
+SHP000567
+
+Enter
+```
+
+Packer confirms.
+
+System updates:
+
+```text
+LPN Status = Packed
+```
+
+---
+
+# Step 10: Move to Shipping Lane
+
+RF displays:
+
+```text
+Move Carton To:
+DOOR-05
+```
+
+or
+
+```text
+STAGE-LANE-03
+```
+
+Packer places carton in staging lane.
+
+---
+
+# Manhattan Transactions Created
+
+Behind the scenes:
+
+```text
+Pick Confirmation
+Pack Confirmation
+Carton Creation
+Weight Capture
+Label Generation
+Shipment Update
+Inventory Movement
+```
+
+---
+
+# Example RF Flow
+
+### Screen 1
+
+```text
+PACK ORDER
+
+Scan Tote:
+_________
+```
+
+---
+
+### Screen 2
+
+```text
+ORDER: SO10045
+
+Scan Item
+_________
+```
+
+---
+
+### Screen 3
+
+```text
+ITEM1001
+
+Expected: 2
+
+Packed Qty:
+__
+```
+
+---
+
+### Screen 4
+
+```text
+Carton:
+BOX-MEDIUM
+
+Confirm?
+Y/N
+```
+
+---
+
+### Screen 5
+
+```text
+Weight:
+5.2 KG
+
+Accept?
+Y/N
+```
+
+---
+
+### Screen 6
+
+```text
+Printing Label...
+```
+
+---
+
+### Screen 7
+
+```text
+PACK COMPLETE
+
+Move To:
+STAGE-03
+```
+
+---
+
+# Resulting Inventory/LPN State
+
+```text
+Pick LPN
+(T000123)
+        ↓
+
+Shipping LPN
+(SHP000567)
+        ↓
+
+PACKED
+        ↓
+
+STAGED
+        ↓
+
+READY FOR LOADING
+```
+
+So from the warehouse operator's perspective, the packing flow is essentially:
+
+```text
+Scan Tote
+    ↓
+Verify Items
+    ↓
+Confirm Quantities
+    ↓
+Select/Suggest Carton
+    ↓
+Pack Items
+    ↓
+Capture Weight
+    ↓
+Print Shipping Label
+    ↓
+Close Carton (Shipping LPN)
+    ↓
+Move To Shipping Lane
+```
+
+After this, the next warehouse process in Manhattan is typically **Shipping/Staging/Load Truck**, where loaders scan packed cartons or pallets onto a trailer and confirm shipment departure.
+
+
+### ASSISTANT
+Here is the complete set of documents detailing the sequence of operations for Manhattan WMS RF users, formatted exactly as requested.
+
+---
+
+# Document 1: Inbound - Receiving
+
+=== Start ===
+verify if this is correct
+In Manhattan WMS, once a truck arrives at the dock, the **receiving operator** takes over. The system expects the goods based on an ASN (Advance Ship Notice) or Purchase Order (PO). 
+
+The receiver's job is to:
+
+* Verify the trailer and dock door
+* Scan the ASN/PO barcode
+* Scan items and verify quantities
+* Generate LPNs (License Plate Numbers) for pallets/cartons
+* Apply LPN labels
+* Move inventory to a staging location
+
+---
+
+# Before Receiver Starts
+
+System already has:
+
+```text
+Purchase Order / ASN
+   ↓
+Truck Arrives at Dock
+   ↓
+Door Assigned in WMS
+   ↓
+Inventory Status = Expected
+```
+
+Order status may be something like:
+
+```text
+ASN Open
+```
+
+or
+
+```text
+PO Open
+```
+
+depending on configuration.
+
+---
+
+# What Receiver Sees
+
+RF Menu:
+
+```text
+Inbound
+   → Receiving
+   → ASN Directed Receive
+```
+
+---
+
+# Step 1: Scan Dock Door & Trailer
+
+Operator receives:
+
+```text
+Trailer TR0099
+```
+
+RF displays:
+
+```text
+Scan Dock Door
+```
+
+Operator scans:
+
+```text
+DOOR-01
+```
+
+RF displays:
+
+```text
+Scan Trailer / ASN
+```
+
+Operator scans:
+
+```text
+ASN10045
+```
+
+---
+
+# Step 2: Scan Item
+
+RF asks:
+
+```text
+Scan Item
+```
+
+Operator scans:
+
+```text
+ITEM1001
+```
+
+RF:
+
+```text
+Expected Qty = 100
+
+Enter Received Qty
+```
+
+Operator enters:
+
+```text
+100
+```
+
+---
+
+# What Manhattan Validates
+
+System checks:
+
+* Correct Dock Door assignment
+* Valid ASN/PO exists and is open
+* Correct SKU matches ASN line
+* Quantity does not exceed ASN tolerance limits
+
+If wrong item scanned:
+
+```text
+ERROR
+
+Item not on ASN
+```
+
+---
+
+# Step 3: Exception Handling
+
+Example:
+
+Expected:
+
+```text
+100 Shirts
+```
+
+Actual:
+
+```text
+90 Shirts
+```
+
+Operator enters:
+
+```text
+Received Qty = 90
+```
+
+Manhattan may create:
+
+```text
+Short Receipt
+```
+
+and prompt for a reason code (e.g., `DMG-IN-TRANSIT`).
+
+---
+
+# Step 4: Create LPN
+
+Manhattan creates a tracking container.
+
+Example:
+
+```text
+Item: ITEM1001
+Qty: 90
+
+Generate LPN?
+Y/N
+```
+
+Operator presses `Y`.
+
+System prints:
+
+```text
+LPN: P000123456
+```
+
+---
+
+# Step 5: Move to Staging
+
+RF displays:
+
+```text
+Move LPN P000123456
+
+To Location:
+STAGE-01
+```
+
+Operator moves the pallet to the staging lane.
+
+---
+
+# Manhattan Transactions Created
+
+Behind the scenes:
+
+```text
+Receipt Creation (rcpt_hdr / rcpt_line)
+LPN Generation (lpn table)
+Inventory Movement (invn table)
+ASN Line Update (asn_line table)
+```
+
+---
+
+# Example RF Flow
+
+### Screen 1
+
+```text
+RECEIVING
+
+Scan Door:
+__________
+```
+
+---
+
+### Screen 2
+
+```text
+Scan ASN / PO:
+__________
+```
+
+---
+
+### Screen 3
+
+```text
+ITEM1001
+
+Expected: 100
+
+Received Qty:
+__
+```
+
+---
+
+### Screen 4
+
+```text
+Generate LPN?
+Y/N
+```
+
+---
+
+### Screen 5
+
+```text
+Move LPN P000123456
+To: STAGE-01
+
+ENTER=CONTINUE
+```
+
+---
+
+# Resulting Inventory/LPN State
+
+```text
+ASN Expected
+        ↓
+
+Physical Receipt
+        ↓
+
+LPN Created (P000123456)
+        ↓
+
+RECEIVED
+        ↓
+
+STAGED (Putaway Pending)
+```
+
+So from the warehouse operator's perspective, the receiving flow is essentially:
+
+```text
+Scan Door
+    ↓
+Scan ASN
+    ↓
+Scan Item & Enter Qty
+    ↓
+Generate LPN
+    ↓
+Move To Staging
+```
+
+After this, the next warehouse process in Manhattan is typically **Quality Inspection** or **Putaway**, where operators move the staged inventory to storage or audit it for defects.
+
+---

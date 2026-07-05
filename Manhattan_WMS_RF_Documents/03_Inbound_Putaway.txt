@@ -1,0 +1,71 @@
+# Document 3: Inbound - Putaway (System Directed)
+
+**Context:** Inventory is sitting in a staging lane. The putaway operator uses the RF device to move the LPN to its optimal storage location (determined by the Putaway Strategy Engine).
+
+### Sequence of Events
+1. **Menu Navigation:** Operator selects `Putaway` → `Directed Putaway` (or uses `Task Interleaving` / `Get Next Task`).
+2. **Scan Source LPN:** Operator scans the LPN sitting in the staging lane.
+3. **System Calculation:** The backend Putaway Strategy engine evaluates item velocity, cube, weight, and zone rules to calculate the destination.
+4. **Display Destination:** RF screen displays the target location (e.g., `A-01-02-03`) and check-digit.
+5. **Travel & Scan Location:** Operator drives to the location and scans the Location Barcode.
+6. **Location Validation:** System verifies the scanned location matches the directed location (or an allowed overflow).
+7. **Confirm Drop:** Operator scans the LPN one last time or presses "Confirm" to drop the inventory.
+
+### API & Backend Interactions
+| Component | Details |
+| :--- | :--- |
+| **Logical API Call** | `GET /api/mobile/tasks/putaway/next` <br> `POST /api/mobile/tasks/putaway/{task_id}/complete` |
+| **Expected API Response** | Payload containing `dest_locn`, `route_seq`, and `check_digit`. Upon completion, returns success. |
+| **Next Screen Prompt** | "Scan Next LPN" OR "Task Complete - Get Next?" |
+| **Backend Entities Updated** | **`task_dtl`:** Task status updates to `COMPLETE`. <br> **`invn`:** Inventory record moves from Staging Location to Storage Location. <br> **`lpn`:** Status updates to `STORED` or `AVAIL`. |
+| **Data Status Changes** | Task Status: `ASGN` (Assigned) → `COMP` (Complete). <br> LPN Status: `PUTAWAY_PND` → `STORED`. |
+
+---
+
+# Document 4: Inventory - Cycle Count (Blind Count)
+
+**Context:** Routine inventory auditing. The operator is directed to a location to count inventory without knowing the system's expected quantity (Blind Count) to prevent bias.
+
+### Sequence of Events
+1. **Menu Navigation:** Operator selects `Inventory` → `Cycle Count` → `Blind Count`.
+2. **Scan Location:** Operator scans the location barcode (e.g., rack shelf).
+3. **System Prompt:** System lists the first LPN or Item expected at that location but *hides* the quantity.
+4. **Scan LPN/Item:** Operator scans the LPN or Item barcode to verify the correct item is being counted.
+5. **Enter Quantity:** Operator physically counts the items and types the quantity into the RF keypad.
+6. **Submit Count:** Operator presses Enter. If the count matches the backend, the system auto-approves. If it varies, the system flags it for a recount or supervisor approval.
+7. **Next LPN:** System prompts for the next LPN in that same location until the operator confirms the location is fully counted.
+
+### API & Backend Interactions
+| Component | Details |
+| :--- | :--- |
+| **Logical API Call** | `POST /api/mobile/inventory/cycle-counts/submit` |
+| **Expected API Response** | Returns `match_status` (True/False). If False, prompts for "Recount" or "Investigate". |
+| **Next Screen Prompt** | "Scan Next LPN in Location" OR "Location Count Complete" |
+| **Backend Entities Updated** | **`cnt_hdr` / `cnt_dtl`:** Creates a cycle count transaction record. <br> **`invn`:** If approved, updates `on_hand_qty`. <br> **`invn_adj`:** Creates an adjustment record if there was a variance. |
+| **Data Status Changes** | Cycle Count Status: `OPEN` → `COMP` (or `PENDING_APPR` if variance exists). |
+
+---
+
+# Document 5: Outbound - Picking (Post-Wave Allocation)
+
+**Context:** A Wave has been released, and inventory has been allocated. The RF user executes the physical pick tasks.
+
+### Sequence of Events
+1. **Get Work:** Operator logs in and presses `Get Next Task` (Task Interleaving). System assigns a Pick Task based on user zone and equipment type.
+2. **Travel to Location:** System directs operator to the Pick Location (e.g., `P-05-A-01`).
+3. **Scan Location Check-Digit:** Operator scans the location barcode. System validates they are at the correct bin.
+4. **Scan LPN/Item:** System prompts to scan the Source LPN or Item UPC to ensure the correct stock is being grabbed.
+5. **Confirm Quantity:** System displays the required quantity (e.g., "Pick 5 Cases"). Operator enters `5`.
+6. **Scan Destination Tote:** Operator scans the barcode of the empty Pick Tote/Carton they are placing the items into. System links the inventory to the new Tote LPN.
+7. **Confirm Drop:** Operator confirms the pick.
+
+### API & Backend Interactions
+| Component | Details |
+| :--- | :--- |
+| **Logical API Call** | `GET /api/mobile/tasks/pick/next` <br> `POST /api/mobile/tasks/pick/{task_id}/confirm` |
+| **Expected API Response** | Returns `pick_locn`, `item_nbr`, `qty_req`, `dest_lpn`. |
+| **Next Screen Prompt** | "Pick Complete for this Locn" OR "Travel to Next Locn" |
+| **Backend Entities Updated** | **`pck_task` / `task_dtl`:** Updates to `COMPLETE`. <br> **`invn`:** Deducts quantity from Pick Location. Adds quantity to Destination Tote LPN. <br> **`ord_line`:** Updates `qty_picked`. |
+| **Data Status Changes** | Task Status: `ASGN` → `COMP`. <br> Order Line Status: `ALLOC` → `PICKED`. |
+
+---

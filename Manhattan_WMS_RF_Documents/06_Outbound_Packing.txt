@@ -1,0 +1,24 @@
+# Document 6: Outbound - Packing (RF Scan-to-Pack)
+
+**Context:** Picked totes arrive at a packing station. While often PC-based, high-volume parcel facilities use RF-enabled Scan-to-Pack to validate items and generate shipping labels via mobile printers.
+
+### Sequence of Events
+1. **Menu Navigation:** Operator selects `Outbound` → `Scan to Pack`.
+2. **Scan Source LPN:** Operator scans the Pick Tote LPN (e.g., `TOTE-999`).
+3. **System Retrieval:** System fetches the Order associated with the tote.
+4. **Scan Item (Validation):** Operator scans the first item UPC. System validates it belongs to the retrieved order.
+5. **Quantity Confirmation:** Operator enters/verifies the packed quantity.
+6. **Carton Selection:** System suggests a Shipping Carton size based on item dimensions. Operator scans the blank shipping box barcode.
+7. **Generate Shipping LPN & Label:** System creates a new Shipping LPN, links it to the Order/Stop, and sends a ZPL command to the Bluetooth/Network printer to print the Carrier Label (UPS/FedEx).
+8. **Close Carton:** Operator applies the label, places items in the box, and confirms "Close Carton".
+
+### API & Backend Interactions
+| Component | Details |
+| :--- | :--- |
+| **Logical API Call** | `POST /api/mobile/outbound/pack/validate` <br> `POST /api/mobile/outbound/pack/close-carton` <br> `POST /api/mobile/print/label` |
+| **Expected API Response** | Returns ZPL label data stream and new `ship_lpn_nbr`. |
+| **Next Screen Prompt** | "Scan Next Source Tote" |
+| **Backend Entities Updated** | **`ord_hdr`:** Status updates to `PACKED`. <br> **`lpn`:** Source Tote LPN is emptied/unlinked. New Shipping LPN is created. <br> **`shipment`:** Adds Shipping LPN to the outbound shipment/manifest. |
+| **Data Status Changes** | Source LPN Status: `ACTIVE` → `EMPTY` (or available for reuse). <br> Order Status: `PICKED` → `PACKED`. <br> Shipping LPN Status: `PACKED`. |
+
+---
