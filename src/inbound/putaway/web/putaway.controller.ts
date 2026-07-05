@@ -39,7 +39,8 @@ export class PutawayController {
     @Body('userId') userId: string,
   ) {
     const tenantId = req.tenantContext.getTenantId();
-    return this.putawayService.assignTask(tenantId, BigInt(id), userId);
+    const taskId = BigInt(id);
+    return this.putawayService.assignTask(tenantId, taskId, userId);
   }
 
   @Patch(':id/complete')

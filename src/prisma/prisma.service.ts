@@ -24,11 +24,6 @@ export class PrismaService
 
         this.injectTenantIdIntoCreate(params, tenantId);
         this.injectTenantIdIntoWhere(params, tenantId);
-
-        await this.$executeRawUnsafe(
-          `SELECT set_config('app.tenant_id', $1, true)`,
-          tenantId,
-        );
       }
 
       try {

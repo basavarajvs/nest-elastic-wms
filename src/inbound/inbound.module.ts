@@ -19,6 +19,7 @@ import { AsnController } from './asn/web/asn.controller';
 import { ReceivingController } from './receiving/web/receiving.controller';
 import { RfReceivingController } from './receiving/rf/receiving.controller';
 import { PutawayController, PutawayRuleController } from './putaway/web/putaway.controller';
+import { LocationExceptionWebController } from './putaway/web/location-exception.controller';
 import { RfPutawayController } from './putaway/rf/putaway.controller';
 import { ReturnsController } from './returns/web/returns.controller';
 import { RfReturnsController } from './returns/rf/returns.controller';
@@ -39,6 +40,7 @@ import { RfInboundTrailerController } from './trailers/rf/trailer.controller';
     AsnController,
     ReceivingController,
     RfReceivingController,
+    LocationExceptionWebController,
     PutawayController,
     PutawayRuleController,
     RfPutawayController,
