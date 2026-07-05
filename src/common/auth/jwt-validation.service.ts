@@ -10,7 +10,7 @@ export class JwtValidationService {
 
     try {
       const payload = this.decodePayload(parts[1]);
-      if (!payload || !payload.iat || !payload.jti) {
+      if (!payload || !payload.iat) {
         return { valid: false, useOld: false };
       }
       return { valid: true, useOld: false };

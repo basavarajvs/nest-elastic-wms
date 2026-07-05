@@ -769,8 +769,14 @@ model customer_return_items {
   return_reason_detail   String?
   status                 String               @default("PENDING_INSPECTION") @db.VarChar(20)
   received_location_id   BigInt?
-  notes                  String?
-  created_by             String?              @db.Uuid
+  notes                 String?
+  sampling_method       String?              @db.VarChar(20)
+  sampling_percentage   Int?
+  sample_size           Int?
+  total_population_quantity Int?
+  population_result     String?              @db.VarChar(20)
+  requires_supervisor_review Boolean?         @default(false)
+  created_by            String?              @db.Uuid
   updated_by             String?              @db.Uuid
   created_at             DateTime?            @default(now()) @db.Timestamptz(6)
   updated_at             DateTime?            @default(now()) @db.Timestamptz(6)
@@ -3175,6 +3181,8 @@ model putaway_rules {
   product_category_id                  BigInt?
   destination_zone_id                  BigInt?
   location_type_preference             String?              @db.VarChar(50)
+  is_overflow_rule                     Boolean?             @default(false)
+  parent_rule_id                       BigInt?
   warehouse_facilities                 warehouse_facilities @relation(fields: [tenant_id, facility_id], references: [tenant_id, facility_id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([tenant_id, facility_id, rule_code])
@@ -3197,6 +3205,7 @@ model putaway_tasks {
   uom_id                     BigInt
   from_location_id           BigInt
   to_location_id             BigInt?
+  required_equipment_type    String?              @db.VarChar(30)
   assigned_to_user_id        String?              @db.Uuid
   status                     task_status_old      @default(PENDING)
   priority                   Int?                 @default(10)
@@ -3221,6 +3230,37 @@ model putaway_tasks {
   @@unique([tenant_id, task_number])
   @@index([grn_number], map: "idx_putaway_tasks_grn_number")
   @@index([tenant_id, grn_number], map: "idx_putaway_tasks_tenant_grn")
+  @@schema("multitenant")
+}
+
+/// Track location exceptions for putaway (full, damaged, blocked)
+model location_exceptions {
+  exception_id   BigInt   @id @default(autoincrement())
+  tenant_id      String   @db.Uuid
+  location_id    BigInt
+  exception_type String   @db.VarChar(20)
+  reported_by    String?  @db.Uuid
+  reported_at    DateTime? @default(now()) @db.Timestamptz(6)
+  resolved_at    DateTime? @db.Timestamptz(6)
+  notes          String?
+
+  @@schema("multitenant")
+}
+
+/// Damage during putaway movement audit trail
+model putaway_damage_records {
+  damage_record_id BigInt  @id @default(autoincrement())
+  tenant_id        String  @db.Uuid
+  facility_id      BigInt
+  task_id           BigInt?
+  damage_code_id    BigInt?
+  damage_quantity   Decimal @db.Decimal(12, 4)
+  lpn_barcode       String? @db.VarChar(200)
+  product_id        BigInt?
+  notes             String?
+  reported_by       String? @db.Uuid
+  reported_at       DateTime? @default(now()) @db.Timestamptz(6)
+
   @@schema("multitenant")
 }
 
@@ -3755,6 +3795,7 @@ model storage_locations {
   is_active                                                                   Boolean?                @default(true)
   is_blocked                                                                  Boolean?                @default(false)
   is_reserved                                                                 Boolean?                @default(false)
+  location_tier                                                               String?                 @default("PRIMARY") @db.VarChar(20)
   block_reason                                                                String?                 @db.VarChar(255)
   reservation_details_json                                                    String?
   created_by                                                                  String?                 @db.Uuid
@@ -4755,382 +4796,6 @@ model yard_vehicles {
   @@schema("multitenant")
 }
 
-/// Physical trailer assets for outbound shipping
-model trailers {
-  trailer_id              BigInt               @id @default(autoincrement())
-  tenant_id               String               @db.Uuid
-  facility_id             BigInt
-  trailer_number          String               @db.VarChar(50)
-  carrier_id              BigInt?
-  trailer_type            String?              @default("DRY_VAN") @db.VarChar(30)
-  status                  String               @default("ARRIVED") @db.VarChar(20)
-  is_active               Boolean?             @default(true)
-  max_weight_kg           Decimal?             @db.Decimal(12, 2)
-  max_volume_cbm          Decimal?             @db.Decimal(12, 2)
-  max_pallets             Int?
-  max_cartons             Int?
-  assigned_load_id        BigInt?
-  assigned_dock_id        BigInt?
-  seal_number             String?              @db.VarChar(50)
-  arrival_time            DateTime?            @db.Timestamptz(6)
-  departure_time          DateTime?            @db.Timestamptz(6)
-  notes                   String?
-  created_by              String?              @db.Uuid
-  updated_by              String?              @db.Uuid
-  created_at              DateTime?            @default(now()) @db.Timestamptz(6)
-  updated_at              DateTime?            @default(now()) @db.Timestamptz(6)
-  version                 BigInt?
-  warehouse_facilities    warehouse_facilities @relation(fields: [tenant_id, facility_id], references: [tenant_id, facility_id], onDelete: Cascade, onUpdate: NoAction)
-  carriers                carriers?            @relation(fields: [carrier_id], references: [carrier_id], onUpdate: NoAction)
-  loading_docks           loading_docks?       @relation(fields: [assigned_dock_id], references: [dock_id], onUpdate: NoAction)
-  loads                   loads?               @relation(fields: [assigned_load_id], references: [load_id], onUpdate: NoAction)
-
-  @@unique([tenant_id, facility_id, trailer_number])
-  @@schema("multitenant")
-}
-
-/// Staging lane definitions for outbound staging operations
-model staging_lanes {
-  lane_id              BigInt               @id @default(autoincrement())
-  tenant_id            String               @db.Uuid
-  facility_id          BigInt
-  lane_code            String               @db.VarChar(50)
-  lane_type            String               @default("CARRIER") @db.VarChar(20)
-  description          String?
-  zone_id              BigInt?
-  assigned_carrier_id  BigInt?
-  assigned_door_id     BigInt?
-  assigned_route_id    BigInt?
-  max_cartons          Int?
-  current_carton_count Int?                 @default(0)
-  is_active            Boolean?             @default(true)
-  created_by           String?              @db.Uuid
-  updated_by           String?              @db.Uuid
-  created_at           DateTime?            @default(now()) @db.Timestamptz(6)
-  updated_at           DateTime?            @default(now()) @db.Timestamptz(6)
-  version              BigInt?
-  warehouse_facilities warehouse_facilities @relation(fields: [tenant_id, facility_id], references: [tenant_id, facility_id], onDelete: Cascade, onUpdate: NoAction)
-  carriers             carriers?            @relation(fields: [assigned_carrier_id], references: [carrier_id], onUpdate: NoAction)
-  loading_docks        loading_docks?       @relation(fields: [assigned_door_id], references: [dock_id], onUpdate: NoAction)
-
-  @@unique([tenant_id, facility_id, lane_code])
-  @@schema("multitenant")
-}
-
-/// Multi-stop load routing for outbound shipping
-model load_stops {
-  stop_id            BigInt               @id @default(autoincrement())
-  tenant_id          String               @db.Uuid
-  load_id            BigInt
-  stop_sequence      Int
-  location_name      String               @db.VarChar(200)
-  shipment_id        BigInt?
-  planned_arrival    DateTime?            @db.Timestamptz(6)
-  planned_departure  DateTime?            @db.Timestamptz(6)
-  actual_arrival     DateTime?            @db.Timestamptz(6)
-  actual_departure   DateTime?            @db.Timestamptz(6)
-  status             String               @default("PENDING") @db.VarChar(20)
-  notes              String?
-  created_by         String?              @db.Uuid
-  updated_by         String?              @db.Uuid
-  created_at         DateTime?            @default(now()) @db.Timestamptz(6)
-  updated_at         DateTime?            @default(now()) @db.Timestamptz(6)
-  version            BigInt?
-  loads              loads                @relation(fields: [load_id], references: [load_id], onDelete: Cascade, onUpdate: NoAction)
-  outbound_shipments outbound_shipments?  @relation(fields: [shipment_id], references: [shipment_id], onUpdate: NoAction)
-
-  @@schema("multitenant")
-}
-
-/// QC inspection profiles - define which checks are required per product type
-model inspection_profiles {
-  profile_id          BigInt                        @id @default(autoincrement())
-  tenant_id           String                        @db.Uuid
-  profile_name        String                        @db.VarChar(100)
-  description         String?
-  is_active           Boolean?                      @default(true)
-  created_by          String?                       @db.Uuid
-  updated_by          String?                       @db.Uuid
-  created_at          DateTime?                     @default(now()) @db.Timestamptz(6)
-  updated_at          DateTime?                     @default(now()) @db.Timestamptz(6)
-  version             BigInt?
-  checklist_items     inspection_checklist_items[]
-  product_profiles    product_inspection_profiles[]
-
-  @@schema("multitenant")
-}
-
-/// Per-profile checklist items for QC inspections
-model inspection_checklist_items {
-  item_id             BigInt               @id @default(autoincrement())
-  profile_id          BigInt
-  check_type          String               @db.VarChar(50)
-  check_label         String               @db.VarChar(200)
-  is_mandatory        Boolean?             @default(true)
-  sort_order          Int?
-  acceptable_criteria String?
-  created_by          String?              @db.Uuid
-  updated_by          String?              @db.Uuid
-  created_at          DateTime?            @default(now()) @db.Timestamptz(6)
-  updated_at          DateTime?            @default(now()) @db.Timestamptz(6)
-  version             BigInt?
-  inspection_profiles inspection_profiles  @relation(fields: [profile_id], references: [profile_id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@schema("multitenant")
-}
-
-/// Product-to-inspection-profile mapping with thresholds
-model product_inspection_profiles {
-  mapping_id              BigInt               @id @default(autoincrement())
-  tenant_id               String               @db.Uuid
-  product_id              BigInt
-  profile_id              BigInt
-  vendor_id               BigInt?
-  client_id               BigInt?
-  min_expiry_days         Int?
-  temperature_min         Decimal?             @db.Decimal(5, 2)
-  temperature_max         Decimal?             @db.Decimal(5, 2)
-  sampling_percentage     Decimal?             @db.Decimal(5, 2)
-  sampling_method         String?              @default("100_PERCENT") @db.VarChar(20)
-  is_active               Boolean?             @default(true)
-  created_by              String?              @db.Uuid
-  updated_by              String?              @db.Uuid
-  created_at              DateTime?            @default(now()) @db.Timestamptz(6)
-  updated_at              DateTime?            @default(now()) @db.Timestamptz(6)
-  version                 BigInt?
-  inspection_profiles     inspection_profiles  @relation(fields: [profile_id], references: [profile_id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@schema("multitenant")
-}
-
-/// Structured defect codes for quality inspection
-model defect_codes {
-  defect_code_id  BigInt               @id @default(autoincrement())
-  tenant_id       String               @db.Uuid
-  code            String               @db.VarChar(50)
-  description     String               @db.VarChar(255)
-  category        String               @default("PACKAGING") @db.VarChar(30)
-  severity        String               @default("MINOR") @db.VarChar(20)
-  is_active       Boolean?             @default(true)
-  created_by      String?              @db.Uuid
-  updated_by      String?              @db.Uuid
-  created_at      DateTime?            @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime?            @default(now()) @db.Timestamptz(6)
-  version         BigInt?
-
-  @@unique([tenant_id, code])
-  @@schema("multitenant")
-}
-
-/// Per-inspection defect records
-model inspection_defects {
-  defect_id       BigInt               @id @default(autoincrement())
-  inspection_id   BigInt
-  defect_code_id  BigInt
-  quantity_affected Decimal?            @db.Decimal(12, 4)
-  notes           String?
-  recorded_by     String?              @db.Uuid
-  recorded_at     DateTime?            @default(now()) @db.Timestamptz(6)
-  quality_inspections quality_inspections @relation(fields: [inspection_id], references: [inspection_id], onDelete: Cascade, onUpdate: NoAction)
-  defect_codes    defect_codes         @relation(fields: [defect_code_id], references: [defect_code_id], onUpdate: NoAction)
-
-  @@schema("multitenant")
-}
-
-/// Temperature readings during QC inspection
-model inspection_temperature_logs {
-  log_id          BigInt               @id @default(autoincrement())
-  inspection_id   BigInt
-  reading_celsius Decimal              @db.Decimal(5, 2)
-  acceptable_min  Decimal?             @db.Decimal(5, 2)
-  acceptable_max  Decimal?             @db.Decimal(5, 2)
-  is_compliant    Boolean?             @default(true)
-  device_id       String?              @db.VarChar(100)
-  logged_at       DateTime?            @default(now()) @db.Timestamptz(6)
-  logged_by       String?              @db.Uuid
-  quality_inspections quality_inspections @relation(fields: [inspection_id], references: [inspection_id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@schema("multitenant")
-}
-
-/// Cartonization rules for outbound packing
-model cartonization_rules {
-  rule_id              BigInt               @id @default(autoincrement())
-  tenant_id            String               @db.Uuid
-  facility_id          BigInt
-  rule_name            String               @db.VarChar(100)
-  priority             Int?                 @default(10)
-  conditions_json      String?              @db.Json
-  carton_type_id       BigInt?
-  is_active            Boolean?             @default(true)
-  created_by           String?              @db.Uuid
-  updated_by           String?              @db.Uuid
-  created_at           DateTime?            @default(now()) @db.Timestamptz(6)
-  updated_at           DateTime?            @default(now()) @db.Timestamptz(6)
-  version              BigInt?
-  warehouse_facilities warehouse_facilities @relation(fields: [tenant_id, facility_id], references: [tenant_id, facility_id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@schema("multitenant")
-}
-
-/// Cartonization output plan per order
-model packing_carton_plan {
-  plan_id        BigInt               @id @default(autoincrement())
-  tenant_id      String               @db.Uuid
-  facility_id    BigInt
-  order_id       BigInt
-  carton_index   Int
-  total_cartons  Int
-  carton_type_id BigInt?
-  items_json     String?              @db.Json
-  status         String               @default("PLANNED") @db.VarChar(20)
-  created_by     String?              @db.Uuid
-  updated_by     String?              @db.Uuid
-  created_at     DateTime?            @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime?            @default(now()) @db.Timestamptz(6)
-  version        BigInt?
-
-  @@schema("multitenant")
-}
-
-/// Packing exceptions (shortage, damage, weight mismatch, wrong item)
-model packing_exceptions {
-  exception_id      BigInt               @id @default(autoincrement())
-  tenant_id         String               @db.Uuid
-  facility_id       BigInt
-  session_id        BigInt?
-  order_id          BigInt
-  carton_id         BigInt?
-  exception_type    String               @db.VarChar(30)
-  product_id        BigInt?
-  expected_qty      Decimal?             @db.Decimal(12, 4)
-  packed_qty        Decimal?             @db.Decimal(12, 4)
-  reason_code       String?              @db.VarChar(50)
-  status            String               @default("OPEN") @db.VarChar(20)
-  resolved_by       String?              @db.Uuid
-  resolved_at       DateTime?            @db.Timestamptz(6)
-  notes             String?
-  created_by        String?              @db.Uuid
-  updated_by        String?              @db.Uuid
-  created_at        DateTime?            @default(now()) @db.Timestamptz(6)
-  updated_at        DateTime?            @default(now()) @db.Timestamptz(6)
-  version           BigInt?
-
-  @@schema("multitenant")
-}
-
-/// Structured damage codes for receiving, putaway, and packing
-model damage_codes {
-  damage_code_id  BigInt               @id @default(autoincrement())
-  tenant_id       String               @db.Uuid
-  code            String               @db.VarChar(50)
-  description     String               @db.VarChar(255)
-  category        String               @default("TRANSPORT") @db.VarChar(30)
-  requires_qc     Boolean?             @default(false)
-  is_active       Boolean?             @default(true)
-  created_by      String?              @db.Uuid
-  updated_by      String?              @db.Uuid
-  created_at      DateTime?            @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime?            @default(now()) @db.Timestamptz(6)
-  version         BigInt?
-
-  @@unique([tenant_id, code])
-  @@schema("multitenant")
-}
-
-/// Approval threshold configurations for inventory count variances
-model approval_threshold_configs {
-  config_id                BigInt               @id @default(autoincrement())
-  tenant_id                String               @db.Uuid
-  facility_id              BigInt
-  threshold_type           String               @default("PERCENTAGE") @db.VarChar(20)
-  auto_approve_pct         Decimal?             @db.Decimal(5, 2)
-  auto_approve_abs         Decimal?             @db.Decimal(12, 4)
-  supervisor_review_pct    Decimal?             @db.Decimal(5, 2)
-  recount_pct              Decimal?             @db.Decimal(5, 2)
-  is_active                Boolean?             @default(true)
-  created_by               String?              @db.Uuid
-  updated_by               String?              @db.Uuid
-  created_at               DateTime?            @default(now()) @db.Timestamptz(6)
-  updated_at               DateTime?            @default(now()) @db.Timestamptz(6)
-  version                  BigInt?
-
-  @@schema("multitenant")
-}
-
-/// Root cause categories for cycle count variance investigations
-model root_cause_categories {
-  category_id     BigInt               @id @default(autoincrement())
-  tenant_id       String               @db.Uuid
-  code            String               @db.VarChar(50)
-  description     String               @db.VarChar(255)
-  category_type   String               @db.VarChar(30)
-  is_active       Boolean?             @default(true)
-  created_by      String?              @db.Uuid
-  updated_by      String?              @db.Uuid
-  created_at      DateTime?            @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime?            @default(now()) @db.Timestamptz(6)
-  version         BigInt?
-
-  @@unique([tenant_id, code])
-  @@schema("multitenant")
-}
-
-/// Pick cart definitions for cluster/batch picking
-model pick_carts {
-  cart_id     BigInt               @id @default(autoincrement())
-  tenant_id   String               @db.Uuid
-  facility_id BigInt
-  cart_code   String               @db.VarChar(50)
-  cart_type   String               @default("CLUSTER") @db.VarChar(20)
-  num_shelves Int?                 @default(3)
-  is_active   Boolean?             @default(true)
-  created_by  String?              @db.Uuid
-  updated_by  String?              @db.Uuid
-  created_at  DateTime?            @default(now()) @db.Timestamptz(6)
-  updated_at  DateTime?            @default(now()) @db.Timestamptz(6)
-  version     BigInt?
-
-  @@schema("multitenant")
-}
-
-/// Backorder records for unfulfilled order lines
-model backorder_records {
-  backorder_id  BigInt               @id @default(autoincrement())
-  tenant_id     String               @db.Uuid
-  order_line_id BigInt
-  shortfall_qty Decimal              @db.Decimal(12, 4)
-  status        String               @default("OPEN") @db.VarChar(20)
-  fulfilled_qty Decimal?             @default(0) @db.Decimal(12, 4)
-  created_by    String?              @db.Uuid
-  updated_by    String?              @db.Uuid
-  created_at    DateTime?            @default(now()) @db.Timestamptz(6)
-  updated_at    DateTime?            @default(now()) @db.Timestamptz(6)
-  version       BigInt?
-
-  @@schema("multitenant")
-}
-
-/// Receiving tolerance configurations per product/vendor/facility
-model receiving_tolerance_configs {
-  config_id                    BigInt               @id @default(autoincrement())
-  tenant_id                    String               @db.Uuid
-  facility_id                  BigInt
-  product_id                   BigInt?
-  vendor_id                    BigInt?
-  tolerance_type               String               @default("PERCENTAGE") @db.VarChar(20)
-  over_tolerance               Decimal?             @db.Decimal(5, 2)
-  under_tolerance              Decimal?             @db.Decimal(5, 2)
-  requires_supervisor_approval Boolean?             @default(true)
-  is_active                    Boolean?             @default(true)
-  created_by                   String?              @db.Uuid
-  updated_by                   String?              @db.Uuid
-  created_at                   DateTime?            @default(now()) @db.Timestamptz(6)
-  updated_at                   DateTime?            @default(now()) @db.Timestamptz(6)
-  version                      BigInt?
-
-  @@schema("multitenant")
-}
 
 /// Physical trailer assets for outbound shipping
 model trailers {
@@ -5321,7 +4986,7 @@ model cartonization_rules {
   facility_id    BigInt
   rule_name      String    @db.VarChar(100)
   priority       Int?      @default(10)
-  conditions_json String?  @db.Json
+  conditions_json Json?     @db.Json
   carton_type_id BigInt?
   is_active      Boolean?  @default(true)
   created_by     String?   @db.Uuid
@@ -5342,7 +5007,7 @@ model packing_carton_plan {
   carton_index  Int
   total_cartons Int
   carton_type_id BigInt?
-  items_json    String?   @db.Json
+  items_json    Json?     @db.Json
   status        String    @default("PLANNED") @db.VarChar(20)
   created_by    String?   @db.Uuid
   updated_by    String?   @db.Uuid
@@ -5487,8 +5152,22 @@ model receiving_tolerance_configs {
   updated_by                   String?   @db.Uuid
   created_at                   DateTime? @default(now()) @db.Timestamptz(6)
   updated_at                   DateTime? @default(now()) @db.Timestamptz(6)
-  version                      BigInt?
+  version     BigInt?
 
+  @@schema("multitenant")
+}
+
+/// Manifest history for shipping
+model generated_manifests {
+  manifest_id        BigInt    @id @default(autoincrement())
+  tenant_id          String    @db.Uuid
+  load_id            BigInt
+  manifest_number    String    @db.VarChar(100)
+  manifest_data_json Json?
+  generated_at       DateTime? @default(now()) @db.Timestamptz(6)
+  generated_by       String?   @db.Uuid
+
+  @@unique([tenant_id, manifest_number])
   @@schema("multitenant")
 }
 

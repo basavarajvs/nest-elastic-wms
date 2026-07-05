@@ -99,7 +99,6 @@ export class PurchaseOrderService {
           ordered_quantity: line.orderedQuantity,
           uom_id: BigInt(line.uomId),
           unit_cost: line.unitCost,
-          line_total: Number(line.orderedQuantity || 0) * Number(line.unitCost || 0),
           required_date: line.requiredDate ? new Date(line.requiredDate) : undefined,
           promised_date: line.promisedDate ? new Date(line.promisedDate) : undefined,
           expected_receipt_date: line.expectedReceiptDate ? new Date(line.expectedReceiptDate) : undefined,

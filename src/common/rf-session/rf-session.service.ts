@@ -45,8 +45,8 @@ export class RfSessionService {
       `INSERT INTO multitenant.db_rf_sessions
          (tenant_id, user_id, facility_id, device_id, session_token, workflow_type,
           payload_json, status, expires_at)
-       VALUES ($1::uuid, $2::uuid, $3::uuid, $4,
-               encode(gen_random_bytes(32), 'hex'), $5,
+       VALUES ($1::uuid, $2::uuid, $3::bigint, $4,
+               gen_random_uuid()::text, $5,
                $6::jsonb, 'ACTIVE',
                NOW() + INTERVAL '1 minute' * $7)
        RETURNING id, session_token, expires_at, workflow_type`,

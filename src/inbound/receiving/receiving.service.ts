@@ -316,8 +316,14 @@ export class ReceivingService {
       });
     }
 
-    // Transition receipt CREATED -> RECEIVING
+    // Transition receipt CREATED -> ARRIVED -> RECEIVING (Manhattan WMS status flow)
     if (receipt.status === 'CREATED') {
+      // Move to ARRIVED first (trigger requires this intermediate state)
+      await this.prisma.goods_receipts.updateMany({
+        where: { tenant_id: tenantId, receipt_id: receiptId },
+        data: { status: 'ARRIVED' },
+      });
+      // Then to RECEIVING
       await this.prisma.goods_receipts.updateMany({
         where: { tenant_id: tenantId, receipt_id: receiptId },
         data: { status: receipt_status.RECEIVING },

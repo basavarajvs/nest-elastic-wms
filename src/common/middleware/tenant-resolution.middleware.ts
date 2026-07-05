@@ -13,19 +13,57 @@ export class TenantResolutionMiddleware implements NestMiddleware {
   constructor(private readonly tenantContext: TenantContextService) {}
 
   use(req: FastifyRequest, _res: FastifyReply, next: () => void) {
-    const user = (req as any).user as Record<string, any> | undefined;
+    const store = this.resolveTenantStore(req);
+    if (store) {
+      (req as any).tenantContext = { getTenantId: () => store.tenantId };
+    }
+    next();
+  }
 
+  private resolveTenantStore(req: FastifyRequest): TenantStore | null {
+    const user = (req as any).user as Record<string, any> | undefined;
     if (user?.tenantId) {
-      const store: TenantStore = {
+      return {
         tenantId: user.tenantId,
         tenantCode: user.tenantCode || '',
         tenantStatus: user.tenantStatus || 'active',
         isSystemContext: false,
       };
-      this.tenantContext.set(store);
-      (req as any).tenantContext = this.tenantContext;
     }
 
-    next();
+    const authHeader = req.headers?.authorization as string | undefined;
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.slice(7);
+      try {
+        const payload = this.decodeJwtPayload(token);
+        if (payload?.tenantId) {
+          return {
+            tenantId: payload.tenantId,
+            tenantCode: payload.tenantCode || '',
+            tenantStatus: payload.tenantStatus || 'active',
+            isSystemContext: false,
+          };
+        }
+      } catch {
+        // ignore decode errors
+      }
+    }
+
+    return null;
+  }
+
+  private decodeJwtPayload(token: string): Record<string, any> | null {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    try {
+      const padded = parts[1].padEnd(
+        parts[1].length + (4 - (parts[1].length % 4)) % 4,
+        '=',
+      );
+      const decoded = Buffer.from(padded, 'base64').toString('utf8');
+      return JSON.parse(decoded);
+    } catch {
+      return null;
+    }
   }
 }

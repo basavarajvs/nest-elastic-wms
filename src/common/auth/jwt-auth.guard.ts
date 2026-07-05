@@ -52,6 +52,14 @@ export class JwtAuthGuard implements CanActivate {
 
       req.user = payload;
 
+      // Set tenant context on the request for downstream handlers
+      if (payload.tenantId) {
+        req.tenantContext = {
+          getTenantId: () => payload.tenantId,
+          getTenantCode: () => payload.tenantCode || '',
+        };
+      }
+
       const ability = this.abilityFactory.createForUser(payload);
       req.ability = ability;
 

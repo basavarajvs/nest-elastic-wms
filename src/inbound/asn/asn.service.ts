@@ -25,11 +25,14 @@ export class AsnService {
       inbound_for_client_id: dto.inboundForClientId ? BigInt(dto.inboundForClientId) : undefined,
     };
 
+    const asn = await this.prisma.advance_ship_notices.create({ data });
+
     if (dto.lines && dto.lines.length > 0) {
-      data.asn_lines = {
-        create: dto.lines.map((line: any) => ({
+      await this.prisma.asn_lines.createMany({
+        data: dto.lines.map((line: any) => ({
           tenant_id: tenantId,
           facility_id: BigInt(dto.facilityId),
+          asn_id: asn.asn_id,
           product_id: BigInt(line.productId),
           expected_quantity: line.expectedQuantity,
           uom_id: BigInt(line.uomId),
@@ -37,10 +40,10 @@ export class AsnService {
           expiry_date: line.expiryDate ? new Date(line.expiryDate) : undefined,
           notes: line.notes,
         })),
-      };
+      });
     }
 
-    return this.prisma.advance_ship_notices.create({ data });
+    return this.findById(tenantId, asn.asn_id);
   }
 
   async findAll(tenantId: string, query: any) {
