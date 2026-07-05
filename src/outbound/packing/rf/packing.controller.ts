@@ -91,4 +91,67 @@ export class RfPackingController {
     const tenantId = req.tenantContext.getTenantId();
     return this.packingService.findSessionByUser(tenantId, userId);
   }
+
+  @Post('get-next')
+  @ApiOperation({ summary: 'Get next packing work (directed assignment)' })
+  @RfAction('read')
+  async getNext(@Req() req: any, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facilityId);
+    const userId = req.rfSession?.userId || dto.userId;
+    return this.packingService.getNextPackWork(tenantId, facilityId, BigInt(dto.stationId || 0), userId);
+  }
+
+  @Post('nest-lpn')
+  @ApiOperation({ summary: 'Nest pick LPN into carton LPN' })
+  @RfAction('update')
+  async nestLpn(@Req() req: any, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    return this.packingService.nestPickLpn(tenantId, BigInt(dto.cartonLpnId), BigInt(dto.pickLpnId));
+  }
+
+  @Post('report-shortage')
+  @ApiOperation({ summary: 'Report shortage during packing' })
+  @RfAction('update')
+  async reportShortage(@Req() req: any, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facilityId);
+    return this.packingService.reportShortage(tenantId, facilityId, BigInt(dto.sessionId), dto);
+  }
+
+  @Post('report-damage')
+  @ApiOperation({ summary: 'Report damage during packing' })
+  @RfAction('update')
+  async reportDamage(@Req() req: any, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facilityId);
+    return this.packingService.reportPackingDamage(tenantId, facilityId, BigInt(dto.sessionId), dto);
+  }
+
+  @Post('pending-exceptions')
+  @ApiOperation({ summary: 'List pending supervisor exceptions' })
+  @RfAction('read')
+  async pendingExceptions(@Req() req: any, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facilityId);
+    return this.packingService.getPendingExceptions(tenantId, facilityId);
+  }
+
+  @Post(':exceptionId/approve')
+  @ApiOperation({ summary: 'Supervisor approve exception' })
+  @RfAction('update')
+  async approveException(@Req() req: any, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    const userId = req.rfSession?.userId || dto.supervisorId;
+    return this.packingService.approveException(tenantId, BigInt(dto.exceptionId), userId);
+  }
+
+  @Post(':exceptionId/reject')
+  @ApiOperation({ summary: 'Supervisor reject exception' })
+  @RfAction('update')
+  async rejectException(@Req() req: any, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    const userId = req.rfSession?.userId || dto.supervisorId;
+    return this.packingService.rejectException(tenantId, BigInt(dto.exceptionId), userId);
+  }
 }

@@ -14,31 +14,20 @@ export class PickingTaskService {
     });
   }
 
-  /** Get next available pick task for a facility (RF) */
+  /** Get next available pick task for a facility (RF) with pre-pick validation */
   async nextTask(tenantId: string, facilityId: bigint, userId?: string) {
-    // First try to find an already ASSIGNED task for this user
     if (userId) {
       const assigned = await this.prisma.picking_tasks.findFirst({
-        where: {
-          tenant_id: tenantId,
-          facility_id: facilityId,
-          assigned_to_user_id: userId,
-          status: 'ASSIGNED',
-        },
+        where: { tenant_id: tenantId, facility_id: facilityId, assigned_to_user_id: userId, status: 'ASSIGNED' },
         orderBy: { priority: 'asc' },
       });
-      if (assigned) return assigned;
+      if (assigned) return this.validatePrePick(tenantId, assigned.task_id) || assigned;
     }
-
-    // Otherwise find the highest priority AVAILABLE task
-    return this.prisma.picking_tasks.findFirst({
-      where: {
-        tenant_id: tenantId,
-        facility_id: facilityId,
-        status: 'AVAILABLE',
-      },
+    const task = await this.prisma.picking_tasks.findFirst({
+      where: { tenant_id: tenantId, facility_id: facilityId, status: 'AVAILABLE' },
       orderBy: [{ priority: 'asc' }, { task_id: 'asc' }],
     });
+    return task ? this.validatePrePick(tenantId, task.task_id) || task : null;
   }
 
   /** Assign a pick task to a user */
@@ -273,39 +262,35 @@ export class PickingTaskService {
    * RF: Scan destination tote/carton barcode, create or validate tote LPN
    * and set it as the task's put-to location (Manhattan step: Scan Destination Tote).
    */
+  /** APP-PICK-H: Scan tote with tote-to-order validation */
   async scanTote(tenantId: string, taskId: bigint, toteBarcode: string, facilityId: bigint) {
-    const task = await this.prisma.picking_tasks.findFirst({
-      where: { tenant_id: tenantId, task_id: taskId },
-    });
+    const task = await this.prisma.picking_tasks.findFirst({ where: { tenant_id: tenantId, task_id: taskId } });
     if (!task) throw new BadRequestException('Task not found');
 
-    // Find or create the tote LPN
     let tote = await this.prisma.license_plate_numbers.findFirst({
       where: { tenant_id: tenantId, facility_id: facilityId, lpn_number: toteBarcode },
     });
-    if (!tote) {
+    if (tote) {
+      if (task.order_line_id && tote.assigned_shipment_id) {
+        const line = await this.prisma.sales_order_lines.findFirst({ where: { tenant_id: tenantId, line_id: task.order_line_id } });
+        if (line && line.order_id && tote.assigned_shipment_id !== line.order_id) {
+          throw new BadRequestException(`WRONG TOTE — Belongs to Order ${tote.assigned_shipment_id}`);
+        }
+      }
+    } else {
       const stagingLocation = await this.prisma.storage_locations.findFirst({
         where: { tenant_id: tenantId, facility_id: facilityId, location_type: 'TEMPORARY' },
         orderBy: { location_code: 'asc' },
       });
       tote = await this.prisma.license_plate_numbers.create({
-        data: {
-          tenant_id: tenantId,
-          facility_id: facilityId,
-          lpn_number: toteBarcode,
-          location_id: stagingLocation?.location_id || 0,
-          lpn_type: 'TOTE',
-          status: 'PICK_PENDING',
-        },
+        data: { tenant_id: tenantId, facility_id: facilityId, lpn_number: toteBarcode,
+          location_id: stagingLocation?.location_id || 0, lpn_type: 'TOTE', status: 'PICK_PENDING' },
       });
     }
-
-    // Set tote as the task's destination
     await this.prisma.picking_tasks.updateMany({
       where: { tenant_id: tenantId, task_id: taskId },
-      data: { to_location_id: tote.location_id, notes: `Tote LPN: ${toteBarcode}` },
+      data: { to_location_id: tote.location_id, notes: `Tote: ${toteBarcode}` },
     });
-
     return { taskId: taskId.toString(), toteId: tote.lpn_id.toString(), toteNumber: tote.lpn_number };
   }
 
@@ -403,6 +388,42 @@ export class PickingTaskService {
       this.prisma.picking_tasks.count({ where }),
     ]);
     return { data, total, page, limit };
+  }
+
+  // GAP-7: Pre-pick allocation validation
+  async validatePrePick(tenantId: string, taskId: bigint) {
+    const task = await this.prisma.picking_tasks.findFirst({ where: { tenant_id: tenantId, task_id: taskId } });
+    if (!task || !task.from_location_id) return null;
+    const onHand = await this.prisma.inventory_on_hand.aggregate({
+      where: { tenant_id: tenantId, facility_id: task.facility_id, product_id: task.product_id, location_id: task.from_location_id },
+      _sum: { quantity_on_hand: true },
+    });
+    const available = Number(onHand._sum?.quantity_on_hand || 0);
+    if (available < Number(task.quantity_to_pick)) {
+      await this.prisma.picking_tasks.updateMany({
+        where: { tenant_id: tenantId, task_id: taskId },
+        data: { hold_reason: 'INVENTORY_SHORT' },
+      });
+      return { atRisk: true, available, required: Number(task.quantity_to_pick), taskId: taskId.toString() };
+    }
+    return null;
+  }
+
+  // APP-PICK-F: Create backorder for unfulfilled quantity
+  async createBackorder(tenantId: string, orderLineId: bigint, shortfallQty: number) {
+    const existing = await this.prisma.backorder_records.findFirst({
+      where: { tenant_id: tenantId, order_line_id: orderLineId, status: 'OPEN' },
+    });
+    if (existing) {
+      await this.prisma.backorder_records.updateMany({
+        where: { tenant_id: tenantId, backorder_id: existing.backorder_id },
+        data: { shortfall_qty: { increment: shortfallQty } },
+      });
+      return existing;
+    }
+    return this.prisma.backorder_records.create({
+      data: { tenant_id: tenantId, order_line_id: orderLineId, shortfall_qty: shortfallQty, status: 'OPEN' },
+    });
   }
 
   private async checkOrderPickedStatus(tenantId: string, orderId: bigint) {

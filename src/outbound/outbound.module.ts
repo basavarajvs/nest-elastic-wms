@@ -12,6 +12,8 @@ import { VasExecutionService } from './vas-execution/vas-execution.service';
 import { ReplenishmentService } from './replenishment/replenishment.service';
 import { CrossDockService } from './cross-dock/cross-dock.service';
 import { CarrierRateService } from './carrier-rates/carrier-rate.service';
+import { StagingService } from './staging/staging.service';
+import { TrailerService } from './shipments/trailer.service';
 import { SalesOrderWebController } from './sales-orders/web/sales-order.controller';
 import { AllocationWebController } from './allocation/allocation.controller';
 import { PickingWaveWebController } from './picking-waves/web/picking-wave.controller';
@@ -28,6 +30,9 @@ import { VasExecutionWebController } from './vas-execution/web/vas-execution.con
 import { ReplenishmentRuleController, ReplenishmentTaskController } from './replenishment/web/replenishment.controller';
 import { CrossDockWebController } from './cross-dock/web/cross-dock.controller';
 import { CarrierRateWebController } from './carrier-rates/web/carrier-rate.controller';
+import { StagingWebController } from './staging/web/staging.controller';
+import { TrailerWebController } from './shipments/web/trailer.controller';
+import { RfStagingController } from './staging/rf/staging.controller';
 
 @Module({
   imports: [PrismaModule],
@@ -49,6 +54,9 @@ import { CarrierRateWebController } from './carrier-rates/web/carrier-rate.contr
     ReplenishmentTaskController,
     CrossDockWebController,
     CarrierRateWebController,
+    StagingWebController,
+    TrailerWebController,
+    RfStagingController,
   ],
   providers: [
     SalesOrderService,
@@ -63,6 +71,8 @@ import { CarrierRateWebController } from './carrier-rates/web/carrier-rate.contr
     ReplenishmentService,
     CrossDockService,
     CarrierRateService,
+    StagingService,
+    TrailerService,
   ],
   exports: [
     SalesOrderService,
@@ -77,6 +87,8 @@ import { CarrierRateWebController } from './carrier-rates/web/carrier-rate.contr
     ReplenishmentService,
     CrossDockService,
     CarrierRateService,
+    StagingService,
+    TrailerService,
   ],
 })
 export class OutboundModule {}

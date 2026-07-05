@@ -247,4 +247,53 @@ export class LoadService {
       },
     });
   }
+
+  // GAP-7: Carrier handoff
+  async transferToCarrier(tenantId: string, loadId: bigint, driverName: string) {
+    const load = await this.prisma.loads.findFirst({ where: { tenant_id: tenantId, load_id: loadId } });
+    if (!load) throw new BadRequestException('Load not found');
+    await this.prisma.loads.updateMany({
+      where: { tenant_id: tenantId, load_id: loadId },
+      data: { status: 'DEPARTED', actual_departure_time: new Date(), driver_name: driverName },
+    });
+    await this.prisma.license_plate_numbers.updateMany({
+      where: { tenant_id: tenantId, assigned_load_id: loadId, status: 'LOADED' },
+      data: { status: 'SHIPPED', updated_at: new Date() },
+    });
+    return { loadId, status: 'DEPARTED', driverName, handedOffAt: new Date() };
+  }
+
+  // GAP-6: Capacity validation
+  async validateCapacity(tenantId: string, loadId: bigint, newCartonWeightKg: number) {
+    const load = await this.prisma.loads.findFirst({ where: { tenant_id: tenantId, load_id: loadId } });
+    if (!load) throw new BadRequestException('Load not found');
+    const currentWeight = Number(load.total_weight || 0);
+    const newTotal = currentWeight + newCartonWeightKg;
+    const maxWeight = 20000;
+    if (newTotal > maxWeight) {
+      return { allowed: false, message: 'OVER CAPACITY: Weight limit exceeded', currentWeight, newTotal, maxWeight };
+    }
+    return { allowed: true, currentWeight, newTotal, maxWeight };
+  }
+
+  // GAP-2: Directed loading work
+  async getNextLoadingWork(tenantId: string, facilityId: bigint, userId: string) {
+    const loads = await this.prisma.loads.findMany({
+      where: { tenant_id: tenantId, facility_id: facilityId, status: { in: ['PLANNED', 'READY'] } },
+      orderBy: { planned_departure_date: 'asc' },
+      take: 1,
+    });
+    if (!loads.length) return null;
+    const load = loads[0];
+    const docks = await this.prisma.loading_docks.findMany({
+      where: { tenant_id: tenantId, facility_id: facilityId, is_active: true, is_available: true }, take: 1,
+    });
+    const trailers = await this.prisma.trailers.findMany({
+      where: { tenant_id: tenantId, facility_id: facilityId, is_active: true, status: { in: ['ARRIVED', 'AT_DOCK'] } }, take: 1,
+    });
+    const shipmentCount = await this.prisma.outbound_shipments.count({
+      where: { tenant_id: tenantId, load_id: load.load_id },
+    });
+    return { load, dock: docks[0] || null, trailer: trailers[0] || null, shipmentCount };
+  }
 }

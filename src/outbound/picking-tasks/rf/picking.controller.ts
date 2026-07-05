@@ -91,4 +91,29 @@ export class RfPickingController {
     const tenantId = req.tenantContext.getTenantId();
     return this.pickingTaskService.myTasks(tenantId, dto.userId, dto.facilityId ? BigInt(dto.facilityId) : undefined);
   }
+
+  @Post('wave-status')
+  @ApiOperation({ summary: 'View current wave progress (RF)' })
+  @RfAction('read')
+  async waveStatus(@Req() req: any, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facilityId);
+    return this.pickingTaskService.findAllTasks(tenantId, { facilityId: facilityId.toString(), status: dto.status });
+  }
+
+  @Post('validate-inventory')
+  @ApiOperation({ summary: 'Pre-pick inventory validation check (RF)' })
+  @RfAction('read')
+  async validateInventory(@Req() req: any, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    return this.pickingTaskService.validatePrePick(tenantId, BigInt(dto.taskId));
+  }
+
+  @Post('create-backorder')
+  @ApiOperation({ summary: 'Create backorder for shortfall (RF)' })
+  @RfAction('create')
+  async createBackorder(@Req() req: any, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    return this.pickingTaskService.createBackorder(tenantId, BigInt(dto.orderLineId), Number(dto.shortfallQty));
+  }
 }

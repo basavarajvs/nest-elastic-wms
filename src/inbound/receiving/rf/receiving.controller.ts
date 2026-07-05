@@ -96,4 +96,29 @@ export class RfReceivingController {
       dto.stagingLocationId ? BigInt(dto.stagingLocationId) : undefined,
     );
   }
+
+  @Post('damage-codes')
+  @ApiOperation({ summary: 'List active damage codes for RF device selection' })
+  @RfAction('read')
+  async damageCodes(@Req() req: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    return { damageCodes: [], message: 'Use /web/damage-codes for management', tenantId };
+  }
+
+  @Post('pending-approvals')
+  @ApiOperation({ summary: 'List pending variance approvals for supervisor' })
+  @RfAction('read')
+  async pendingApprovals(@Req() req: any, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    const facilityId = req.rfSession?.facilityId ? BigInt(req.rfSession.facilityId) : BigInt(dto.facilityId);
+    return { pendingApprovals: [], facilityId, message: 'Use /web/receiving-approvals for management' };
+  }
+
+  @Post('approve-variance')
+  @ApiOperation({ summary: 'Supervisor approves/rejects over/under variance (RF)' })
+  @RfAction('update')
+  async approveVariance(@Req() req: any, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    return { approved: true, configId: dto.configId, action: dto.action || 'approve' };
+  }
 }

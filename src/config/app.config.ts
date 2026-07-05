@@ -4,9 +4,9 @@ export const appValidationSchema = Joi.object({
   NODE_ENV: Joi.string()
     .valid('development', 'production', 'test')
     .default('development'),
-  PORT: Joi.number().default(3001),
+  PORT: Joi.number().default(3002),
   API_PREFIX: Joi.string().default('api/v1/wms'),
-  APP_URL: Joi.string().default('http://localhost:3001'),
+  APP_URL: Joi.string().default('http://localhost:3002'),
   LOG_LEVEL: Joi.string().default('info'),
 
   DATABASE_URL: Joi.string().required(),

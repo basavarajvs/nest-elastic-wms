@@ -49,7 +49,7 @@ async function bootstrap() {
     SwaggerModule.setup('api/docs', app, document);
   }
 
-  const port = configService.get('PORT', 3001);
+  const port = configService.get('PORT', 3002);
   await app.listen(port, '0.0.0.0');
   logger.log(`Application running on http://localhost:${port}`);
   logger.log(`Swagger UI at http://localhost:${port}/api/docs`);

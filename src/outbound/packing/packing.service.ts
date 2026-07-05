@@ -320,12 +320,103 @@ export class PackingService {
   /** Find active session for a user (RF my-session) */
   async findSessionByUser(tenantId: string, userId: string) {
     return this.prisma.packing_sessions.findFirst({
-      where: {
-        tenant_id: tenantId,
-        user_id: userId,
-        status: { in: ['STATION_ASSIGNED', 'PACKING_ACTIVE'] },
-      },
+      where: { tenant_id: tenantId, user_id: userId, status: { in: ['STATION_ASSIGNED', 'PACKING_ACTIVE'] } },
       orderBy: { start_time: 'desc' },
+    });
+  }
+
+  // GAP-1: Directed pack work
+  async getNextPackWork(tenantId: string, facilityId: bigint, stationId: bigint, userId: string) {
+    const order = await this.prisma.sales_orders.findFirst({
+      where: { tenant_id: tenantId, facility_id: facilityId, status: 'PICKED' },
+      orderBy: { created_at: 'asc' },
+    });
+    if (!order) return null;
+    const pickLpns = await this.prisma.license_plate_numbers.findMany({
+      where: { tenant_id: tenantId, facility_id: facilityId, assigned_shipment_id: order.order_id, status: 'PICKED' },
+    });
+    return { order, pickLpns };
+  }
+
+  // GAP-9: Nest pick LPN into carton LPN
+  async nestPickLpn(tenantId: string, cartonLpnId: bigint, pickLpnId: bigint) {
+    const cartonLpn = await this.prisma.license_plate_numbers.findFirst({ where: { tenant_id: tenantId, lpn_id: cartonLpnId } });
+    if (!cartonLpn) throw new BadRequestException('Carton LPN not found');
+    const pickLpn = await this.prisma.license_plate_numbers.findFirst({ where: { tenant_id: tenantId, lpn_id: pickLpnId } });
+    if (!pickLpn) throw new BadRequestException('Pick LPN not found');
+    if (pickLpn.status !== 'PICKED') throw new BadRequestException(`Pick LPN status is ${pickLpn.status}, must be PICKED`);
+    await this.prisma.license_plate_numbers.updateMany({
+      where: { tenant_id: tenantId, lpn_id: pickLpnId },
+      data: { parent_lpn_id: cartonLpnId, status: 'NESTED', updated_at: new Date() },
+    });
+    return { cartonLpnId, pickLpnId, status: 'NESTED' };
+  }
+
+  // GAP-5: Report shortage during packing
+  async reportShortage(tenantId: string, facilityId: bigint, sessionId: bigint, dto: any) {
+    const exception = await this.prisma.packing_exceptions.create({
+      data: {
+        tenant_id: tenantId, facility_id: facilityId,
+        session_id: sessionId, order_id: BigInt(dto.orderId),
+        exception_type: 'SHORTAGE',
+        product_id: dto.productId ? BigInt(dto.productId) : undefined,
+        expected_qty: dto.expectedQty, packed_qty: dto.packedQty,
+        reason_code: dto.reasonCode, status: 'OPEN',
+        notes: dto.notes,
+      },
+    });
+    return exception;
+  }
+
+  // GAP-6: Report damage during packing
+  async reportPackingDamage(tenantId: string, facilityId: bigint, sessionId: bigint, dto: any) {
+    const exception = await this.prisma.packing_exceptions.create({
+      data: {
+        tenant_id: tenantId, facility_id: facilityId,
+        session_id: sessionId, order_id: BigInt(dto.orderId),
+        exception_type: 'DAMAGE',
+        product_id: dto.productId ? BigInt(dto.productId) : undefined,
+        expected_qty: dto.expectedQty, packed_qty: 0,
+        reason_code: dto.reasonCode || 'DAMAGE', status: 'OPEN',
+        notes: dto.notes,
+      },
+    });
+    await this.prisma.quality_holds.create({
+      data: {
+        tenant_id: tenantId, facility_id: facilityId,
+        hold_number: `HOLD-PACK-${Date.now()}`,
+        reference_type: 'PACKING', reference_id: exception.exception_id,
+        product_id: dto.productId ? BigInt(dto.productId) : undefined,
+        hold_reason: dto.reasonCode || 'PACKING_DAMAGE',
+        hold_reason_code: 'PACKING_DAMAGE',
+        placed_by_user_id: dto.userId || '', affected_quantity: dto.expectedQty || 0,
+        status: 'OPEN',
+      },
+    });
+    return exception;
+  }
+
+  // GAP-7: Supervisor override
+  async getPendingExceptions(tenantId: string, facilityId: bigint) {
+    return this.prisma.packing_exceptions.findMany({
+      where: { tenant_id: tenantId, facility_id: facilityId, status: 'OPEN' },
+      orderBy: { created_at: 'desc' },
+    });
+  }
+
+  async approveException(tenantId: string, exceptionId: bigint, supervisorId: string) {
+    const exc = await this.prisma.packing_exceptions.findFirst({ where: { tenant_id: tenantId, exception_id: exceptionId } });
+    if (!exc) throw new BadRequestException('Exception not found');
+    return this.prisma.packing_exceptions.updateMany({
+      where: { tenant_id: tenantId, exception_id: exceptionId },
+      data: { status: 'RESOLVED', resolved_by: supervisorId, resolved_at: new Date() },
+    });
+  }
+
+  async rejectException(tenantId: string, exceptionId: bigint, supervisorId: string) {
+    return this.prisma.packing_exceptions.updateMany({
+      where: { tenant_id: tenantId, exception_id: exceptionId },
+      data: { status: 'RESOLVED', resolved_by: supervisorId, resolved_at: new Date(), notes: 'Rejected by supervisor' },
     });
   }
 }

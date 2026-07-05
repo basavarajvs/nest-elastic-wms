@@ -200,7 +200,7 @@ export class CycleCountService {
     };
   }
 
-  /** Complete count with variance detection and investigation creation */
+  /** Complete count with variance detection, inventory adjustment, and investigation creation */
   async complete(tenantId: string, id: string, userId: string, facilityId?: string) {
     const count = await this.findById(tenantId, id);
     if (!count) throw new Error('Cycle count not found');
@@ -214,22 +214,14 @@ export class CycleCountService {
     let varianceLines = 0;
 
     for (const line of lines) {
-      const systemQty = await this.getSystemQuantity(
-        tenantId,
-        line.product_id,
-        line.location_id,
-        line.lot_id,
-      );
-
+      const systemQty = await this.getSystemQuantity(tenantId, line.product_id, line.location_id, line.lot_id);
       const countedQty = Number(line.counted_quantity || 0);
       const variance = Math.abs(countedQty - systemQty);
       const tolerance = 0.05 * Math.max(systemQty, 1);
 
       await this.prisma.inventory_count_lines.update({
         where: { count_line_id: line.count_line_id },
-        data: {
-          system_quantity: systemQty,
-        },
+        data: { system_quantity: systemQty },
       });
 
       if (variance > tolerance) {
@@ -239,7 +231,7 @@ export class CycleCountService {
         await this.prisma.variance_investigations.create({
           data: {
             tenant_id: tenantId,
-            facility_id: line.facility_id,
+            facility_id: count.facility_id,
             count_id: line.count_id,
             product_id: line.product_id,
             location_id: line.location_id,
@@ -250,6 +242,30 @@ export class CycleCountService {
             status: 'OPEN',
           },
         });
+      } else {
+        // Auto-approve: adjust inventory to match count
+        if (countedQty !== systemQty) {
+          await this.prisma.inventory_on_hand.updateMany({
+            where: { tenant_id: tenantId, product_id: line.product_id, location_id: line.location_id },
+            data: { quantity_on_hand: countedQty },
+          });
+          await this.prisma.inventory_transactions.create({
+            data: {
+              tenant_id: tenantId,
+              facility_id: count.facility_id,
+              transaction_type: 'CYCLE_COUNT',
+              transaction_status: 'COMPLETED',
+              reference_type: 'CYCLE_COUNT',
+              reference_id: line.count_id,
+              product_id: line.product_id,
+              from_location_id: line.location_id,
+              to_location_id: line.location_id,
+              quantity: variance,
+              uom_id: BigInt(1),
+              notes: `Auto-adjust from cycle count ${count.count_number}`,
+            },
+          });
+        }
       }
     }
 
@@ -264,6 +280,62 @@ export class CycleCountService {
     });
 
     return updated;
+  }
+
+  // GAP-4: Supervisor review methods
+  async getPendingReviews(tenantId: string, facilityId: bigint) {
+    return this.prisma.variance_investigations.findMany({
+      where: { tenant_id: tenantId, facility_id: facilityId, status: 'OPEN' },
+    });
+  }
+
+  async approveVariance(tenantId: string, investigationId: bigint, supervisorId: string) {
+    const inv = await this.prisma.variance_investigations.findFirst({ where: { tenant_id: tenantId, investigation_id: investigationId } });
+    if (!inv) throw new Error('Investigation not found');
+    await this.prisma.inventory_on_hand.updateMany({
+      where: { tenant_id: tenantId, product_id: inv.product_id, location_id: inv.location_id || undefined },
+      data: { quantity_on_hand: Number(inv.counted_quantity) },
+    });
+    await this.prisma.inventory_transactions.create({
+      data: {
+        tenant_id: tenantId, facility_id: inv.facility_id,
+        transaction_type: 'CYCLE_COUNT', transaction_status: 'COMPLETED',
+        reference_type: 'CYCLE_COUNT', reference_id: inv.count_id,
+        product_id: inv.product_id, from_location_id: inv.location_id, to_location_id: inv.location_id,
+        quantity: Number(inv.variance_quantity), uom_id: BigInt(1),
+        notes: `Supervisor approved variance for count ${inv.count_id}`,
+      },
+    });
+    return this.prisma.variance_investigations.updateMany({
+      where: { tenant_id: tenantId, investigation_id: investigationId },
+      data: { status: 'RESOLVED' },
+    });
+  }
+
+  async rejectVariance(tenantId: string, investigationId: bigint, supervisorId: string, reason: string) {
+    return this.prisma.variance_investigations.updateMany({
+      where: { tenant_id: tenantId, investigation_id: investigationId },
+      data: { status: 'CLOSED' },
+    });
+  }
+
+  async requestRecount(tenantId: string, investigationId: bigint, supervisorId: string) {
+    const inv = await this.prisma.variance_investigations.findFirst({ where: { tenant_id: tenantId, investigation_id: investigationId } });
+    if (!inv) throw new Error('Investigation not found');
+    await this.prisma.inventory_counts.create({
+      data: {
+        tenant_id: tenantId, facility_id: inv.facility_id,
+        count_number: `RECOUNT-${inv.count_id}-${Date.now()}`,
+        count_scope_type: 'LOCATION',
+        count_scope_identifier: inv.location_id || BigInt(0),
+        status: 'PENDING',
+        description: `Recount requested for investigation ${investigationId}`,
+      },
+    });
+    return this.prisma.variance_investigations.updateMany({
+      where: { tenant_id: tenantId, investigation_id: investigationId },
+      data: { status: 'OPEN' },
+    });
   }
 
   private async getSystemQuantity(

@@ -625,6 +625,48 @@ export class ReceivingService {
   async stageReceipt(tenantId: string, receiptId: bigint, stagingLocationId: string) {
     const receipt = await this.findReceiptById(tenantId, receiptId);
     if (!receipt) throw new Error('Receipt not found');
+
+    const location = await this.prisma.storage_locations.findFirst({
+      where: { tenant_id: tenantId, location_code: stagingLocationId },
+    });
+    if (!location) throw new BadRequestException(`Staging location ${stagingLocationId} not found`);
+
+    const lines = receipt.lines || [];
+    for (const line of lines) {
+      if (line.line_status === 'OPEN' || line.line_status === 'QC_PENDING') {
+        const receiptItems = await this.prisma.goods_receipt_items.findMany({
+          where: { tenant_id: tenantId, receipt_line_id: line.receipt_line_id },
+        });
+        for (const item of receiptItems) {
+          await this.prisma.license_plate_numbers.updateMany({
+            where: { tenant_id: tenantId, grn_line_id: item.receipt_item_id, status: 'RECEIVED' },
+            data: { status: 'IN_STAGING', location_id: location.location_id, staging_location_id: location.location_id, staged_at: new Date() },
+          });
+        }
+        if (receiptItems.length > 0) {
+          const firstItem = receiptItems[0];
+          await this.prisma.inventory_transactions.create({
+            data: {
+              tenant_id: tenantId,
+              facility_id: receipt.facility_id,
+              transaction_type: 'PUTAWAY',
+              transaction_status: 'COMPLETED',
+              reference_type: 'GRN',
+              reference_id: receiptId,
+              product_id: firstItem.product_id ?? BigInt(0),
+              uom_id: BigInt(1),
+              from_location_id: location.location_id,
+              to_location_id: location.location_id,
+              reference_document_type: 'GRN',
+              reference_document_number: receipt.receipt_number,
+              quantity: line.received_quantity || 0,
+              notes: `Staged at ${stagingLocationId}`,
+              created_at: new Date(),
+            },
+          });
+        }
+      }
+    }
     return this.prisma.goods_receipts.update({
       where: { receipt_id: receiptId, tenant_id: tenantId },
       data: { notes: `Staged at location: ${stagingLocationId}` },

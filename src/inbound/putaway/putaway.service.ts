@@ -78,18 +78,20 @@ export class PutawayService {
     return task;
   }
 
-  /** Lookup putaway task by scanning LPN barcode (RF) */
+  /** Lookup putaway task by scanning LPN barcode (RF) - APP-PUT-A */
   async findTaskByLpn(tenantId: string, facilityId: bigint, lpnBarcode: string) {
+    // First validate LPN exists and is in PUTAWAY_PENDING status
+    const lpn = await this.prisma.license_plate_numbers.findFirst({
+      where: { tenant_id: tenantId, facility_id: facilityId, lpn_number: lpnBarcode },
+    });
+    if (!lpn) throw new BadRequestException(`LPN ${lpnBarcode} not found`);
+    if (lpn.status !== 'PUTAWAY_PENDING') {
+      throw new BadRequestException(`LPN ${lpnBarcode} status is ${lpn.status}, must be PUTAWAY_PENDING`);
+    }
+    // Now find the task
     const task = await this.prisma.putaway_tasks.findFirst({
       where: { tenant_id: tenantId, facility_id: facilityId, lpn_barcode: lpnBarcode, status: { not: task_status_old.COMPLETED } },
     });
-    if (!task) {
-      // Check by suggested_location_barcode as well
-      const taskByLoc = await this.prisma.putaway_tasks.findFirst({
-        where: { tenant_id: tenantId, facility_id: facilityId, suggested_location_barcode: lpnBarcode, status: { not: task_status_old.COMPLETED } },
-      });
-      return taskByLoc;
-    }
     return task;
   }
 
@@ -120,6 +122,49 @@ export class PutawayService {
       where: { tenant_id: tenantId, task_id: taskId },
       data: { assigned_to_user_id: userId, status: task_status_old.ASSIGNED },
     });
+  }
+
+  /** GAP-1: Location Full Exception - flag location as full, find alternate */
+  async locationFullException(tenantId: string, taskId: bigint, userId: string) {
+    const task = await this.prisma.putaway_tasks.findFirst({ where: { tenant_id: tenantId, task_id: taskId } });
+    if (!task) throw new BadRequestException('Task not found');
+    if (task.to_location_id) {
+      await this.prisma.location_exceptions.create({
+        data: { tenant_id: tenantId, location_id: task.to_location_id, exception_type: 'FULL', reported_by: userId, reported_at: new Date() },
+      });
+      await this.prisma.storage_locations.updateMany({
+        where: { tenant_id: tenantId, location_id: task.to_location_id },
+        data: { is_blocked: true, block_reason: 'Putaway reported full' },
+      });
+    }
+    const alt = await this.suggestLocation(tenantId, task.facility_id, task.product_id, undefined, task.from_location_id, false);
+    if (!alt) throw new BadRequestException('No alternate location available');
+    await this.prisma.putaway_tasks.updateMany({
+      where: { tenant_id: tenantId, task_id: taskId },
+      data: { to_location_id: BigInt(alt.locationId), suggested_location_barcode: alt.locationCode, notes: `Alt from full: ${alt.locationCode}` },
+    });
+    return { ...alt, locationTier: 'OVERFLOW' };
+  }
+
+  /** GAP-2: Report damage during putaway movement */
+  async reportDamage(tenantId: string, taskId: bigint, dto: any) {
+    const task = await this.prisma.putaway_tasks.findFirst({ where: { tenant_id: tenantId, task_id: taskId } });
+    if (!task) throw new BadRequestException('Task not found');
+    const rec = await this.prisma.putaway_damage_records.create({
+      data: {
+        tenant_id: tenantId, facility_id: task.facility_id, task_id: taskId,
+        damage_code_id: dto.damageCodeId ? BigInt(dto.damageCodeId) : undefined,
+        damage_quantity: dto.damageQuantity || 0, lpn_barcode: task.lpn_barcode,
+        product_id: task.product_id, notes: dto.notes, reported_by: dto.userId, reported_at: new Date(),
+      },
+    });
+    if (task.lpn_barcode && dto.damageQuantity > 0) {
+      await this.prisma.license_plate_numbers.updateMany({
+        where: { tenant_id: tenantId, facility_id: task.facility_id, lpn_number: task.lpn_barcode },
+        data: { status: 'IN_QC', updated_at: new Date() },
+      });
+    }
+    return rec;
   }
 
   /**
@@ -167,7 +212,10 @@ export class PutawayService {
           _sum: { quantity_on_hand: true },
         });
         const currentQty = Number(onHand._sum?.quantity_on_hand || 0);
-        if (!fixed.max_weight || currentQty < Number(fixed.max_weight)) {
+        const prod = await this.prisma.products.findFirst({ where: { tenant_id: tenantId, product_id: productId } });
+        const unitWeight = prod?.weight ? Number(prod.weight) : 1;
+        const currentWeight = currentQty * unitWeight;
+        if ((!fixed.max_weight || currentWeight < Number(fixed.max_weight)) && (!fixed.max_volume || currentQty < Number(fixed.max_volume))) {
           return {
             locationId: fixed.location_id.toString(),
             locationCode: fixed.location_code,
@@ -175,6 +223,8 @@ export class PutawayService {
             checkDigit: fixed.barcode_value || fixed.location_code,
             ruleCode: productRule.rule_code,
             ruleName: productRule.rule_name,
+            locationTier: fixed.location_tier || 'PRIMARY',
+            velocityClass: productRule.velocity_class_filter?.[0],
           };
         }
       }
@@ -232,17 +282,21 @@ export class PutawayService {
       });
 
       if (matched.length > 0) {
-        // Sort by distance to staging area (prefer same zone as staging)
         const sorted = fromLocationId
           ? await this.sortByProximity(tenantId, facilityId, fromLocationId, matched)
           : matched;
+
+        const prod = await this.prisma.products.findFirst({ where: { tenant_id: tenantId, product_id: productId } });
+        const unitWeight = prod?.weight ? Number(prod.weight) : 1;
 
         for (const loc of sorted) {
           const onHand = await this.prisma.inventory_on_hand.aggregate({
             where: { tenant_id: tenantId, location_id: loc.location_id },
             _sum: { quantity_on_hand: true },
           });
-          if (!loc.max_weight || Number(onHand._sum?.quantity_on_hand || 0) < Number(loc.max_weight)) {
+          const currentQty = Number(onHand._sum?.quantity_on_hand || 0);
+          const currentWeight = currentQty * unitWeight;
+          if ((!loc.max_weight || currentWeight < Number(loc.max_weight)) && (!loc.max_volume || currentQty < Number(loc.max_volume))) {
             return {
               locationId: loc.location_id.toString(),
               locationCode: loc.location_code,
@@ -251,23 +305,29 @@ export class PutawayService {
               zoneId: loc.zone_id?.toString(),
               ruleCode: rule.rule_code,
               ruleName: rule.rule_name,
+              locationTier: loc.location_tier || 'PRIMARY',
             };
           }
         }
       }
     }
 
-    // Fallback: nearest empty location
+    // Fallback: nearest empty or under-capacity location
     const sortedByProximity = fromLocationId
       ? await this.sortByProximity(tenantId, facilityId, fromLocationId, candidates)
       : candidates;
+
+    const prodFallback = await this.prisma.products.findFirst({ where: { tenant_id: tenantId, product_id: productId } });
+    const unitWeightFb = prodFallback?.weight ? Number(prodFallback.weight) : 1;
 
     for (const loc of sortedByProximity) {
       const onHand = await this.prisma.inventory_on_hand.aggregate({
         where: { tenant_id: tenantId, location_id: loc.location_id },
         _sum: { quantity_on_hand: true },
       });
-      if (!loc.max_weight || Number(onHand._sum?.quantity_on_hand || 0) < Number(loc.max_weight)) {
+      const currentQty = Number(onHand._sum?.quantity_on_hand || 0);
+      const currentWeight = currentQty * unitWeightFb;
+      if ((!loc.max_weight || currentWeight < Number(loc.max_weight)) && (!loc.max_volume || currentQty < Number(loc.max_volume))) {
         return {
           locationId: loc.location_id.toString(),
           locationCode: loc.location_code,
@@ -275,10 +335,10 @@ export class PutawayService {
           checkDigit: loc.barcode_value || loc.location_code,
           ruleCode: 'FALLBACK',
           ruleName: 'Nearest available',
+          locationTier: loc.location_tier || 'PRIMARY',
         };
       }
     }
-
     return null;
   }
 
@@ -417,10 +477,7 @@ export class PutawayService {
     };
   }
 
-  /**
-   * RF: Validate scanned location matches expected putaway destination.
-   * Manhattan: operator scans location barcode, system verifies match (or allowed overflow).
-   */
+  /** APP-PUT-H: Validate scanned location with scan-time rejection */
   async validateLocation(tenantId: string, facilityId: bigint, taskId: bigint, locationBarcode: string) {
     const task = await this.prisma.putaway_tasks.findFirst({
       where: { tenant_id: tenantId, facility_id: facilityId, task_id: taskId },
@@ -428,11 +485,7 @@ export class PutawayService {
     if (!task) throw new BadRequestException('Task not found');
 
     const location = await this.prisma.storage_locations.findFirst({
-      where: {
-        tenant_id: tenantId,
-        facility_id: facilityId,
-        OR: [{ location_code: locationBarcode }, { barcode_value: locationBarcode }],
-      },
+      where: { tenant_id: tenantId, facility_id: facilityId, OR: [{ location_code: locationBarcode }, { barcode_value: locationBarcode }] },
     });
     if (!location) throw new BadRequestException('Location not found for scanned barcode');
 
@@ -440,20 +493,13 @@ export class PutawayService {
       ? (await this.prisma.storage_locations.findFirst({ where: { tenant_id: tenantId, location_id: task.to_location_id } }))?.location_code
       : task.suggested_location_barcode;
 
-    const isMatch = !expectedCode || location.location_code === expectedCode;
-    const allowedOverflow = task.to_location_id && location.zone_id === (
-      await this.prisma.storage_locations.findFirst({ where: { tenant_id: tenantId, location_id: task.to_location_id } })
-    )?.zone_id;
-
+    if (expectedCode && location.location_code !== expectedCode) {
+      throw new BadRequestException(`WRONG LOCATION — Expected: ${expectedCode}, Scanned: ${location.location_code}. Use override reason code to force.`);
+    }
     return {
-      valid: isMatch || allowedOverflow,
-      isExactMatch: isMatch,
-      isOverflow: allowedOverflow && !isMatch,
-      locationId: location.location_id.toString(),
-      locationCode: location.location_code,
-      barcodeValue: location.barcode_value,
-      expectedCode: expectedCode || null,
-      taskId: taskId.toString(),
+      valid: true, isExactMatch: true, locationId: location.location_id.toString(),
+      locationCode: location.location_code, barcodeValue: location.barcode_value,
+      expectedCode, taskId: taskId.toString(),
     };
   }
 

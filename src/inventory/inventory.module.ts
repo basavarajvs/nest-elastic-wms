@@ -29,6 +29,8 @@ import { CycleCountRfController } from './rf/cycle-count.controller';
 import { LpnRfController } from './rf/lpn.controller';
 import { InventoryRfController } from './rf/inventory.controller';
 import { ReplenishmentRfController } from './replenishment/rf/replenishment.controller';
+import { CycleCountThresholdService } from './counts/cycle-count-threshold.service';
+import { RootCauseService } from './counts/root-cause.service';
 
 @Module({
   imports: [
@@ -66,6 +68,8 @@ import { ReplenishmentRfController } from './replenishment/rf/replenishment.cont
     AdjustmentApprovalService,
     AutoApprovalProcessor,
     ClassificationService,
+    CycleCountThresholdService,
+    RootCauseService,
   ],
   exports: [
     OnHandService,

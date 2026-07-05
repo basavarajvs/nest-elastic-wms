@@ -315,4 +315,55 @@ export class ShipmentService {
       },
     });
   }
+
+  // GAP-3: Verify shipment completeness
+  async verifyShipmentCompleteness(tenantId: string, shipmentId: bigint) {
+    const shipment = await this.prisma.outbound_shipments.findFirst({
+      where: { tenant_id: tenantId, shipment_id: shipmentId },
+    });
+    if (!shipment) throw new BadRequestException('Shipment not found');
+    const loadedLpns = await this.prisma.license_plate_numbers.count({
+      where: { tenant_id: tenantId, assigned_shipment_id: shipmentId, status: 'LOADED' },
+    });
+    const expected = Number(shipment.total_cartons || 0);
+    const loaded = loadedLpns;
+    return { isComplete: loaded >= expected && expected > 0, expected, loaded, missing: Math.max(0, expected - loaded), shipmentId };
+  }
+
+  // GAP-3: Verify all shipments on a load are complete
+  async verifyLoad(tenantId: string, loadId: bigint) {
+    const load = await this.prisma.loads.findFirst({ where: { tenant_id: tenantId, load_id: loadId } });
+    if (!load) throw new BadRequestException('Load not found');
+    const shipments = await this.prisma.outbound_shipments.findMany({
+      where: { tenant_id: tenantId, load_id: loadId },
+    });
+    const results = await Promise.all(shipments.map((s) => this.verifyShipmentCompleteness(tenantId, s.shipment_id)));
+    return { loadId, allComplete: results.every((r) => r.isComplete), shipments: results };
+  }
+
+  // GAP-9: Close individual shipment
+  async closeShipment(tenantId: string, shipmentId: bigint, force?: boolean) {
+    const shipment = await this.prisma.outbound_shipments.findFirst({
+      where: { tenant_id: tenantId, shipment_id: shipmentId },
+    });
+    if (!shipment) throw new BadRequestException('Shipment not found');
+    if (!force) {
+      const verification = await this.verifyShipmentCompleteness(tenantId, shipmentId);
+      if (!verification.isComplete) {
+        return { blocked: true, message: `Only ${verification.loaded} of ${verification.expected} cartons loaded`, ...verification };
+      }
+    }
+    await this.prisma.outbound_shipments.updateMany({
+      where: { tenant_id: tenantId, shipment_id: shipmentId },
+      data: { status: 'SHIPPED', shipped_date: new Date() },
+    });
+    await this.recordStatusChange(tenantId, shipmentId, 'SHIPPED');
+    if (shipment.order_id) {
+      await this.prisma.sales_orders.updateMany({
+        where: { tenant_id: tenantId, order_id: shipment.order_id },
+        data: { status: 'SHIPPED', shipped_date: new Date() },
+      });
+    }
+    return { closed: true, shipmentId };
+  }
 }

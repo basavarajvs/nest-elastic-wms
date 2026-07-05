@@ -4,12 +4,16 @@ import { RfSessionGuard } from '../../common/guards/rf-session.guard';
 import { RfActionLightweightGuard } from '../../common/guards/rf-action-lightweight.guard';
 import { RfAction } from '../../common/decorators/rf-action.decorator';
 import { CycleCountService } from '../counts/cycle-count.service';
+import { RootCauseService } from '../counts/root-cause.service';
 
 @ApiTags('WMS-RF')
 @Controller('rf/cycle-counts')
 @UseGuards(RfSessionGuard, RfActionLightweightGuard)
 export class CycleCountRfController {
-  constructor(private readonly service: CycleCountService) {}
+  constructor(
+    private readonly service: CycleCountService,
+    private readonly rootCauseService: RootCauseService,
+  ) {}
 
   @Post('start')
   @RfAction('create')
@@ -54,5 +58,44 @@ export class CycleCountRfController {
     const tenantId = req.tenantContext.getTenantId();
     const userId = req.rfSession.userId;
     return this.service.complete(tenantId, dto.countId, userId);
+  }
+
+  @Post('pending-reviews')
+  @RfAction('read')
+  async pendingReviews(@Req() req: any, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facilityId);
+    return this.service.getPendingReviews(tenantId, facilityId);
+  }
+
+  @Post(':id/approve')
+  @RfAction('update')
+  async approve(@Req() req: any, @Param('id') id: string) {
+    const tenantId = req.tenantContext.getTenantId();
+    const userId = req.rfSession?.userId || 'system';
+    return this.service.approveVariance(tenantId, BigInt(id), userId);
+  }
+
+  @Post(':id/reject')
+  @RfAction('update')
+  async reject(@Req() req: any, @Param('id') id: string, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    const userId = req.rfSession?.userId || 'system';
+    return this.service.rejectVariance(tenantId, BigInt(id), userId, dto.reason);
+  }
+
+  @Post(':id/recount')
+  @RfAction('update')
+  async recount(@Req() req: any, @Param('id') id: string) {
+    const tenantId = req.tenantContext.getTenantId();
+    const userId = req.rfSession?.userId || 'system';
+    return this.service.requestRecount(tenantId, BigInt(id), userId);
+  }
+
+  @Post(':id/root-cause')
+  @RfAction('update')
+  async rootCause(@Req() req: any, @Param('id') id: string, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    return this.rootCauseService.assignRootCause(tenantId, BigInt(id), BigInt(dto.categoryId), dto.description);
   }
 }

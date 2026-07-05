@@ -13,7 +13,7 @@ export class RfPutawayController {
 
   @Post('next-task')
   @ApiOperation({ summary: 'Get next unassigned putaway task for the facility (RF)' })
-  @RfAction('read')
+  @RfAction('update')
   async nextTask(@Req() req: any, @Body('facilityId') facilityId: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.putawayService.nextTask(tenantId, BigInt(facilityId));
@@ -49,12 +49,7 @@ export class RfPutawayController {
   async scanLocation(@Req() req: any, @Body() dto: any) {
     const tenantId = req.tenantContext.getTenantId();
     const facilityId = BigInt(req.rfSession.facilityId || dto.facilityId);
-    return this.putawayService.validateLocation(
-      tenantId,
-      facilityId,
-      BigInt(dto.taskId),
-      dto.locationBarcode,
-    );
+    return this.putawayService.validateLocation(tenantId, facilityId, BigInt(dto.taskId), dto.locationBarcode);
   }
 
   @Post('suggest-location')
@@ -63,9 +58,7 @@ export class RfPutawayController {
   async suggestLocation(@Req() req: any, @Body() dto: any) {
     const tenantId = req.tenantContext.getTenantId();
     return this.putawayService.suggestLocation(
-      tenantId,
-      BigInt(dto.facilityId),
-      BigInt(dto.productId),
+      tenantId, BigInt(dto.facilityId), BigInt(dto.productId),
       dto.categoryId ? BigInt(dto.categoryId) : undefined,
       dto.fromLocationId ? BigInt(dto.fromLocationId) : undefined,
       dto.hasExpiry,
@@ -86,5 +79,22 @@ export class RfPutawayController {
   async myTasks(@Req() req: any, @Body('userId') userId: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.putawayService.findAllTasks(tenantId, { assignedToUserId: userId, status: 'ASSIGNED' });
+  }
+
+  @Post('location-full')
+  @ApiOperation({ summary: 'Flag location as full, get alternate (RF)' })
+  @RfAction('update')
+  async locationFull(@Req() req: any, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    const userId = req.rfSession?.userId || dto.userId;
+    return this.putawayService.locationFullException(tenantId, BigInt(dto.taskId), userId);
+  }
+
+  @Post('report-damage')
+  @ApiOperation({ summary: 'Report damage during putaway movement (RF)' })
+  @RfAction('update')
+  async reportDamage(@Req() req: any, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    return this.putawayService.reportDamage(tenantId, BigInt(dto.taskId), { ...dto, userId: req.rfSession?.userId || dto.userId });
   }
 }
