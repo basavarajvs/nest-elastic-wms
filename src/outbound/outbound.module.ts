@@ -4,7 +4,11 @@ import { SalesOrderService } from './sales-orders/sales-order.service';
 import { AllocationService } from './allocation/allocation.service';
 import { PickingWaveService } from './picking-waves/picking-wave.service';
 import { PickingTaskService } from './picking-tasks/picking-task.service';
+import { ClusterPickService } from './picking-tasks/cluster-pick.service';
+import { PickRouteService } from './picking-tasks/pick-route.service';
 import { PackingService } from './packing/packing.service';
+import { CartonizationService } from './packing/cartonization.service';
+import { ScaleIntegrationService } from './packing/scale-integration.service';
 import { ShipmentService } from './shipments/shipment.service';
 import { LoadService } from './loads/load.service';
 import { VasCatalogService } from './vas-catalog/vas-catalog.service';
@@ -33,6 +37,10 @@ import { CarrierRateWebController } from './carrier-rates/web/carrier-rate.contr
 import { StagingWebController } from './staging/web/staging.controller';
 import { TrailerWebController } from './shipments/web/trailer.controller';
 import { RfStagingController } from './staging/rf/staging.controller';
+import { BackorderWebController } from './sales-orders/web/backorder.controller';
+import { WaveTaskWebController } from './picking-waves/web/wave-task.controller';
+import { PickAuditWebController } from './picking-tasks/web/pick-audit.controller';
+import { PickRouteWebController } from './picking-tasks/web/pick-route.controller';
 
 @Module({
   imports: [PrismaModule],
@@ -57,13 +65,21 @@ import { RfStagingController } from './staging/rf/staging.controller';
     StagingWebController,
     TrailerWebController,
     RfStagingController,
+    BackorderWebController,
+    WaveTaskWebController,
+    PickAuditWebController,
+    PickRouteWebController,
   ],
   providers: [
     SalesOrderService,
     AllocationService,
     PickingWaveService,
     PickingTaskService,
+    ClusterPickService,
+    PickRouteService,
     PackingService,
+    CartonizationService,
+    ScaleIntegrationService,
     ShipmentService,
     LoadService,
     VasCatalogService,
@@ -79,7 +95,11 @@ import { RfStagingController } from './staging/rf/staging.controller';
     AllocationService,
     PickingWaveService,
     PickingTaskService,
+    ClusterPickService,
+    PickRouteService,
     PackingService,
+    CartonizationService,
+    ScaleIntegrationService,
     ShipmentService,
     LoadService,
     VasCatalogService,

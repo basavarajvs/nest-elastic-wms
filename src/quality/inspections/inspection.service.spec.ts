@@ -95,7 +95,6 @@ describe('InspectionService', () => {
       },
       quality_holds: { create: jest.fn().mockResolvedValue({}) },
       defect_codes: { findFirst: jest.fn().mockResolvedValue({ severity: 'MAJOR' }) },
-      inspection_defects: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
       inspection_temperature_logs: { create: jest.fn().mockResolvedValue({}) },
       product_inspection_profiles: { findFirst: jest.fn().mockResolvedValue(mockProductMapping) },
       inspection_profiles: { findFirst: jest.fn().mockResolvedValue(mockProfile) },

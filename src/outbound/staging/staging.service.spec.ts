@@ -67,8 +67,8 @@ describe('StagingService', () => {
 
   it('getNextStagingWork should return carton and lane', async () => {
     const result = await service.getNextStagingWork(tenantId, facilityId, 'user-1');
-    expect(result.carton).toBeDefined();
-    expect(result.suggestedLane).toBeDefined();
+    expect(result!.carton).toBeDefined();
+    expect(result!.suggestedLane).toBeDefined();
   });
 
   it('scanCartonForStaging should validate PACKED status', async () => {

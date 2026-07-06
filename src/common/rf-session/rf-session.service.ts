@@ -43,12 +43,13 @@ export class RfSessionService {
     const expiryMinutes = params.expiryMinutes || 480;
     const rows = await this.prisma.$queryRawUnsafe<Record<string, any>[]>(
       `INSERT INTO multitenant.db_rf_sessions
-         (tenant_id, user_id, facility_id, device_id, session_token, workflow_type,
-          payload_json, status, expires_at)
-       VALUES ($1::uuid, $2::uuid, $3::bigint, $4,
+         (id, tenant_id, user_id, facility_id, device_id, session_token, workflow_type,
+          payload_json, status, expires_at, started_at, last_activity_at)
+       VALUES (gen_random_uuid(), $1::uuid, $2::uuid, $3::bigint, $4,
                gen_random_uuid()::text, $5,
                $6::jsonb, 'ACTIVE',
-               NOW() + INTERVAL '1 minute' * $7)
+               NOW() + INTERVAL '1 minute' * $7,
+               NOW(), NOW())
        RETURNING id, session_token, expires_at, workflow_type`,
       params.tenantId,
       params.userId,

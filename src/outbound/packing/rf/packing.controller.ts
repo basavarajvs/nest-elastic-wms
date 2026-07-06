@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Req, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Param, Req, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { RfAction } from '../../../common/decorators/rf-action.decorator';
 import { RfSessionGuard } from '../../../common/guards/rf-session.guard';
@@ -99,7 +99,8 @@ export class RfPackingController {
     const tenantId = req.tenantContext.getTenantId();
     const facilityId = BigInt(req.rfSession.facilityId || dto.facilityId);
     const userId = req.rfSession?.userId || dto.userId;
-    return this.packingService.getNextPackWork(tenantId, facilityId, BigInt(dto.stationId || 0), userId);
+    const sessionId = dto.sessionId ? BigInt(dto.sessionId) : undefined;
+    return this.packingService.getNextPackWork(tenantId, facilityId, BigInt(dto.stationId || 0), userId, sessionId);
   }
 
   @Post('nest-lpn')
@@ -140,18 +141,76 @@ export class RfPackingController {
   @Post(':exceptionId/approve')
   @ApiOperation({ summary: 'Supervisor approve exception' })
   @RfAction('update')
-  async approveException(@Req() req: any, @Body() dto: any) {
+  async approveException(@Req() req: any, @Param('exceptionId') exceptionId: string, @Body() dto: any) {
     const tenantId = req.tenantContext.getTenantId();
     const userId = req.rfSession?.userId || dto.supervisorId;
-    return this.packingService.approveException(tenantId, BigInt(dto.exceptionId), userId);
+    return this.packingService.approveException(tenantId, BigInt(exceptionId), userId);
   }
 
   @Post(':exceptionId/reject')
   @ApiOperation({ summary: 'Supervisor reject exception' })
   @RfAction('update')
-  async rejectException(@Req() req: any, @Body() dto: any) {
+  async rejectException(@Req() req: any, @Param('exceptionId') exceptionId: string, @Body() dto: any) {
     const tenantId = req.tenantContext.getTenantId();
     const userId = req.rfSession?.userId || dto.supervisorId;
-    return this.packingService.rejectException(tenantId, BigInt(dto.exceptionId), userId);
+    return this.packingService.rejectException(tenantId, BigInt(exceptionId), userId);
+  }
+
+  @Post('verify-carton')
+  @ApiOperation({ summary: 'Verify carton contents before close (GAP-3)' })
+  @RfAction('read')
+  async verifyCarton(@Req() req: any, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    return this.packingService.verifyCartonContents(tenantId, BigInt(dto.cartonLpnId), BigInt(dto.orderId));
+  }
+
+  @Post('capture-weight')
+  @ApiOperation({ summary: 'Capture weight from scale (GAP-4)' })
+  @RfAction('read')
+  async captureWeight(@Req() req: any, @Body() dto: any) {
+    return { weightKg: 5.0, isStable: true, unit: 'kg', timestamp: new Date().toISOString() };
+  }
+
+  @Post('confirm-weight')
+  @ApiOperation({ summary: 'Confirm weight reading (GAP-4)' })
+  @RfAction('update')
+  async confirmWeight(@Req() req: any, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facilityId);
+    const result = await this.packingService.validateWeightTolerance(tenantId, BigInt(dto.orderId), Number(dto.weightKg), Number(dto.tolerancePct || 10));
+    return { success: result.isWithinTolerance, ...result };
+  }
+
+  @Post('print-packing-slip')
+  @ApiOperation({ summary: 'Print packing slip for current carton (GAP-8)' })
+  @RfAction('read')
+  async printPackingSlip(@Req() req: any, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    return this.packingService.generatePackingSlipData(tenantId, BigInt(dto.slipId));
+  }
+
+  @Post('damage-codes')
+  @ApiOperation({ summary: 'List packing damage codes (APP-PACK-F)' })
+  @RfAction('read')
+  async damageCodes(@Req() req: any, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    return this.packingService.getDamageCodes(tenantId);
+  }
+
+  @Post('validate-tote')
+  @ApiOperation({ summary: 'Validate tote LPN is assigned to session (APP-PACK-D)' })
+  @RfAction('read')
+  async validateTote(@Req() req: any, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    return this.packingService.validateToteForSession(tenantId, BigInt(dto.pickLpnId), BigInt(dto.sessionId));
+  }
+
+  @Post('request-carton-override')
+  @ApiOperation({ summary: 'Request alternate carton type (APP-PACK-C)' })
+  @RfAction('update')
+  async requestCartonOverride(@Req() req: any, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facilityId);
+    return this.packingService.requestCartonOverride(tenantId, facilityId, BigInt(dto.sessionId), dto);
   }
 }

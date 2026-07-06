@@ -22,6 +22,7 @@ import { TransactionWebController } from './web/transaction.controller';
 import { HoldWebController } from './web/hold.controller';
 import { AdjustmentWebController } from './web/adjustment.controller';
 import { CycleCountWebController } from './web/cycle-count.controller';
+import { CycleCountWebSupervisorController, RootCauseWebController, CountSchedulerWebController } from './web/cycle-count-supervisor.controller';
 import { AllocationWebController } from './web/allocation.controller';
 import { ApprovalWebController } from './web/approval.controller';
 import { ClassificationWebController } from './web/classification.controller';
@@ -31,6 +32,7 @@ import { InventoryRfController } from './rf/inventory.controller';
 import { ReplenishmentRfController } from './replenishment/rf/replenishment.controller';
 import { CycleCountThresholdService } from './counts/cycle-count-threshold.service';
 import { RootCauseService } from './counts/root-cause.service';
+import { CountSchedulerService } from './counts/count-scheduler.service';
 
 @Module({
   imports: [
@@ -47,6 +49,9 @@ import { RootCauseService } from './counts/root-cause.service';
     HoldWebController,
     AdjustmentWebController,
     CycleCountWebController,
+    CycleCountWebSupervisorController,
+    RootCauseWebController,
+    CountSchedulerWebController,
     AllocationWebController,
     ApprovalWebController,
     ClassificationWebController,
@@ -70,6 +75,7 @@ import { RootCauseService } from './counts/root-cause.service';
     ClassificationService,
     CycleCountThresholdService,
     RootCauseService,
+    CountSchedulerService,
   ],
   exports: [
     OnHandService,

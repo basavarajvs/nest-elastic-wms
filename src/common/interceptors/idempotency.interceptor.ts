@@ -35,8 +35,10 @@ export class IdempotencyInterceptor implements NestInterceptor {
       return next.handle();
     }
 
+    // Only auto-cache PATCH/DELETE (truly idempotent). POST requires explicit Idempotency-Key header.
+    const autoCache = method === 'PATCH' || method === 'DELETE';
     const idempotencyKey =
-      req.headers['idempotency-key'] || (this.bodyHash(req.body) ? `${req.url}:${this.bodyHash(req.body)}` : null);
+      req.headers['idempotency-key'] || (autoCache && this.bodyHash(req.body) ? `${req.url}:${this.bodyHash(req.body)}` : null);
 
     if (!idempotencyKey) {
       return next.handle();

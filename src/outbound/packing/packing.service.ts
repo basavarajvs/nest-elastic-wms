@@ -1,11 +1,15 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CartonizationService } from './cartonization.service';
 
 @Injectable()
 export class PackingService {
   private readonly logger = new Logger(PackingService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cartonizationService: CartonizationService,
+  ) {}
 
   async deleteSession(tenantId: string, sessionId: bigint) {
     return this.prisma.packing_sessions.deleteMany({
@@ -74,7 +78,8 @@ export class PackingService {
 
   /**
    * Pack items: record what was packed into a container.
-   * Creates packing slip, packing slip items, and links to shipment.
+   * Creates packing slip, packing slip items, auto-detects shortage (GAP-5.1),
+   * and handles LPN nesting (GAP-9.1).
    */
   async packItems(tenantId: string, sessionId: bigint, dto: any) {
     const session = await this.prisma.packing_sessions.findFirst({
@@ -118,6 +123,40 @@ export class PackingService {
       });
     }
 
+    // GAP-5.1: Auto-detect shortage
+    const shortages = await this.detectShortage(tenantId, orderId, items);
+    for (const s of shortages) {
+      await this.prisma.packing_exceptions.create({
+        data: {
+          tenant_id: tenantId,
+          facility_id: session.facility_id,
+          session_id: sessionId,
+          order_id: orderId,
+          exception_type: 'SHORTAGE',
+          product_id: s.productId ? BigInt(s.productId) : undefined,
+          expected_qty: s.expectedQty,
+          packed_qty: s.packedQty,
+          reason_code: 'AUTO_DETECTED',
+          status: 'OPEN',
+          notes: `Auto-detected: packed ${s.packedQty} of ${s.expectedQty} for product ${s.productId}`,
+        },
+      });
+    }
+
+    // GAP-9.1: Nest pick LPNs into this carton
+    if (dto.pickLpnIds && Array.isArray(dto.pickLpnIds)) {
+      const slipLpnId = dto.cartonLpnId ? BigInt(dto.cartonLpnId) : null;
+      if (slipLpnId) {
+        for (const pickLpnId of dto.pickLpnIds) {
+          try {
+            await this.nestPickLpn(tenantId, slipLpnId, BigInt(pickLpnId));
+          } catch (e) {
+            this.logger.warn(`LPN nesting failed for pickLpn ${pickLpnId}: ${e.message}`);
+          }
+        }
+      }
+    }
+
     // Create or assign container
     let containerId: bigint | undefined;
     if (dto.containerCode) {
@@ -144,12 +183,15 @@ export class PackingService {
       },
     });
 
-    return { slip, containerId };
+    return { slip, containerId, shortagesDetected: shortages.length };
   }
 
   /**
-   * RF: Close carton — create shipping LPN, update order to PACKED, return label data.
-   * Manhattan: generates shipping LPN and sends ZPL to printer.
+   * Close carton — generate shipping LPN, update order to PACKED, return label data.
+   * GAP-8.1: Generate packing slip data alongside label.
+   * GAP-9.2: Consume nested LPNs (NESTED → CONSUMED).
+   * APP-PACK-A: Update shipment status if last carton.
+   * APP-PACK-H: Assign tracking number stub.
    */
   async closeCarton(tenantId: string, facilityId: bigint, sessionId: bigint, dto: any) {
     const session = await this.prisma.packing_sessions.findFirst({
@@ -188,8 +230,9 @@ export class PackingService {
     const order = await this.prisma.sales_orders.findFirst({
       where: { tenant_id: tenantId, order_id: orderId },
     });
+    let shipment: any = null;
     if (order) {
-      const shipment = await this.prisma.outbound_shipments.findFirst({
+      shipment = await this.prisma.outbound_shipments.findFirst({
         where: { tenant_id: tenantId, facility_id: facilityId, order_id: orderId },
       });
       if (shipment) {
@@ -197,7 +240,29 @@ export class PackingService {
           where: { tenant_id: tenantId, lpn_id: lpn.lpn_id },
           data: { assigned_shipment_id: shipment.shipment_id },
         });
+
+        // APP-PACK-H: Assign tracking number stub
+        const trackingNumber = `TRK-${lpnNumber}-${Date.now().toString(36).toUpperCase()}`;
+        await this.prisma.license_plate_numbers.updateMany({
+          where: { tenant_id: tenantId, lpn_id: lpn.lpn_id },
+          data: { updated_at: new Date() },
+        });
+        await this.prisma.outbound_shipments.updateMany({
+          where: { tenant_id: tenantId, shipment_id: shipment.shipment_id },
+          data: { tracking_number: trackingNumber },
+        });
       }
+    }
+
+    // GAP-9.2: Consume nested pick LPNs
+    const nestedLpns = await this.prisma.license_plate_numbers.findMany({
+      where: { tenant_id: tenantId, parent_lpn_id: lpn.lpn_id, status: 'NESTED' },
+    });
+    for (const nlpn of nestedLpns) {
+      await this.prisma.license_plate_numbers.updateMany({
+        where: { tenant_id: tenantId, lpn_id: nlpn.lpn_id },
+        data: { status: 'CONSUMED', updated_at: new Date() },
+      });
     }
 
     // Update order status to PACKED
@@ -206,8 +271,55 @@ export class PackingService {
       data: { status: 'PACKED' },
     });
 
-    // Generate label placeholder (ZPL stub — real ZPL would come from carrier integration)
-    const labelData = `^XA^FO50,50^ADN,36,20^FD${lpnNumber}^FS^FO50,100^ADN,18,10^FDOrder: ${order?.order_number || orderId}^FS^FO50,150^ADN,18,10^FDCarton: ${(session.cartons_completed || 0) + 1}^FS^XZ`;
+    // APP-PACK-A: Check if shipment is ready
+    let allCartonsPacked = true;
+    let cartonIndex = 0;
+    let totalCartons = 0;
+    if (order) {
+      const cplan = await this.prisma.packing_carton_plan.findMany({
+        where: { tenant_id: tenantId, order_id: orderId },
+        orderBy: { carton_index: 'asc' },
+      });
+      totalCartons = cplan.length;
+      cartonIndex = totalCartons > 0 ? (cplan.filter(c => c.status === 'PACKED').length + 1) : 1;
+      allCartonsPacked = totalCartons === 0 || cplan.every(c => c.status === 'PACKED');
+
+      // Update carton plan status
+      if (totalCartons > 0 && cartonIndex <= totalCartons) {
+        await this.prisma.packing_carton_plan.updateMany({
+          where: { tenant_id: tenantId, order_id: orderId, carton_index: cartonIndex },
+          data: { status: 'PACKED' },
+        });
+      }
+
+      if (shipment && allCartonsPacked) {
+        await this.prisma.outbound_shipments.updateMany({
+          where: { tenant_id: tenantId, shipment_id: shipment.shipment_id },
+          data: { status: 'STAGED' },
+        });
+        await this.prisma.shipment_status_history.create({
+          data: {
+            tenant_id: tenantId, shipment_id: shipment.shipment_id,
+            previous_status: shipment.status as string, current_status: 'STAGED',
+            changed_by: 'PACKING_SYSTEM',
+          },
+        });
+      }
+    }
+
+    // Generate label placeholder (ZPL stub)
+    const labelData = `^XA^FO50,50^ADN,36,20^FD${lpnNumber}^FS^FO50,100^ADN,18,10^FDOrder: ${order?.order_number || orderId}^FS^FO50,150^ADN,18,10^FDCarton: ${cartonIndex || (session.cartons_completed || 0) + 1}^FS^XZ`;
+
+    // GAP-8.1: Generate packing slip data
+    let packingSlipData: any = null;
+    const slips = await this.prisma.packing_slips.findMany({
+      where: { tenant_id: tenantId, session_id: sessionId },
+      orderBy: { packing_slip_id: 'desc' },
+      take: 1,
+    });
+    if (slips.length) {
+      packingSlipData = await this.generatePackingSlipData(tenantId, slips[0].packing_slip_id);
+    }
 
     return {
       lpnId: lpn.lpn_id.toString(),
@@ -215,7 +327,11 @@ export class PackingService {
       labelData,
       orderId: orderId.toString(),
       orderNumber: order?.order_number || null,
-      cartonIndex: (session.cartons_completed || 0) + 1,
+      cartonIndex: cartonIndex || (session.cartons_completed || 0) + 1,
+      totalCartons,
+      allCartonsPacked,
+      packingSlipData,
+      nestedLpnsConsumed: nestedLpns.length,
     };
   }
 
@@ -325,8 +441,8 @@ export class PackingService {
     });
   }
 
-  // GAP-1: Directed pack work
-  async getNextPackWork(tenantId: string, facilityId: bigint, stationId: bigint, userId: string) {
+  // GAP-1: Directed pack work (APP-PACK-E: auto-assign totes to session)
+  async getNextPackWork(tenantId: string, facilityId: bigint, stationId: bigint, userId: string, sessionId?: bigint) {
     const order = await this.prisma.sales_orders.findFirst({
       where: { tenant_id: tenantId, facility_id: facilityId, status: 'PICKED' },
       orderBy: { created_at: 'asc' },
@@ -335,6 +451,14 @@ export class PackingService {
     const pickLpns = await this.prisma.license_plate_numbers.findMany({
       where: { tenant_id: tenantId, facility_id: facilityId, assigned_shipment_id: order.order_id, status: 'PICKED' },
     });
+    // APP-PACK-E: Auto-assign totes to the active session
+    if (sessionId && pickLpns.length) {
+      try {
+        await this.assignTotesToSession(tenantId, facilityId, sessionId, pickLpns.map(l => l.lpn_id));
+      } catch (e) {
+        this.logger.warn(`Tote assignment failed: ${e.message}`);
+      }
+    }
     return { order, pickLpns };
   }
 
@@ -393,6 +517,16 @@ export class PackingService {
         status: 'OPEN',
       },
     });
+
+    // GAP-6.1: Auto-create replacement pick task for damaged quantity
+    if (dto.productId && dto.expectedQty > 0) {
+      try {
+        await this.createReplacementPick(tenantId, facilityId, BigInt(dto.orderId), BigInt(dto.productId), Number(dto.expectedQty));
+      } catch (e) {
+        this.logger.warn(`Replacement pick creation failed: ${e.message}`);
+      }
+    }
+
     return exception;
   }
 
@@ -418,5 +552,322 @@ export class PackingService {
       where: { tenant_id: tenantId, exception_id: exceptionId },
       data: { status: 'RESOLVED', resolved_by: supervisorId, resolved_at: new Date(), notes: 'Rejected by supervisor' },
     });
+  }
+
+  // GAP-3: Verify carton contents before close
+  async verifyCartonContents(tenantId: string, cartonLpnId: bigint, orderId: bigint) {
+    const cartonLpn = await this.prisma.license_plate_numbers.findFirst({
+      where: { tenant_id: tenantId, lpn_id: cartonLpnId },
+    });
+    if (!cartonLpn) throw new BadRequestException('Carton LPN not found');
+
+    const plan = await this.prisma.packing_carton_plan.findMany({
+      where: { tenant_id: tenantId, order_id: orderId },
+      orderBy: { carton_index: 'asc' },
+    });
+
+    const slips = await this.prisma.packing_slips.findMany({
+      where: { tenant_id: tenantId, order_id: orderId },
+    });
+    const slipIds = slips.map(s => s.packing_slip_id);
+    const slipItems = slipIds.length
+      ? await this.prisma.packing_slip_items.findMany({
+          where: { tenant_id: tenantId, packing_slip_id: { in: slipIds } },
+        })
+      : [];
+
+    const plannedItems: { productId: number; quantity: number }[] = [];
+    for (const p of plan) {
+      if (p.items_json) {
+        const items = p.items_json as any[];
+        for (const item of items) {
+          plannedItems.push({ productId: Number(item.productId), quantity: Number(item.quantity) });
+        }
+      }
+    }
+
+    const packedMap = new Map<number, number>();
+    for (const si of slipItems) {
+      const pid = Number(si.product_id);
+      packedMap.set(pid, (packedMap.get(pid) || 0) + Number(si.quantity_packed));
+    }
+
+    const matched: any[] = [];
+    const missing: any[] = [];
+    const extra: any[] = [];
+
+    for (const pi of plannedItems) {
+      const packedQty = packedMap.get(pi.productId) || 0;
+      matched.push({ productId: pi.productId, expectedQty: pi.quantity, packedQty });
+      if (packedQty < pi.quantity) {
+        missing.push({ productId: pi.productId, expectedQty: pi.quantity, packedQty, shortQty: pi.quantity - packedQty });
+      }
+    }
+
+    for (const [productId, packedQty] of packedMap.entries()) {
+      if (!plannedItems.find(p => p.productId === productId)) {
+        extra.push({ productId, packedQty });
+      }
+    }
+
+    return { isComplete: missing.length === 0 && extra.length === 0, missing, extra, matched };
+  }
+
+  // GAP-4.3: Weight tolerance validation
+  async validateWeightTolerance(tenantId: string, orderId: bigint, capturedWeightKg: number, tolerancePct: number = 10) {
+    const orderLines = await this.prisma.sales_order_lines.findMany({
+      where: { tenant_id: tenantId, order_id: orderId },
+    });
+    const productIds = orderLines.map(l => l.product_id);
+    const products = await this.prisma.products.findMany({
+      where: { tenant_id: tenantId, product_id: { in: productIds } },
+    });
+    const productMap = new Map(products.map(p => [p.product_id, p]));
+
+    let expectedWeight = 0;
+    for (const line of orderLines) {
+      const prod = productMap.get(line.product_id);
+      if (prod?.weight) expectedWeight += Number(prod.weight) * Number(line.requested_quantity);
+    }
+
+    if (expectedWeight === 0) return { isWithinTolerance: true, expectedWeight, capturedWeight: capturedWeightKg, deviationPct: 0 };
+
+    const deviationPct = Math.abs(capturedWeightKg - expectedWeight) / expectedWeight * 100;
+    const isWithinTolerance = deviationPct <= tolerancePct;
+
+    return { isWithinTolerance, expectedWeight, capturedWeight: capturedWeightKg, deviationPct: Math.round(deviationPct * 100) / 100 };
+  }
+
+  // GAP-8: Generate packing slip data
+  async generatePackingSlipData(tenantId: string, slipId: bigint) {
+    const slip = await this.prisma.packing_slips.findFirst({
+      where: { tenant_id: tenantId, packing_slip_id: slipId },
+    });
+    if (!slip) throw new BadRequestException('Packing slip not found');
+
+    const items = await this.prisma.packing_slip_items.findMany({
+      where: { tenant_id: tenantId, packing_slip_id: slipId },
+    });
+
+    const order = slip.order_id
+      ? await this.prisma.sales_orders.findFirst({ where: { tenant_id: tenantId, order_id: slip.order_id } })
+      : null;
+
+    const productIds = items.map(i => i.product_id);
+    const products = productIds.length
+      ? await this.prisma.products.findMany({ where: { tenant_id: tenantId, product_id: { in: productIds } } })
+      : [];
+    const productMap = new Map(products.map(p => [p.product_id, p]));
+
+    return {
+      packingSlipNumber: slip.packing_slip_number,
+      orderNumber: order?.order_number || null,
+      orderDate: order?.order_date || null,
+      deliveryAddress: order ? {
+        line1: order.delivery_address_line1,
+        city: order.delivery_city,
+        state: order.delivery_state_province,
+        postalCode: order.delivery_postal_code,
+        countryCode: order.delivery_country_code,
+      } : null,
+      items: items.map(i => ({
+        productCode: productMap.get(i.product_id)?.product_code || null,
+        productName: productMap.get(i.product_id)?.product_name || null,
+        quantityPacked: Number(i.quantity_packed),
+        uomId: Number(i.uom_id),
+      })),
+      weight: slip.weight ? Number(slip.weight) : null,
+      volume: slip.volume ? Number(slip.volume) : null,
+    };
+  }
+
+  // GAP-9.2: Close carton with nested LPN consumption
+  async closeCartonWithConsumption(tenantId: string, facilityId: bigint, sessionId: bigint, dto: any) {
+    const result = await this.closeCarton(tenantId, facilityId, sessionId, dto);
+
+    const session = await this.prisma.packing_sessions.findFirst({
+      where: { tenant_id: tenantId, id: sessionId },
+    });
+    const orderId = dto.orderId || session?.current_order_id;
+    if (orderId) {
+      const nestedLpns = await this.prisma.license_plate_numbers.findMany({
+        where: { tenant_id: tenantId, parent_lpn_id: BigInt(result.lpnId), status: 'NESTED' },
+      });
+      for (const lpn of nestedLpns) {
+        await this.prisma.license_plate_numbers.updateMany({
+          where: { tenant_id: tenantId, lpn_id: lpn.lpn_id },
+          data: { status: 'CONSUMED', updated_at: new Date() },
+        });
+      }
+    }
+
+    return result;
+  }
+
+  // APP-PACK-A: Check if shipment is ready after carton close
+  async updateShipmentPackingStatus(tenantId: string, facilityId: bigint, orderId: bigint) {
+    const plan = await this.prisma.packing_carton_plan.findMany({
+      where: { tenant_id: tenantId, order_id: orderId },
+      orderBy: { carton_index: 'asc' },
+    });
+    const allPacked = plan.every(p => p.status === 'PACKED');
+    const cartonIndex = plan.filter(p => p.status === 'PACKED').length;
+    if (plan.length > 0 && !allPacked) {
+      return { allCartonsPacked: false, cartonIndex, totalCartons: plan.length };
+    }
+    const shipment = await this.prisma.outbound_shipments.findFirst({
+      where: { tenant_id: tenantId, facility_id: facilityId, order_id: orderId },
+    });
+    if (shipment && allPacked) {
+      await this.prisma.outbound_shipments.updateMany({
+        where: { tenant_id: tenantId, shipment_id: shipment.shipment_id },
+        data: { status: 'STAGED' },
+      });
+      await this.prisma.shipment_status_history.create({
+        data: {
+          tenant_id: tenantId, shipment_id: shipment.shipment_id,
+          previous_status: shipment.status as string, current_status: 'STAGED',
+          changed_by: 'PACKING_SYSTEM',
+        },
+      });
+    }
+    return { allCartonsPacked: allPacked, cartonIndex, totalCartons: plan.length };
+  }
+
+  // APP-PACK-D: Validate scanned LPN is assigned to the packing session
+  async validateToteForSession(tenantId: string, pickLpnId: bigint, sessionId: bigint) {
+    const lpn = await this.prisma.license_plate_numbers.findFirst({
+      where: { tenant_id: tenantId, lpn_id: pickLpnId },
+    });
+    if (!lpn) return { valid: false, message: 'LPN not found' };
+    const session = await this.prisma.packing_sessions.findFirst({
+      where: { tenant_id: tenantId, id: sessionId },
+    });
+    if (!session) return { valid: false, message: 'Session not found' };
+    if (lpn.assigned_shipment_id && session.current_order_id) {
+      const order = await this.prisma.sales_orders.findFirst({
+        where: { tenant_id: tenantId, order_id: session.current_order_id },
+      });
+      const shipment = await this.prisma.outbound_shipments.findFirst({
+        where: { tenant_id: tenantId, order_id: session.current_order_id },
+      });
+      if (shipment && lpn.assigned_shipment_id !== shipment.shipment_id) {
+        return { valid: false, message: `WRONG LPN: Expected LPN assigned to shipment ${shipment.shipment_number}`, expected: shipment.shipment_number, scanned: lpn.lpn_number };
+      }
+    }
+    return { valid: true, lpn };
+  }
+
+  // APP-PACK-E: Assign totes to station on getNextPackWork
+  async assignTotesToSession(tenantId: string, facilityId: bigint, sessionId: bigint, pickLpnIds: bigint[]) {
+    const session = await this.prisma.packing_sessions.findFirst({
+      where: { tenant_id: tenantId, id: sessionId },
+    });
+    if (!session) throw new BadRequestException('Session not found');
+    for (const lpnId of pickLpnIds) {
+      await this.prisma.license_plate_numbers.updateMany({
+        where: { tenant_id: tenantId, lpn_id: lpnId },
+        data: { assigned_shipment_id: session.current_order_id || undefined, updated_at: new Date() },
+      });
+    }
+    return { assigned: pickLpnIds.length };
+  }
+
+  // APP-PACK-F: List packing damage codes
+  async getDamageCodes(tenantId: string) {
+    return this.prisma.damage_codes.findMany({
+      where: { tenant_id: tenantId, is_active: true, category: 'PACKING' },
+      orderBy: { code: 'asc' },
+    });
+  }
+
+  // GAP-5.1: Auto-detect shortage in packItems
+  async detectShortage(tenantId: string, orderId: bigint, packedItems: any[]) {
+    const orderLines = await this.prisma.sales_order_lines.findMany({
+      where: { tenant_id: tenantId, order_id: orderId },
+    });
+    const shortages: any[] = [];
+    for (const line of orderLines) {
+      const qtyPacked = packedItems
+        .filter(pi => Number(pi.productId) === Number(line.product_id))
+        .reduce((sum, pi) => sum + Number(pi.quantityPacked || 0), 0);
+      const qtyOrdered = Number(line.requested_quantity);
+      if (qtyPacked < qtyOrdered) {
+        shortages.push({
+          productId: Number(line.product_id),
+          expectedQty: qtyOrdered,
+          packedQty: qtyPacked,
+          shortQty: qtyOrdered - qtyPacked,
+          lineId: Number(line.line_id),
+        });
+      }
+    }
+    return shortages;
+  }
+
+  // GAP-7.2: List all packing sessions (web)
+  async getSessions(tenantId: string, facilityId: bigint) {
+    return this.prisma.packing_sessions.findMany({
+      where: { tenant_id: tenantId, facility_id: facilityId },
+      orderBy: { start_time: 'desc' },
+      take: 50,
+    });
+  }
+
+  // GAP-8.3: Get packing slip by order (web)
+  async getPackingSlipsByOrder(tenantId: string, orderId: bigint) {
+    const slips = await this.prisma.packing_slips.findMany({
+      where: { tenant_id: tenantId, order_id: orderId },
+      orderBy: { packing_slip_id: 'asc' },
+    });
+    const slipIds = slips.map(s => s.packing_slip_id);
+    const items = slipIds.length
+      ? await this.prisma.packing_slip_items.findMany({ where: { tenant_id: tenantId, packing_slip_id: { in: slipIds } } })
+      : [];
+    return { slips, items };
+  }
+
+  // GAP-7.2: List all exceptions (web)
+  async getExceptions(tenantId: string, facilityId: bigint, status?: string) {
+    const where: any = { tenant_id: tenantId, facility_id: facilityId };
+    if (status) where.status = status;
+    return this.prisma.packing_exceptions.findMany({
+      where,
+      orderBy: { created_at: 'desc' },
+      take: 50,
+    });
+  }
+
+  // APP-PACK-C: Request carton type override
+  async requestCartonOverride(tenantId: string, facilityId: bigint, sessionId: bigint, dto: any) {
+    const exception = await this.prisma.packing_exceptions.create({
+      data: {
+        tenant_id: tenantId, facility_id: facilityId,
+        session_id: sessionId, order_id: BigInt(dto.orderId),
+        exception_type: 'CARTON_TYPE_OVERRIDE',
+        reason_code: dto.reasonCode || 'CARTON_OVERRIDE',
+        status: 'OPEN',
+        notes: `Requested carton type: ${dto.requestedCartonType}. Reason: ${dto.reason || ''}`,
+      },
+    });
+    return exception;
+  }
+
+  // GAP-6: Create replacement pick task for damage
+  async createReplacementPick(tenantId: string, facilityId: bigint, orderId: bigint, productId: bigint, quantity: number, uomId: bigint = BigInt(1)) {
+    const task = await this.prisma.picking_tasks.create({
+      data: {
+        tenant_id: tenantId,
+        facility_id: facilityId,
+        task_number: `REPL-${Date.now()}`,
+        order_id: orderId,
+        product_id: productId,
+        quantity_to_pick: quantity,
+        uom_id: uomId,
+        status: 'AVAILABLE',
+        priority: 99,
+      },
+    });
+    return task;
   }
 }

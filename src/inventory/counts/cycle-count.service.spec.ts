@@ -74,7 +74,7 @@ describe('CycleCountService', () => {
       license_plate_numbers: { findMany: jest.fn().mockResolvedValue([]) },
       products: { findMany: jest.fn().mockResolvedValue([]) },
     };
-    service = new CycleCountService(mockPrisma as any);
+    service = new CycleCountService(mockPrisma as any, { findAll: jest.fn().mockResolvedValue([]) } as any);
   });
 
   describe('complete (GAP-2: Inventory Adjustment)', () => {
