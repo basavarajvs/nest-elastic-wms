@@ -76,4 +76,34 @@ export class LoadWebController {
     const tenantId = req.tenantContext.getTenantId();
     return this.service.delete(tenantId, BigInt(id));
   }
+
+  // GAP-4: Multi-stop configuration
+  @Post(':id/stops')
+  @ApiOperation({ summary: 'Create a load stop' })
+  async createStop(@Req() req: any, @Param('id') id: string, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    return this.service.createStop(tenantId, BigInt(id), dto);
+  }
+
+  @Get(':id/stops')
+  @ApiOperation({ summary: 'List load stops' })
+  async listStops(@Req() req: any, @Param('id') id: string) {
+    const tenantId = req.tenantContext.getTenantId();
+    return this.service.getLoadingSequence(tenantId, BigInt(id));
+  }
+
+  @Post(':id/apply-route')
+  @ApiOperation({ summary: 'Apply route template to create stops' })
+  async applyRoute(@Req() req: any, @Param('id') id: string, @Body('routeId') routeId: string) {
+    const tenantId = req.tenantContext.getTenantId();
+    return this.service.createLoadStopsFromRoute(tenantId, BigInt(id), BigInt(routeId));
+  }
+
+  // GAP-8: View manifest from web
+  @Get(':id/manifest')
+  @ApiOperation({ summary: 'View manifest for load' })
+  async viewManifest(@Req() req: any, @Param('id') id: string) {
+    const tenantId = req.tenantContext.getTenantId();
+    return this.service.generateBol(tenantId, BigInt(id));
+  }
 }

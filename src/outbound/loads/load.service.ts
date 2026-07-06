@@ -296,4 +296,152 @@ export class LoadService {
     });
     return { load, dock: docks[0] || null, trailer: trailers[0] || null, shipmentCount };
   }
+
+  // GAP-4.2: Get loading sequence for multi-stop loads (reverse order)
+  async getLoadingSequence(tenantId: string, loadId: bigint) {
+    const load = await this.prisma.loads.findFirst({ where: { tenant_id: tenantId, load_id: loadId } });
+    if (!load) throw new BadRequestException('Load not found');
+    const stops = await this.prisma.load_stops.findMany({
+      where: { tenant_id: tenantId, load_id: loadId },
+      orderBy: { stop_sequence: 'desc' }, // Reverse: last stop loaded first
+    });
+    return {
+      loadId: load.load_id.toString(),
+      loadNumber: load.load_number,
+      multiStop: load.multi_stop || false,
+      totalStops: load.total_stops || stops.length,
+      currentStopLoading: load.current_stop_loading || 1,
+      stops: stops.map(s => ({
+        stopId: s.stop_id.toString(),
+        sequence: s.stop_sequence,
+        locationName: s.location_name,
+        shipmentId: s.shipment_id?.toString(),
+        status: s.status,
+      })),
+    };
+  }
+
+  // GAP-4.2: Advance to next stop
+  async advanceToNextStop(tenantId: string, loadId: bigint) {
+    const load = await this.prisma.loads.findFirst({ where: { tenant_id: tenantId, load_id: loadId } });
+    if (!load) throw new BadRequestException('Load not found');
+    const current = load.current_stop_loading || 1;
+    const total = load.total_stops || 1;
+    if (current >= total) {
+      return { loadId: loadId.toString(), currentStop: current, totalStops: total, message: 'Already at last stop' };
+    }
+    const nextStop = current + 1;
+    await this.prisma.loads.updateMany({
+      where: { tenant_id: tenantId, load_id: loadId },
+      data: { current_stop_loading: nextStop },
+    });
+    // Mark previous stop as loaded
+    await this.prisma.load_stops.updateMany({
+      where: { tenant_id: tenantId, load_id: loadId, stop_sequence: current },
+      data: { status: 'LOADED' },
+    });
+    return { loadId: loadId.toString(), currentStop: nextStop, totalStops: total, message: `Advanced to stop ${nextStop} of ${total}` };
+  }
+
+  // APP-SHIP-E: Create load stops from a route template
+  async createLoadStopsFromRoute(tenantId: string, loadId: bigint, routeId: bigint) {
+    const routeStops = await this.prisma.route_stops.findMany({
+      where: { tenant_id: tenantId, route_id: routeId, is_active: true },
+      orderBy: { stop_sequence: 'asc' },
+    });
+    for (const rs of routeStops) {
+      await this.prisma.load_stops.create({
+        data: {
+          tenant_id: tenantId,
+          load_id: loadId,
+          stop_sequence: rs.stop_sequence,
+          location_name: rs.location_name,
+          planned_arrival: rs.planned_arrival,
+          planned_departure: rs.planned_departure,
+          status: 'PENDING',
+        },
+      });
+    }
+    await this.prisma.loads.updateMany({
+      where: { tenant_id: tenantId, load_id: loadId },
+      data: { multi_stop: true, total_stops: routeStops.length, current_stop_loading: 1, route_id: routeId },
+    });
+    return { loadId: loadId.toString(), stopsCreated: routeStops.length };
+  }
+
+  // APP-SHIP-G: Undo last carton load
+  async undoLoad(tenantId: string, loadId: bigint, lpnId: bigint, reasonCode: string) {
+    const lpn = await this.prisma.license_plate_numbers.findFirst({
+      where: { tenant_id: tenantId, lpn_id: lpnId },
+    });
+    if (!lpn) throw new BadRequestException('LPN not found');
+    if (lpn.status !== 'LOADED') throw new BadRequestException('LPN is not LOADED');
+    // Reverse: LOADED → STAGED, decrement carton count
+    await this.prisma.license_plate_numbers.updateMany({
+      where: { tenant_id: tenantId, lpn_id: lpnId },
+      data: { status: 'STAGED', assigned_load_id: null, loaded_at: null },
+    });
+    await this.prisma.loads.updateMany({
+      where: { tenant_id: tenantId, load_id: loadId },
+      data: { loaded_cartons: { decrement: 1 } },
+    });
+    // Write audit event
+    await this.prisma.shipping_audit_log.create({
+      data: {
+        tenant_id: tenantId,
+        event_type: 'CARTON_LOAD_UNDONE',
+        load_id: loadId,
+        carton_id: lpnId,
+        operator_id: null,
+        notes: `Undo reason: ${reasonCode}`,
+      },
+    }).catch(() => {});
+    return { loadId: loadId.toString(), lpnId: lpnId.toString(), status: 'STAGED', message: 'Carton load reversed' };
+  }
+
+  // APP-SHIP-F: Persist BOL to table
+  async persistBol(tenantId: string, loadId: bigint, generatedBy: string) {
+    const bolData = await this.generateBol(tenantId, loadId);
+    const bolNumber = bolData.bolNumber || `BOL-${loadId}-${Date.now()}`;
+    await this.prisma.bill_of_lading.create({
+      data: {
+        tenant_id: tenantId,
+        load_id: loadId,
+        bol_number: bolNumber,
+        vehicle_number: bolData.vehicleNumber,
+        trailer_number: bolData.trailerNumber,
+        seal_number: bolData.sealNumber,
+        total_weight_kg: bolData.totalWeight,
+        total_cartons: bolData.totalCartons,
+        driver_name: bolData.driverName,
+        generated_by: generatedBy,
+      },
+    }).catch(() => {});
+    return { ...bolData, bolNumber };
+  }
+
+  // GAP-4: Create a single load stop
+  async createStop(tenantId: string, loadId: bigint, dto: any) {
+    const stop = await this.prisma.load_stops.create({
+      data: {
+        tenant_id: tenantId,
+        load_id: loadId,
+        stop_sequence: dto.stopSequence || 1,
+        location_name: dto.locationName,
+        shipment_id: dto.shipmentId ? BigInt(dto.shipmentId) : null,
+        planned_arrival: dto.plannedArrival ? new Date(dto.plannedArrival) : null,
+        planned_departure: dto.plannedDeparture ? new Date(dto.plannedDeparture) : null,
+        status: 'PENDING',
+      },
+    });
+    // Update load multi-stop flag
+    const stopCount = await this.prisma.load_stops.count({ where: { tenant_id: tenantId, load_id: loadId } });
+    if (stopCount > 1) {
+      await this.prisma.loads.updateMany({
+        where: { tenant_id: tenantId, load_id: loadId },
+        data: { multi_stop: true, total_stops: stopCount },
+      });
+    }
+    return stop;
+  }
 }

@@ -54,4 +54,23 @@ export class RfStagingController {
     const facilityId = req.rfSession?.facilityId ? BigInt(req.rfSession.facilityId) : BigInt(dto.facilityId);
     return this.stagingService.findAllLanes(tenantId, facilityId);
   }
+
+  // APP-SHIP-G: Undo staging
+  @Post('undo-stage')
+  @ApiOperation({ summary: 'Reverse staging — STAGED → PACKED (RF)' })
+  @RfAction('update')
+  async undoStage(@Req() req: any, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    return this.stagingService.undoStage(tenantId, BigInt(dto.lpnId), dto.reasonCode || 'WRONG_LANE');
+  }
+
+  // APP-SHIP-K: RF lane contents
+  @Post('lane-contents')
+  @ApiOperation({ summary: 'Get cartons staged at a lane (RF)' })
+  @RfAction('read')
+  async laneContents(@Req() req: any, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    const facilityId = req.rfSession?.facilityId ? BigInt(req.rfSession.facilityId) : BigInt(dto.facilityId);
+    return this.stagingService.getLaneContentsRF(tenantId, facilityId, dto.laneCode);
+  }
 }

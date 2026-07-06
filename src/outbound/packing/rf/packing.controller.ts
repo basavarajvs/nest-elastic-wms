@@ -4,12 +4,16 @@ import { RfAction } from '../../../common/decorators/rf-action.decorator';
 import { RfSessionGuard } from '../../../common/guards/rf-session.guard';
 import { RfActionLightweightGuard } from '../../../common/guards/rf-action-lightweight.guard';
 import { PackingService } from '../packing.service';
+import { ScaleIntegrationService } from '../scale-integration.service';
 
 @ApiTags('RF - Packing')
 @Controller('rf/outbound/pack')
 @UseGuards(RfSessionGuard, RfActionLightweightGuard)
 export class RfPackingController {
-  constructor(private readonly packingService: PackingService) {}
+  constructor(
+    private readonly packingService: PackingService,
+    private readonly scaleService: ScaleIntegrationService,
+  ) {}
 
   @Post('start')
   @ApiOperation({ summary: 'Start packing session at station (RF)' })
@@ -168,7 +172,9 @@ export class RfPackingController {
   @ApiOperation({ summary: 'Capture weight from scale (GAP-4)' })
   @RfAction('read')
   async captureWeight(@Req() req: any, @Body() dto: any) {
-    return { weightKg: 5.0, isStable: true, unit: 'kg', timestamp: new Date().toISOString() };
+    // APP-PACK-I: Use scale integration service instead of hardcoded value
+    const reading = await this.scaleService.captureWeight();
+    return { weightKg: reading.weightKg, isStable: reading.isStable, unit: reading.unit, timestamp: reading.timestamp.toISOString() };
   }
 
   @Post('confirm-weight')
@@ -212,5 +218,22 @@ export class RfPackingController {
     const tenantId = req.tenantContext.getTenantId();
     const facilityId = BigInt(req.rfSession.facilityId || dto.facilityId);
     return this.packingService.requestCartonOverride(tenantId, facilityId, BigInt(dto.sessionId), dto);
+  }
+
+  @Post('report-wrong-item')
+  @ApiOperation({ summary: 'Report wrong item during packing (APP-PACK-G)' })
+  @RfAction('update')
+  async reportWrongItem(@Req() req: any, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facilityId);
+    return this.packingService.reportWrongItem(tenantId, facilityId, BigInt(dto.sessionId), BigInt(dto.orderId), BigInt(dto.productId), BigInt(dto.pickTaskId), dto.reasonCode);
+  }
+
+  @Post('request-tracking-number')
+  @ApiOperation({ summary: 'Request tracking number from carrier API (APP-PACK-H)' })
+  @RfAction('update')
+  async requestTrackingNumber(@Req() req: any, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    return this.packingService.requestTrackingNumber(tenantId, BigInt(dto.shipmentId), dto.carrierId ? BigInt(dto.carrierId) : undefined);
   }
 }

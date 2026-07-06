@@ -89,7 +89,6 @@
     "globals": "^17.0.0",
     "jest": "^30.0.0",
     "jsonwebtoken": "^9.0.3",
-    "pg": "^8.22.0",
     "prettier": "^3.4.2",
     "prisma": "^5.22.0",
     "source-map-support": "^0.5.21",

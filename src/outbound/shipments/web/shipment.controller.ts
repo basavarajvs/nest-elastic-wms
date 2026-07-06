@@ -1,11 +1,15 @@
 import { Controller, Get, Post, Patch, Delete, Body, Param, Query, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { ShipmentService } from '../shipment.service';
+import { LoadService } from '../../loads/load.service';
 
 @ApiTags('Outbound - Shipments')
 @Controller('web/shipments')
 export class ShipmentWebController {
-  constructor(private readonly service: ShipmentService) {}
+  constructor(
+    private readonly service: ShipmentService,
+    private readonly loadService: LoadService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create outbound shipment' })
@@ -61,5 +65,29 @@ export class ShipmentWebController {
   async delete(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.service.delete(tenantId, BigInt(id));
+  }
+
+  // GAP-9: Close shipment from web
+  @Post(':id/close')
+  @ApiOperation({ summary: 'Close shipment from web' })
+  async close(@Req() req: any, @Param('id') id: string, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    return this.service.closeShipment(tenantId, BigInt(id), dto?.force);
+  }
+
+  // APP-SHIP-D: Shipping audit timeline for a load
+  @Get('audit/shipping/:loadId')
+  @ApiOperation({ summary: 'Get shipping audit timeline for a load' })
+  async auditTimeline(@Req() req: any, @Param('loadId') loadId: string) {
+    const tenantId = req.tenantContext.getTenantId();
+    return this.service.getShippingAuditTimeline(tenantId, BigInt(loadId));
+  }
+
+  // APP-SHIP-D: Carton lifecycle audit
+  @Get('audit/carton/:cartonId')
+  @ApiOperation({ summary: 'Get carton lifecycle audit from pack to ship' })
+  async cartonAudit(@Req() req: any, @Param('cartonId') cartonId: string) {
+    const tenantId = req.tenantContext.getTenantId();
+    return this.service.getCartonAuditTimeline(tenantId, BigInt(cartonId));
   }
 }

@@ -116,6 +116,11 @@ export type WmsSubjects =
   | 'RfSession'
   | 'SupervisorPin'
   | 'ResourceQuota'
-  | 'Quota';
+  | 'Quota'
+  | 'CartonizationRule'
+  | 'PackingException'
+  | 'StagingLane'
+  | 'Trailer'
+  | 'Manifest';
 
 export type WmsAbility = MongoAbility<[WmsAction, WmsSubjects]>;

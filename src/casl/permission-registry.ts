@@ -131,6 +131,7 @@ export const ALL_WMS_SUBJECTS: WmsSubjects[] = [
   'DailyKpiMetric', 'LocationPickHeatmap', 'FulfillmentWorkflowEvent',
   'FulfillmentWorkflowTransition', 'FulfillmentBillingRun',
   'FulfillmentBillingEvent', 'RfSession', 'SupervisorPin', 'ResourceQuota', 'Quota',
+  'CartonizationRule', 'PackingException', 'StagingLane', 'Trailer', 'Manifest',
 ];
 
 export const ALL_WMS_ACTIONS: WmsAction[] = Object.values(WmsAction);

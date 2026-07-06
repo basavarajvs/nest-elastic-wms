@@ -47,6 +47,28 @@ export class StagingService {
     if (lane.max_cartons && (lane.current_carton_count ?? 0) >= lane.max_cartons) {
       throw new BadRequestException('Staging lane is full');
     }
+
+    // APP-SHIP-H: Mixed-route staging enforcement
+    if (lane.lane_type === 'CARRIER' && lane.assigned_carrier_id && lpn.assigned_shipment_id) {
+      const shipment = await this.prisma.outbound_shipments.findFirst({
+        where: { tenant_id: tenantId, shipment_id: lpn.assigned_shipment_id },
+      });
+      if (shipment && shipment.carrier_id && shipment.carrier_id !== lane.assigned_carrier_id) {
+        throw new BadRequestException(`WRONG STAGING LANE — Carton carrier ${shipment.carrier_id} does not match lane carrier ${lane.assigned_carrier_id}`);
+      }
+    }
+    if (lane.lane_type === 'ROUTE' && lane.assigned_route_id && lpn.assigned_shipment_id) {
+      const shipment = await this.prisma.outbound_shipments.findFirst({
+        where: { tenant_id: tenantId, shipment_id: lpn.assigned_shipment_id },
+      });
+      if (shipment && shipment.load_id) {
+        const load = await this.prisma.loads.findFirst({ where: { tenant_id: tenantId, load_id: shipment.load_id } });
+        if (load && load.route_id && load.route_id !== lane.assigned_route_id) {
+          throw new BadRequestException(`WRONG STAGING LANE — Carton route ${load.route_id} does not match lane route ${lane.assigned_route_id}`);
+        }
+      }
+    }
+
     await this.prisma.license_plate_numbers.updateMany({
       where: { tenant_id: tenantId, lpn_id: lpnId },
       data: { status: 'STAGED', staging_location_id: laneId, staged_at: new Date() },
@@ -58,9 +80,22 @@ export class StagingService {
     if (lpn.assigned_shipment_id) {
       await this.prisma.outbound_shipments.updateMany({
         where: { tenant_id: tenantId, shipment_id: lpn.assigned_shipment_id },
-        data: { status: 'STAGED' },
+        data: { status: 'STAGED', staging_lane_id: laneId },
       });
     }
+    // Update staging_work_queue entry
+    await this.prisma.staging_work_queue.updateMany({
+      where: { tenant_id: tenantId, carton_id: lpnId, status: { in: ['PENDING_STAGE', 'ASSIGNED'] } },
+      data: { status: 'STAGED', staged_at: new Date() },
+    }).catch(() => {});
+    // Write audit event
+    await this.prisma.shipping_audit_log.create({
+      data: {
+        tenant_id: tenantId, event_type: 'CARTON_STAGED', carton_id: lpnId,
+        staging_lane_id: laneId, operator_id: userId,
+        shipment_id: lpn.assigned_shipment_id || null,
+      },
+    }).catch(() => {});
     return { lpn, lane };
   }
 
@@ -105,5 +140,55 @@ export class StagingService {
       where: { tenant_id: tenantId, lane_id: laneId },
     });
     return { lane, cartons, cartonCount: cartons.length };
+  }
+
+  // APP-SHIP-G: Undo staging — reverse STAGED → PACKED
+  async undoStage(tenantId: string, lpnId: bigint, reasonCode: string) {
+    const lpn = await this.prisma.license_plate_numbers.findFirst({
+      where: { tenant_id: tenantId, lpn_id: lpnId },
+    });
+    if (!lpn) throw new NotFoundException('Carton not found');
+    if (lpn.status !== 'STAGED') throw new BadRequestException('Carton is not STAGED');
+    await this.prisma.license_plate_numbers.updateMany({
+      where: { tenant_id: tenantId, lpn_id: lpnId },
+      data: { status: 'PACKED', staging_location_id: null, staged_at: null },
+    });
+    // Decrement lane count
+    if (lpn.staging_location_id) {
+      await this.prisma.staging_lanes.updateMany({
+        where: { tenant_id: tenantId, lane_id: lpn.staging_location_id },
+        data: { current_carton_count: { decrement: 1 } },
+      });
+    }
+    // Update staging_work_queue
+    await this.prisma.staging_work_queue.updateMany({
+      where: { tenant_id: tenantId, carton_id: lpnId },
+      data: { status: 'PENDING_STAGE' },
+    }).catch(() => {});
+    // Write audit event
+    await this.prisma.shipping_audit_log.create({
+      data: {
+        tenant_id: tenantId, event_type: 'STAGING_UNDONE', carton_id: lpnId,
+        staging_lane_id: lpn.staging_location_id, notes: `Undo reason: ${reasonCode}`,
+      },
+    }).catch(() => {});
+    return { lpnId: lpnId.toString(), status: 'PACKED', message: 'Staging reversed' };
+  }
+
+  // APP-SHIP-K: RF lane contents
+  async getLaneContentsRF(tenantId: string, facilityId: bigint, laneCode: string) {
+    const lane = await this.prisma.staging_lanes.findFirst({
+      where: { tenant_id: tenantId, facility_id: facilityId, lane_code: laneCode },
+    });
+    if (!lane) throw new NotFoundException('Staging lane not found');
+    const cartons = await this.prisma.license_plate_numbers.findMany({
+      where: { tenant_id: tenantId, facility_id: facilityId, staging_location_id: lane.lane_id, status: 'STAGED' },
+      select: { lpn_id: true, lpn_number: true, status: true, assigned_shipment_id: true },
+    });
+    return {
+      laneId: lane.lane_id.toString(), laneCode: lane.lane_code, laneType: lane.lane_type,
+      currentCount: lane.current_carton_count, maxCartons: lane.max_cartons,
+      cartons: cartons.map(c => ({ lpnId: c.lpn_id.toString(), lpnNumber: c.lpn_number, status: c.status, shipmentId: c.assigned_shipment_id?.toString() })),
+    };
   }
 }

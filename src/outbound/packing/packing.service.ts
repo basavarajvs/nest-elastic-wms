@@ -254,6 +254,14 @@ export class PackingService {
       }
     }
 
+    // GAP-9.2: Check all pick LPNs for the order are nested before closing
+    const unnestedPickLpns = await this.prisma.license_plate_numbers.count({
+      where: { tenant_id: tenantId, facility_id: facilityId, assigned_shipment_id: lpn.assigned_shipment_id, status: 'PICKED' },
+    });
+    if (unnestedPickLpns > 0 && !dto.forceClose) {
+      return { blocked: true, message: `${unnestedPickLpns} pick LPNs not yet nested into carton`, unnestedCount: unnestedPickLpns };
+    }
+
     // GAP-9.2: Consume nested pick LPNs
     const nestedLpns = await this.prisma.license_plate_numbers.findMany({
       where: { tenant_id: tenantId, parent_lpn_id: lpn.lpn_id, status: 'NESTED' },
@@ -320,6 +328,19 @@ export class PackingService {
     if (slips.length) {
       packingSlipData = await this.generatePackingSlipData(tenantId, slips[0].packing_slip_id);
     }
+
+    // APP-SHIP-L: Create staging work queue entry for pack→stage auto-queue
+    await this.prisma.staging_work_queue.create({
+      data: {
+        tenant_id: tenantId,
+        facility_id: facilityId,
+        carton_id: lpn.lpn_id,
+        shipment_id: shipment?.shipment_id || null,
+        order_id: BigInt(orderId),
+        status: 'PENDING_STAGE',
+        priority: 0,
+      },
+    }).catch(() => {});
 
     return {
       lpnId: lpn.lpn_id.toString(),
@@ -442,6 +463,7 @@ export class PackingService {
   }
 
   // GAP-1: Directed pack work (APP-PACK-E: auto-assign totes to session)
+  // GAP-2.3: Integrate cartonization into pack flow
   async getNextPackWork(tenantId: string, facilityId: bigint, stationId: bigint, userId: string, sessionId?: bigint) {
     const order = await this.prisma.sales_orders.findFirst({
       where: { tenant_id: tenantId, facility_id: facilityId, status: 'PICKED' },
@@ -459,7 +481,28 @@ export class PackingService {
         this.logger.warn(`Tote assignment failed: ${e.message}`);
       }
     }
-    return { order, pickLpns };
+    // GAP-2.3: Run cartonization and store carton plan if not already done
+    let cartonPlan = await this.prisma.packing_carton_plan.findMany({
+      where: { tenant_id: tenantId, order_id: order.order_id },
+    });
+    if (cartonPlan.length === 0) {
+      try {
+        const cartonizationResult = await this.cartonizationService.calculateCartons(tenantId, facilityId, order.order_id);
+        if (cartonizationResult.cartons && cartonizationResult.cartons.length > 0) {
+          cartonPlan = await this.cartonizationService.createCartonPlan(tenantId, facilityId, order.order_id, cartonizationResult.cartons);
+          // Update session with planned cartons count
+          if (sessionId) {
+            await this.prisma.packing_sessions.updateMany({
+              where: { tenant_id: tenantId, id: sessionId },
+              data: { planned_cartons: cartonPlan.length, current_order_id: order.order_id },
+            }).catch(() => {});
+          }
+        }
+      } catch (e) {
+        this.logger.warn(`Cartonization failed for order ${order.order_id}: ${e.message}`);
+      }
+    }
+    return { order, pickLpns, cartonPlan: cartonPlan.length ? cartonPlan : null };
   }
 
   // GAP-9: Nest pick LPN into carton LPN
@@ -689,9 +732,10 @@ export class PackingService {
       where: { tenant_id: tenantId, id: sessionId },
     });
     const orderId = dto.orderId || session?.current_order_id;
-    if (orderId) {
+    const cartonLpnId = (result as any).lpnId;
+    if (orderId && cartonLpnId) {
       const nestedLpns = await this.prisma.license_plate_numbers.findMany({
-        where: { tenant_id: tenantId, parent_lpn_id: BigInt(result.lpnId), status: 'NESTED' },
+        where: { tenant_id: tenantId, parent_lpn_id: BigInt(cartonLpnId), status: 'NESTED' },
       });
       for (const lpn of nestedLpns) {
         await this.prisma.license_plate_numbers.updateMany({
@@ -773,12 +817,20 @@ export class PackingService {
     return { assigned: pickLpnIds.length };
   }
 
-  // APP-PACK-F: List packing damage codes
+  // APP-PACK-F: List packing damage codes — query packing_damage_codes table
   async getDamageCodes(tenantId: string) {
-    return this.prisma.damage_codes.findMany({
-      where: { tenant_id: tenantId, is_active: true, category: 'PACKING' },
+    const codes = await this.prisma.packing_damage_codes.findMany({
+      where: { tenant_id: tenantId, is_active: true },
       orderBy: { code: 'asc' },
     });
+    // Fallback to damage_codes with category PACKING if packing_damage_codes is empty
+    if (codes.length === 0) {
+      return this.prisma.damage_codes.findMany({
+        where: { tenant_id: tenantId, is_active: true, category: 'PACKING' },
+        orderBy: { code: 'asc' },
+      });
+    }
+    return codes;
   }
 
   // GAP-5.1: Auto-detect shortage in packItems
@@ -869,5 +921,69 @@ export class PackingService {
       },
     });
     return task;
+  }
+
+  // APP-PACK-G: Quality feedback loop — report wrong item during packing
+  async reportWrongItem(tenantId: string, facilityId: bigint, sessionId: bigint, orderId: bigint, productId: bigint, pickTaskId: bigint, reasonCode: string) {
+    // Create WRONG_ITEM exception
+    const exception = await this.prisma.packing_exceptions.create({
+      data: {
+        tenant_id: tenantId, facility_id: facilityId, session_id: sessionId,
+        order_id: orderId, exception_type: 'WRONG_ITEM', product_id: productId,
+        reason_code: reasonCode || 'WRONG_ITEM', status: 'OPEN',
+        notes: `Pick task ${pickTaskId} put wrong item into tote`,
+      },
+    });
+    // Increment pick task error count for quality tracking
+    const pickTask = await this.prisma.picking_tasks.findFirst({ where: { tenant_id: tenantId, task_id: pickTaskId } });
+    if (pickTask) {
+      const currentErrors = Number((pickTask as any).error_count || 0);
+      await this.prisma.picking_tasks.updateMany({
+        where: { tenant_id: tenantId, task_id: pickTaskId },
+        data: { notes: `Quality issue: wrong item reported. Error count: ${currentErrors + 1}` } as any,
+      }).catch(() => {});
+    }
+    // Update session exceptions count
+    await this.prisma.packing_sessions.updateMany({
+      where: { tenant_id: tenantId, id: sessionId },
+      data: { exceptions_count: { increment: 1 } },
+    }).catch(() => {});
+    return { exceptionId: exception.exception_id.toString(), message: 'Wrong item reported and pick task flagged' };
+  }
+
+  // APP-PACK-G: Get picking quality report
+  async getPickingQualityReport(tenantId: string, facilityId: bigint) {
+    const wrongItemExceptions = await this.prisma.packing_exceptions.findMany({
+      where: { tenant_id: tenantId, facility_id: facilityId, exception_type: 'WRONG_ITEM' },
+      orderBy: { created_at: 'desc' },
+      take: 100,
+    });
+    return {
+      totalWrongItems: wrongItemExceptions.length,
+      exceptions: wrongItemExceptions.map(e => ({
+        exceptionId: e.exception_id.toString(),
+        orderId: e.order_id?.toString(),
+        productId: e.product_id?.toString(),
+        reasonCode: e.reason_code,
+        status: e.status,
+        createdAt: e.created_at,
+      })),
+    };
+  }
+
+  // APP-PACK-H: Carrier API integration — request tracking number (stub implementation)
+  async requestTrackingNumber(tenantId: string, shipmentId: bigint, carrierId?: bigint) {
+    const shipment = await this.prisma.outbound_shipments.findFirst({
+      where: { tenant_id: tenantId, shipment_id: shipmentId },
+    });
+    if (!shipment) throw new BadRequestException('Shipment not found');
+    // Stub: generate tracking number — in production this would call carrier API
+    const trackingNumber = `TRK-${shipment.shipment_number}-${Date.now().toString(36).toUpperCase()}`;
+    // Store tracking number on shipment
+    await this.prisma.outbound_shipments.updateMany({
+      where: { tenant_id: tenantId, shipment_id: shipmentId },
+      data: { tracking_number: trackingNumber },
+    });
+    return { trackingNumber, carrierId: carrierId?.toString() || null, shipmentId: shipmentId.toString() };
   }
 }

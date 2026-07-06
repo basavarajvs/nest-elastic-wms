@@ -47,6 +47,20 @@ export class CartonizationService {
     const maxVolume = conditions.maxVolume ? Number(conditions.maxVolume) : null;
     const maxItems = conditions.maxItems ? Number(conditions.maxItems) : null;
 
+    // APP-PACK-B: Apply customer cartonization preferences
+    const order = await this.prisma.sales_orders.findFirst({ where: { tenant_id: tenantId, order_id: orderId } });
+    let customerPrefs: any = null;
+    if (order?.customer_id) {
+      customerPrefs = await this.prisma.customer_cartonization_preferences.findFirst({
+        where: { tenant_id: tenantId, customer_id: order.customer_id, is_active: true },
+      });
+    }
+    // If customer prefers "combine items" and no max weight/items constraint, put all in one carton
+    if (customerPrefs?.combine_items && !maxWeight && !maxItems) {
+      const cartons = [{ cartonIndex: 1, totalCartons: 1, cartonTypeId: primaryRule.carton_type_id ? Number(primaryRule.carton_type_id) : null, items }];
+      return { cartons };
+    }
+
     const cartons: any[] = [];
     let currentCarton: any = { items: [], totalWeight: 0, totalVolume: 0 };
 

@@ -366,4 +366,80 @@ export class ShipmentService {
     }
     return { closed: true, shipmentId };
   }
+
+  // APP-SHIP-G: Reassign shipment to a different load
+  async reassignShipment(tenantId: string, shipmentId: bigint, newLoadId: bigint, reasonCode: string) {
+    const shipment = await this.prisma.outbound_shipments.findFirst({
+      where: { tenant_id: tenantId, shipment_id: shipmentId },
+    });
+    if (!shipment) throw new BadRequestException('Shipment not found');
+    const oldLoadId = shipment.load_id;
+    // Remove from old load
+    if (oldLoadId) {
+      await this.prisma.load_shipments.deleteMany({
+        where: { tenant_id: tenantId, shipment_id: shipmentId, load_id: oldLoadId },
+      });
+    }
+    // Assign to new load
+    await this.prisma.outbound_shipments.updateMany({
+      where: { tenant_id: tenantId, shipment_id: shipmentId },
+      data: { load_id: newLoadId },
+    });
+    const newLoad = await this.prisma.loads.findFirst({ where: { tenant_id: tenantId, load_id: newLoadId } });
+    if (newLoad) {
+      const existing = await this.prisma.load_shipments.findFirst({
+        where: { tenant_id: tenantId, load_id: newLoadId, shipment_id: shipmentId },
+      });
+      if (!existing) {
+        await this.prisma.load_shipments.create({
+          data: { tenant_id: tenantId, facility_id: newLoad.facility_id, load_id: newLoadId, shipment_id: shipmentId },
+        });
+      }
+    }
+    // Write audit event
+    await this.prisma.shipping_audit_log.create({
+      data: {
+        tenant_id: tenantId,
+        event_type: 'SHIPMENT_REASSIGNED',
+        shipment_id: shipmentId,
+        load_id: newLoadId,
+        notes: `Reassigned from load ${oldLoadId} to ${newLoadId}. Reason: ${reasonCode}`,
+      },
+    }).catch(() => {});
+    return { shipmentId: shipmentId.toString(), oldLoadId: oldLoadId?.toString(), newLoadId: newLoadId.toString() };
+  }
+
+  // APP-SHIP-D: Write shipping audit event
+  async writeShippingAuditEvent(tenantId: string, eventType: string, data: any) {
+    await this.prisma.shipping_audit_log.create({
+      data: {
+        tenant_id: tenantId,
+        event_type: eventType,
+        load_id: data.loadId ? BigInt(data.loadId) : null,
+        shipment_id: data.shipmentId ? BigInt(data.shipmentId) : null,
+        carton_id: data.cartonId ? BigInt(data.cartonId) : null,
+        trailer_id: data.trailerId ? BigInt(data.trailerId) : null,
+        staging_lane_id: data.laneId ? BigInt(data.laneId) : null,
+        operator_id: data.operatorId || null,
+        notes: data.notes || null,
+        snapshot_data: data.snapshot || null,
+      },
+    }).catch(() => {});
+  }
+
+  // APP-SHIP-D: Get shipping audit timeline for a load
+  async getShippingAuditTimeline(tenantId: string, loadId: bigint) {
+    return this.prisma.shipping_audit_log.findMany({
+      where: { tenant_id: tenantId, load_id: loadId },
+      orderBy: { event_time: 'asc' },
+    });
+  }
+
+  // APP-SHIP-D: Get carton lifecycle audit
+  async getCartonAuditTimeline(tenantId: string, cartonId: bigint) {
+    return this.prisma.shipping_audit_log.findMany({
+      where: { tenant_id: tenantId, carton_id: cartonId },
+      orderBy: { event_time: 'asc' },
+    });
+  }
 }

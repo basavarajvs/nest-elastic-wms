@@ -145,4 +145,55 @@ export class PackingWebController {
       })),
     };
   }
+
+  // GAP-2.5: Cartonization rule CRUD
+  @Post('cartonization-rules')
+  @ApiOperation({ summary: 'Create cartonization rule' })
+  async createCartonizationRule(@Req() req: any, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    return this.prisma.cartonization_rules.create({
+      data: {
+        tenant_id: tenantId,
+        facility_id: BigInt(dto.facilityId),
+        rule_name: dto.ruleName,
+        priority: dto.priority || 1,
+        conditions_json: dto.conditionsJson || {},
+        carton_type_id: dto.cartonTypeId ? BigInt(dto.cartonTypeId) : null,
+        is_active: dto.isActive ?? true,
+      },
+    });
+  }
+
+  @Get('cartonization-rules')
+  @ApiOperation({ summary: 'List cartonization rules' })
+  async listCartonizationRules(@Req() req: any, @Query('facilityId') facilityId: string) {
+    const tenantId = req.tenantContext.getTenantId();
+    return this.prisma.cartonization_rules.findMany({
+      where: { tenant_id: tenantId, facility_id: BigInt(facilityId), is_active: true },
+      orderBy: { priority: 'asc' },
+    });
+  }
+
+  @Patch('cartonization-rules/:id')
+  @ApiOperation({ summary: 'Update cartonization rule' })
+  async updateCartonizationRule(@Req() req: any, @Param('id') id: string, @Body() dto: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    return this.prisma.cartonization_rules.updateMany({
+      where: { tenant_id: tenantId, rule_id: BigInt(id) },
+      data: {
+        rule_name: dto.ruleName,
+        priority: dto.priority,
+        conditions_json: dto.conditionsJson,
+        is_active: dto.isActive,
+      },
+    });
+  }
+
+  // APP-PACK-G: Picking quality report
+  @Get('reports/picking-quality')
+  @ApiOperation({ summary: 'Get picking quality report (APP-PACK-G)' })
+  async pickingQualityReport(@Req() req: any, @Query('facilityId') facilityId: string) {
+    const tenantId = req.tenantContext.getTenantId();
+    return this.service.getPickingQualityReport(tenantId, BigInt(facilityId));
+  }
 }

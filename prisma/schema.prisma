@@ -2151,7 +2151,6 @@ model license_plate_numbers {
   inventory_items             inventory_items[]
   loads                       loads?                  @relation(fields: [assigned_load_id], references: [load_id], onUpdate: NoAction, map: "fk_lpn_assigned_load")
   outbound_shipments          outbound_shipments?     @relation(fields: [assigned_shipment_id], references: [shipment_id], onUpdate: NoAction, map: "fk_lpn_assigned_shipment")
-  storage_locations           storage_locations?      @relation(fields: [staging_location_id], references: [location_id], onUpdate: NoAction, map: "fk_lpn_staging_location")
   license_plate_numbers       license_plate_numbers?  @relation("license_plate_numbersTolicense_plate_numbers", fields: [parent_lpn_id], references: [lpn_id], onUpdate: NoAction)
   other_license_plate_numbers license_plate_numbers[] @relation("license_plate_numbersTolicense_plate_numbers")
   lpn_transactions            lpn_transactions[]
@@ -2256,6 +2255,10 @@ model loads {
   bol_number             String?                 @db.VarChar(50)
   pro_number             String?                 @db.VarChar(50)
   loaded_by              String?                 @db.Uuid
+  multi_stop             Boolean?                @default(false)
+  total_stops            Int?                    @default(0)
+  current_stop_loading   Int?                    @default(1)
+  route_id               BigInt?
   license_plate_numbers  license_plate_numbers[]
   carriers               carriers?               @relation(fields: [carrier_id], references: [carrier_id], onUpdate: NoAction, map: "fk_loads_carrier")
   warehouse_facilities   warehouse_facilities    @relation(fields: [tenant_id, facility_id], references: [tenant_id, facility_id], onDelete: Cascade, onUpdate: NoAction)
@@ -2439,6 +2442,8 @@ model outbound_shipments {
   driver_name             String?                 @db.VarChar(255)
   trailer_number          String?                 @db.VarChar(50)
   total_cartons           Int?
+  staging_lane_id         BigInt?
+  expected_carton_count   Int?
   license_plate_numbers   license_plate_numbers[]
   loads                   loads?                  @relation(fields: [load_id], references: [load_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_outbound_shipments_load")
   warehouse_facilities    warehouse_facilities    @relation(fields: [tenant_id, facility_id], references: [tenant_id, facility_id], onDelete: Cascade, onUpdate: NoAction)
@@ -2480,6 +2485,8 @@ model packing_containers {
   staging_lane_code    String?              @db.VarChar(20)
   staged_at            DateTime?            @db.Timestamp(6)
   staged_by            String?              @db.Uuid
+  carton_index         Int?
+  total_cartons        Int?
   warehouse_facilities warehouse_facilities @relation(fields: [tenant_id, facility_id], references: [tenant_id, facility_id], onDelete: Cascade, onUpdate: NoAction)
 
   @@unique([tenant_id, facility_id, container_code])
@@ -2556,6 +2563,9 @@ model packing_sessions {
   cartons_completed              Int?                             @default(0)
   items_packed                   Int?                             @default(0)
   errors_count                   Int?                             @default(0)
+  planned_cartons                Int?                             @default(0)
+  completed_cartons              Int?                             @default(0)
+  exceptions_count               Int?                             @default(0)
   notes                          String?
   created_date                   DateTime                         @default(now()) @db.Timestamp(6)
   created_by                     String?                          @db.VarChar(100)
@@ -2641,6 +2651,8 @@ model packing_stations {
   printer_type         String?              @db.VarChar(100)
   scale_type           String?              @db.VarChar(100)
   scanner_type         String?              @db.VarChar(100)
+  scale_device_id      String?              @db.VarChar(100)
+  scale_device_type    String?              @db.VarChar(50)
   is_active            Boolean?             @default(true)
   is_available         Boolean?             @default(true)
   created_by           String?              @db.Uuid
@@ -3835,7 +3847,6 @@ model storage_locations {
   aisle_id                                                                    BigInt?
   bay_id                                                                      BigInt?
   client_id                                                                   BigInt?
-  license_plate_numbers                                                       license_plate_numbers[]
   location_pick_heatmap                                                       location_pick_heatmap[]
   replenishment_rules_replenishment_rules_from_location_idTostorage_locations replenishment_rules[]   @relation("replenishment_rules_from_location_idTostorage_locations")
   replenishment_rules_replenishment_rules_to_location_idTostorage_locations   replenishment_rules[]   @relation("replenishment_rules_to_location_idTostorage_locations")
@@ -4895,6 +4906,135 @@ model load_stops {
   updated_at         DateTime? @default(now()) @db.Timestamptz(6)
   version            BigInt?
 
+  @@schema("multitenant")
+}
+
+/// Shipping audit trail — immutable log of all shipping events (APP-SHIP-D)
+model shipping_audit_log {
+  audit_id          BigInt    @id @default(autoincrement())
+  tenant_id         String    @db.Uuid
+  facility_id       BigInt?
+  event_type        String    @db.VarChar(50)
+  load_id           BigInt?
+  shipment_id       BigInt?
+  carton_id         BigInt?
+  trailer_id        BigInt?
+  staging_lane_id   BigInt?
+  dock_id           BigInt?
+  operator_id       String?   @db.Uuid
+  event_time        DateTime  @default(now()) @db.Timestamptz(6)
+  snapshot_data     Json?
+  notes             String?
+
+  @@index([tenant_id, load_id], map: "idx_shipping_audit_load")
+  @@index([tenant_id, carton_id], map: "idx_shipping_audit_carton")
+  @@index([tenant_id, event_type], map: "idx_shipping_audit_type")
+  @@schema("multitenant")
+}
+
+/// Shipping route definitions (APP-SHIP-E)
+model shipping_routes {
+  route_id            BigInt    @id @default(autoincrement())
+  tenant_id           String    @db.Uuid
+  route_code          String    @db.VarChar(50)
+  description         String?
+  origin_facility_id  BigInt?
+  is_active           Boolean?  @default(true)
+  created_by          String?   @db.Uuid
+  updated_by          String?   @db.Uuid
+  created_at          DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime? @default(now()) @db.Timestamptz(6)
+  version             BigInt?
+
+  @@unique([tenant_id, route_code])
+  @@schema("multitenant")
+}
+
+/// Route stop templates (APP-SHIP-E)
+model route_stops {
+  route_stop_id      BigInt    @id @default(autoincrement())
+  tenant_id          String    @db.Uuid
+  route_id           BigInt
+  stop_sequence      Int
+  location_name      String    @db.VarChar(200)
+  planned_arrival    DateTime? @db.Timestamptz(6)
+  planned_departure  DateTime? @db.Timestamptz(6)
+  carrier_id         BigInt?
+  is_active          Boolean?  @default(true)
+
+  @@index([route_id], map: "idx_route_stops_route")
+  @@schema("multitenant")
+}
+
+/// Bill of Lading persistence (APP-SHIP-F)
+model bill_of_lading {
+  bol_id             BigInt    @id @default(autoincrement())
+  tenant_id          String    @db.Uuid
+  load_id            BigInt
+  bol_number         String    @db.VarChar(100)
+  carrier_id         BigInt?
+  vehicle_number     String?   @db.VarChar(50)
+  trailer_number     String?   @db.VarChar(50)
+  seal_number        String?   @db.VarChar(50)
+  total_weight_kg    Decimal?  @db.Decimal(12, 2)
+  total_volume_cbm   Decimal?  @db.Decimal(12, 2)
+  total_cartons      Int?      @default(0)
+  total_pallets      Int?      @default(0)
+  driver_name        String?   @db.VarChar(100)
+  driver_signature   String?
+  generated_at       DateTime? @default(now()) @db.Timestamptz(6)
+  generated_by       String?   @db.Uuid
+
+  @@unique([tenant_id, bol_number])
+  @@index([load_id], map: "idx_bol_load")
+  @@schema("multitenant")
+}
+
+/// Staging work queue — pack→stage auto-queue (APP-SHIP-L)
+model staging_work_queue {
+  queue_id           BigInt    @id @default(autoincrement())
+  tenant_id          String    @db.Uuid
+  facility_id        BigInt
+  carton_id          BigInt
+  shipment_id        BigInt?
+  order_id           BigInt?
+  status             String    @default("PENDING_STAGE") @db.VarChar(30)
+  priority           Int?      @default(0)
+  assigned_to        String?   @db.Uuid
+  created_at         DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime? @default(now()) @db.Timestamptz(6)
+  staged_at          DateTime? @db.Timestamptz(6)
+
+  @@index([tenant_id, facility_id, status], map: "idx_staging_wq_status")
+  @@schema("multitenant")
+}
+
+/// Force-close authorization records (APP-SHIP-M)
+model force_close_authorizations {
+  authorization_id    BigInt    @id @default(autoincrement())
+  tenant_id           String    @db.Uuid
+  load_id             BigInt
+  supervisor_user_id  String    @db.Uuid
+  reason_code         String?   @db.VarChar(100)
+  incomplete_shipments Json?
+  authorized_at       DateTime  @default(now()) @db.Timestamptz(6)
+
+  @@index([load_id], map: "idx_force_close_load")
+  @@schema("multitenant")
+}
+
+/// Carton loading confirmation audit (APP-SHIP-C)
+model carton_loading_confirmation {
+  confirmation_id     BigInt    @id @default(autoincrement())
+  tenant_id           String    @db.Uuid
+  carton_id           BigInt
+  load_id             BigInt
+  loaded_by           String?   @db.Uuid
+  loaded_at           DateTime  @default(now()) @db.Timestamptz(6)
+  confirmation_method String    @default("SCAN_CONFIRM") @db.VarChar(20)
+
+  @@index([load_id], map: "idx_carton_confirm_load")
+  @@index([carton_id], map: "idx_carton_confirm_carton")
   @@schema("multitenant")
 }
 
