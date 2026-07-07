@@ -1,7 +1,8 @@
 import { Controller, Get, Inject } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse } from '@nestjs/swagger';
 import { Public } from '../../common/decorators/public.decorator';
 import { PrismaService } from '../../prisma/prisma.service';
+import { HealthCheckResponseDto } from '../dto/health-response.dto';
 import Redis from 'ioredis';
 
 @ApiTags('Health')
@@ -15,6 +16,7 @@ export class HealthController {
   @Public()
   @Get('health')
   @ApiOperation({ summary: 'Health check' })
+  @ApiOkResponse({ type: HealthCheckResponseDto })
   async check() {
     const modules: Record<string, string> = {};
 

@@ -43,14 +43,14 @@ export class ReceivingToleranceService {
   async upsert(tenantId: string, dto: any) {
     const data: any = {
       tenant_id: tenantId,
-      facility_id: BigInt(dto.facilityId),
-      product_id: dto.productId ? BigInt(dto.productId) : undefined,
-      vendor_id: dto.vendorId ? BigInt(dto.vendorId) : undefined,
-      tolerance_type: dto.toleranceType || 'PERCENTAGE',
-      over_tolerance: dto.overTolerance,
-      under_tolerance: dto.underTolerance,
-      requires_supervisor_approval: dto.requiresSupervisorApproval ?? true,
-      is_active: dto.isActive ?? true,
+      facility_id: BigInt(dto.facility_id),
+      product_id: dto.product_id ? BigInt(dto.product_id) : undefined,
+      vendor_id: dto.vendor_id ? BigInt(dto.vendor_id) : undefined,
+      tolerance_type: dto.tolerance_type || 'PERCENTAGE',
+      over_tolerance: dto.max_tolerance,
+      under_tolerance: dto.min_tolerance,
+      requires_supervisor_approval: dto.requires_supervisor_approval ?? true,
+      is_active: dto.is_active ?? true,
     };
     const existing = await this.prisma.receiving_tolerance_configs.findFirst({
       where: {
@@ -77,8 +77,13 @@ export class ReceivingToleranceService {
   }
 
   async delete(tenantId: string, configId: bigint) {
-    return this.prisma.receiving_tolerance_configs.deleteMany({
+    const entity = await this.prisma.receiving_tolerance_configs.findFirst({
       where: { tenant_id: tenantId, config_id: configId },
     });
+    if (!entity) throw new NotFoundException('Receiving tolerance config not found');
+    await this.prisma.receiving_tolerance_configs.deleteMany({
+      where: { tenant_id: tenantId, config_id: configId },
+    });
+    return entity;
   }
 }

@@ -6,6 +6,10 @@ import { PickingWaveService } from './picking-waves/picking-wave.service';
 import { PickingTaskService } from './picking-tasks/picking-task.service';
 import { ClusterPickService } from './picking-tasks/cluster-pick.service';
 import { PickRouteService } from './picking-tasks/pick-route.service';
+import { PickCartService } from './picking-tasks/pick-cart.service';
+import { PickCartAssignmentService } from './picking-tasks/pick-cart-assignment.service';
+import { ClusterPickGroupService } from './picking-tasks/cluster-pick-group.service';
+import { ShortPickReasonService } from './picking-tasks/short-pick-reason.service';
 import { PackingService } from './packing/packing.service';
 import { CartonizationService } from './packing/cartonization.service';
 import { ScaleIntegrationService } from './packing/scale-integration.service';
@@ -18,6 +22,12 @@ import { CrossDockService } from './cross-dock/cross-dock.service';
 import { CarrierRateService } from './carrier-rates/carrier-rate.service';
 import { StagingService } from './staging/staging.service';
 import { TrailerService } from './shipments/trailer.service';
+import { PackingMaterialService } from './packing/packing-material.service';
+import { PackingStationService } from './packing/packing-station.service';
+import { CartonizationPreferenceService } from './sales-orders/cartonization-preference.service';
+import { ShippingRouteService } from './shipments/shipping-route.service';
+import { RouteStopService } from './shipments/route-stop.service';
+import { ShippingLabelService } from './shipments/shipping-label.service';
 import { SalesOrderWebController } from './sales-orders/web/sales-order.controller';
 import { AllocationWebController } from './allocation/allocation.controller';
 import { PickingWaveWebController } from './picking-waves/web/picking-wave.controller';
@@ -36,11 +46,21 @@ import { CrossDockWebController } from './cross-dock/web/cross-dock.controller';
 import { CarrierRateWebController } from './carrier-rates/web/carrier-rate.controller';
 import { StagingWebController } from './staging/web/staging.controller';
 import { TrailerWebController } from './shipments/web/trailer.controller';
+import { PackingMaterialWebController } from './packing/web/packing-material.controller';
+import { PackingStationWebController } from './packing/web/packing-station.controller';
+import { CartonizationPreferenceWebController } from './sales-orders/web/cartonization-preference.controller';
+import { ShippingRouteWebController } from './shipments/web/shipping-route.controller';
+import { RouteStopWebController } from './shipments/web/route-stop.controller';
+import { ShippingLabelWebController } from './shipments/web/shipping-label.controller';
 import { RfStagingController } from './staging/rf/staging.controller';
 import { BackorderWebController } from './sales-orders/web/backorder.controller';
 import { WaveTaskWebController } from './picking-waves/web/wave-task.controller';
 import { PickAuditWebController } from './picking-tasks/web/pick-audit.controller';
 import { PickRouteWebController } from './picking-tasks/web/pick-route.controller';
+import { PickCartController } from './picking-tasks/web/pick-cart.controller';
+import { PickCartAssignmentController } from './picking-tasks/web/pick-cart-assignment.controller';
+import { ClusterPickGroupController } from './picking-tasks/web/cluster-pick-group.controller';
+import { ShortPickReasonController } from './picking-tasks/web/short-pick-reason.controller';
 
 @Module({
   imports: [PrismaModule],
@@ -69,6 +89,16 @@ import { PickRouteWebController } from './picking-tasks/web/pick-route.controlle
     WaveTaskWebController,
     PickAuditWebController,
     PickRouteWebController,
+    PickCartController,
+    PickCartAssignmentController,
+    ClusterPickGroupController,
+    ShortPickReasonController,
+    PackingMaterialWebController,
+    PackingStationWebController,
+    CartonizationPreferenceWebController,
+    ShippingRouteWebController,
+    RouteStopWebController,
+    ShippingLabelWebController,
   ],
   providers: [
     SalesOrderService,
@@ -77,6 +107,10 @@ import { PickRouteWebController } from './picking-tasks/web/pick-route.controlle
     PickingTaskService,
     ClusterPickService,
     PickRouteService,
+    PickCartService,
+    PickCartAssignmentService,
+    ClusterPickGroupService,
+    ShortPickReasonService,
     PackingService,
     CartonizationService,
     ScaleIntegrationService,
@@ -89,6 +123,12 @@ import { PickRouteWebController } from './picking-tasks/web/pick-route.controlle
     CarrierRateService,
     StagingService,
     TrailerService,
+    PackingMaterialService,
+    PackingStationService,
+    CartonizationPreferenceService,
+    ShippingRouteService,
+    RouteStopService,
+    ShippingLabelService,
   ],
   exports: [
     SalesOrderService,
@@ -97,6 +137,10 @@ import { PickRouteWebController } from './picking-tasks/web/pick-route.controlle
     PickingTaskService,
     ClusterPickService,
     PickRouteService,
+    PickCartService,
+    PickCartAssignmentService,
+    ClusterPickGroupService,
+    ShortPickReasonService,
     PackingService,
     CartonizationService,
     ScaleIntegrationService,
@@ -109,6 +153,12 @@ import { PickRouteWebController } from './picking-tasks/web/pick-route.controlle
     CarrierRateService,
     StagingService,
     TrailerService,
+    PackingMaterialService,
+    PackingStationService,
+    CartonizationPreferenceService,
+    ShippingRouteService,
+    RouteStopService,
+    ShippingLabelService,
   ],
 })
 export class OutboundModule {}

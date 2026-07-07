@@ -89,10 +89,12 @@ export class AuditLogService {
   }
 
   async delete(tenantId: string, id: bigint) {
-    return this.prisma.$executeRawUnsafe(
+    const entity = await this.findById(tenantId, id);
+    await this.prisma.$executeRawUnsafe(
       `DELETE FROM multitenant.system_audit_log WHERE audit_log_id = $2::bigint AND tenant_id = $1::uuid`,
       tenantId, id,
     );
+    return entity;
   }
 
   async findById(tenantId: string, id: bigint) {

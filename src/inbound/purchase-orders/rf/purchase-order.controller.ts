@@ -1,9 +1,10 @@
 import { Controller, Post, Body, Req, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiCreatedResponse } from '@nestjs/swagger';
 import { RfSessionGuard } from '../../../common/guards/rf-session.guard';
 import { RfActionLightweightGuard } from '../../../common/guards/rf-action-lightweight.guard';
 import { RfAction } from '../../../common/decorators/rf-action.decorator';
 import { PurchaseOrderService } from '../purchase-order.service';
+import { RfLookupResultDto, RfStartReceivingResultDto, StartReceivingDto } from '../dtos/purchase-order-response.dto';
 
 @ApiTags('RF - Purchase Orders')
 @Controller('rf/purchase-orders')
@@ -13,6 +14,7 @@ export class RfPurchaseOrderController {
 
   @Post('lookup')
   @ApiOperation({ summary: 'Lookup PO by number (RF) with line items' })
+  @ApiCreatedResponse({ type: RfLookupResultDto })
   @RfAction('read')
   async lookup(@Req() req: any, @Body('poNumber') poNumber: string) {
     const tenantId = req.tenantContext.getTenantId();
@@ -29,10 +31,11 @@ export class RfPurchaseOrderController {
 
   @Post('start-receiving')
   @ApiOperation({ summary: 'Initiate PO-based receiving session (RF)' })
+  @ApiCreatedResponse({ type: RfStartReceivingResultDto })
   @RfAction('create')
-  async startReceiving(@Req() req: any, @Body() dto: any) {
+  async startReceiving(@Req() req: any, @Body() dto: StartReceivingDto) {
     const tenantId = req.tenantContext.getTenantId();
-    const po = await this.poService.findAll(tenantId, { search: dto.poNumber, limit: 1 });
+    const po = await this.poService.findAll(tenantId, { search: dto.po_number, limit: 1 });
     if (!po?.data?.[0]) {
       return { error: 'PO not found' };
     }

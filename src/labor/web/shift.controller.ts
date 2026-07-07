@@ -1,5 +1,7 @@
 import { Controller, Delete, Get, Post, Patch, Param, Body, Query, Req, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
+import { ShiftResponseDto, CreateShiftDto, UpdateShiftDto } from '../dtos/shift-response.dto';
+import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { CaslGuard } from '../../common/guards/casl.guard';
 import { CheckAbility } from '../../common/decorators/check-ability.decorator';
@@ -14,7 +16,8 @@ export class ShiftController {
   @Post()
   @CheckAbility({ action: 'create', subject: 'Labor' })
   @ApiOperation({ summary: 'Create shift' })
-  async create(@Req() req: any, @Body() dto: any) {
+  @ApiCreatedResponse({ type: ShiftResponseDto })
+  async create(@Req() req: any, @Body() dto: CreateShiftDto) {
     const tenantId = req.tenantContext.getTenantId();
     const userId = req.user?.sub;
     return this.shiftService.create(tenantId, userId, dto);
@@ -23,6 +26,7 @@ export class ShiftController {
   @Get()
   @CheckAbility({ action: 'read', subject: 'Labor' })
   @ApiOperation({ summary: 'List shifts' })
+  @ApiOkResponse({ type: PaginatedResponseDto })
   async findAll(@Req() req: any, @Query() query: any) {
     const tenantId = req.tenantContext.getTenantId();
     return this.shiftService.findAll(tenantId, query);
@@ -31,6 +35,7 @@ export class ShiftController {
   @Get(':id')
   @CheckAbility({ action: 'read', subject: 'Labor' })
   @ApiOperation({ summary: 'Get shift by ID' })
+  @ApiOkResponse({ type: ShiftResponseDto })
   async findById(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.shiftService.findById(tenantId, BigInt(id));
@@ -39,7 +44,8 @@ export class ShiftController {
   @Patch(':id')
   @CheckAbility({ action: 'update', subject: 'Labor' })
   @ApiOperation({ summary: 'Update shift' })
-  async update(@Req() req: any, @Param('id') id: string, @Body() dto: any) {
+  @ApiOkResponse({ type: ShiftResponseDto })
+  async update(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateShiftDto) {
     const tenantId = req.tenantContext.getTenantId();
     const userId = req.user?.sub;
     return this.shiftService.update(tenantId, userId, BigInt(id), dto);
@@ -48,6 +54,7 @@ export class ShiftController {
   @Delete(':id')
   @CheckAbility({ action: 'delete', subject: 'Labor' })
   @ApiOperation({ summary: 'Delete shift' })
+  @ApiOkResponse({ type: ShiftResponseDto })
   async delete(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.shiftService.delete(tenantId, BigInt(id));

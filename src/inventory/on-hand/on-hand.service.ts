@@ -6,13 +6,19 @@ export class OnHandService {
   constructor(private readonly prisma: PrismaService) {}
 
   async delete(tenantId: string, id: bigint) {
-    return this.prisma.inventory_on_hand.deleteMany({
+    const entity = await this.prisma.inventory_on_hand.findFirst({
       where: { tenant_id: tenantId, on_hand_id: id },
     });
+    await this.prisma.inventory_on_hand.deleteMany({
+      where: { tenant_id: tenantId, on_hand_id: id },
+    });
+    return entity;
   }
 
   async findAll(tenantId: string, query: any) {
-    const { locationId, productId, lotId, facilityId, page = 1, limit = 50 } = query;
+    const { locationId, productId, lotId, facilityId } = query;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 50;
     const skip = (page - 1) * limit;
     const where: any = { tenant_id: tenantId };
     if (locationId) where.location_id = BigInt(locationId);
@@ -25,16 +31,53 @@ export class OnHandService {
         skip,
         take: limit,
         orderBy: { created_at: 'desc' },
+        include: { warehouse_facilities: true, units_of_measure: true },
       }),
       this.prisma.inventory_on_hand.count({ where }),
     ]);
-    return { data, total, page, limit };
+    const productIds = [...new Set(data.map(r => r.product_id))];
+    const locationIds = [...new Set(data.map(r => r.location_id))];
+    const lotIds = [...new Set(data.filter(r => r.lot_id).map(r => r.lot_id!))];
+    const [products, locations, lots] = await Promise.all([
+      productIds.length ? this.prisma.products.findMany({ where: { product_id: { in: productIds } }, select: { product_id: true, product_name: true } }) : [],
+      locationIds.length ? this.prisma.storage_locations.findMany({ where: { tenant_id: tenantId, location_id: { in: locationIds } }, select: { location_id: true, location_name: true } }) : [],
+      lotIds.length ? this.prisma.inventory_lots.findMany({ where: { lot_id: { in: lotIds } }, select: { lot_id: true, lot_number: true } }) : [],
+    ]);
+    const productMap = new Map<string, string>(products.map(p => [p.product_id.toString(), p.product_name] as [string, string]));
+    const locationMap = new Map<string, string>(locations.map(l => [l.location_id.toString(), l.location_name] as [string, string]));
+    const lotMap = new Map<string, string>(lots.map(l => [l.lot_id.toString(), l.lot_number] as [string, string]));
+    const mappedData = data.map(r => {
+      const { warehouse_facilities, units_of_measure, ...rest } = r as any;
+      return {
+        ...rest,
+        product_name: productMap.get(r.product_id.toString()) ?? null,
+        location_name: locationMap.get(r.location_id.toString()) ?? null,
+        lot_number: r.lot_id ? lotMap.get(r.lot_id.toString()) ?? null : null,
+        uom_name: units_of_measure?.uom_name ?? null,
+      };
+    });
+    return { data: mappedData, total, page, limit };
   }
 
   async findById(tenantId: string, id: string) {
-    return this.prisma.inventory_on_hand.findFirst({
+    const record = await this.prisma.inventory_on_hand.findFirst({
       where: { tenant_id: tenantId, on_hand_id: BigInt(id) },
+      include: { warehouse_facilities: true, units_of_measure: true },
     });
+    if (!record) return null;
+    const [product, location, lot] = await Promise.all([
+      this.prisma.products.findFirst({ where: { product_id: record.product_id }, select: { product_name: true } }),
+      this.prisma.storage_locations.findFirst({ where: { tenant_id: tenantId, location_id: record.location_id }, select: { location_name: true } }),
+      record.lot_id ? this.prisma.inventory_lots.findFirst({ where: { lot_id: record.lot_id }, select: { lot_number: true } }) : null,
+    ]);
+    const { warehouse_facilities, units_of_measure, ...rest } = record as any;
+    return {
+      ...rest,
+      product_name: product?.product_name ?? null,
+      location_name: location?.location_name ?? null,
+      lot_number: lot?.lot_number ?? null,
+      uom_name: units_of_measure?.uom_name ?? null,
+    };
   }
 
   async getQuantityAtLocation(tenantId: string, locationId: string, productId: string) {
@@ -54,14 +97,22 @@ export class OnHandService {
       orderBy: { created_at: 'desc' },
     });
 
+    const productIds = [...new Set(records.map(r => r.product_id))];
+    const locationIds = [...new Set(records.map(r => r.location_id))];
     const lotIds = records.filter((r) => r.lot_id).map((r) => r.lot_id!);
-    const lots = lotIds.length
-      ? await this.prisma.inventory_lots.findMany({
-          where: { lot_id: { in: lotIds } },
-          select: { lot_id: true, lot_number: true, received_date: true, expiry_date: true },
-        })
-      : [];
-    const lotMap = new Map(lots.map((l) => [l.lot_id.toString(), l]));
+    const [products, locations, lots] = await Promise.all([
+      productIds.length ? this.prisma.products.findMany({ where: { product_id: { in: productIds } }, select: { product_id: true, product_name: true } }) : [],
+      locationIds.length ? this.prisma.storage_locations.findMany({ where: { tenant_id: tenantId, location_id: { in: locationIds } }, select: { location_id: true, location_name: true } }) : [],
+      lotIds.length
+        ? this.prisma.inventory_lots.findMany({
+            where: { lot_id: { in: lotIds } },
+            select: { lot_id: true, lot_number: true, received_date: true, expiry_date: true },
+          })
+        : [],
+    ]);
+    const productMap = new Map<string, string>(products.map(p => [p.product_id.toString(), p.product_name] as [string, string]));
+    const locationMap = new Map<string, string>(locations.map(l => [l.location_id.toString(), l.location_name] as [string, string]));
+    const lotMap = new Map<string, any>(lots.map((l) => [l.lot_id.toString(), l] as [string, any]));
 
     const now = new Date();
     return records.map((r) => {
@@ -70,7 +121,9 @@ export class OnHandService {
       return {
         on_hand_id: r.on_hand_id.toString(),
         product_id: r.product_id.toString(),
+        product_name: productMap.get(r.product_id.toString()) ?? null,
         location_id: r.location_id.toString(),
+        location_name: locationMap.get(r.location_id.toString()) ?? null,
         lot_id: r.lot_id?.toString() ?? null,
         lot_number: lot?.lot_number ?? null,
         received_date: receivedDate,

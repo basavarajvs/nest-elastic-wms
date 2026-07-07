@@ -9,12 +9,12 @@ export class ProductAttributeService {
     return this.prisma.product_attributes.create({
       data: {
         tenant_id: tenantId,
-        attribute_name: dto.attributeName,
-        attribute_code: dto.attributeCode,
-        attribute_type: dto.attributeType,
-        allowed_values: dto.allowedValues,
-        is_required: dto.isRequired ?? false,
-        is_searchable: dto.isSearchable ?? false,
+        attribute_name: dto.attribute_name,
+        attribute_code: dto.attribute_code,
+        attribute_type: dto.attribute_type,
+        allowed_values: dto.allowed_values,
+        is_required: dto.is_required ?? false,
+        is_searchable: dto.is_searchable ?? false,
         description: dto.description,
       },
     });
@@ -30,8 +30,8 @@ export class ProductAttributeService {
         { attribute_code: { contains: query.search, mode: 'insensitive' } },
       ];
     }
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const [data, total] = await Promise.all([
       this.prisma.product_attributes.findMany({
         where,
@@ -52,22 +52,25 @@ export class ProductAttributeService {
 
   async update(tenantId: string, attributeId: bigint, dto: any) {
     const data: any = {};
-    if (dto.attributeName !== undefined) data.attribute_name = dto.attributeName;
-    if (dto.attributeCode !== undefined) data.attribute_code = dto.attributeCode;
-    if (dto.attributeType !== undefined) data.attribute_type = dto.attributeType;
-    if (dto.allowedValues !== undefined) data.allowed_values = dto.allowedValues;
-    if (dto.isRequired !== undefined) data.is_required = dto.isRequired;
-    if (dto.isSearchable !== undefined) data.is_searchable = dto.isSearchable;
+    if (dto.attribute_name !== undefined) data.attribute_name = dto.attribute_name;
+    if (dto.attribute_code !== undefined) data.attribute_code = dto.attribute_code;
+    if (dto.attribute_type !== undefined) data.attribute_type = dto.attribute_type;
+    if (dto.allowed_values !== undefined) data.allowed_values = dto.allowed_values;
+    if (dto.is_required !== undefined) data.is_required = dto.is_required;
+    if (dto.is_searchable !== undefined) data.is_searchable = dto.is_searchable;
     if (dto.description !== undefined) data.description = dto.description;
-    return this.prisma.product_attributes.updateMany({
+    await this.prisma.product_attributes.updateMany({
       where: { tenant_id: tenantId, attribute_id: attributeId },
       data,
     });
+    return this.findById(tenantId, attributeId);
   }
 
   async delete(tenantId: string, attributeId: bigint) {
-    return this.prisma.product_attributes.deleteMany({
+    const record = await this.findById(tenantId, attributeId);
+    await this.prisma.product_attributes.deleteMany({
       where: { tenant_id: tenantId, attribute_id: attributeId },
     });
+    return record;
   }
 }

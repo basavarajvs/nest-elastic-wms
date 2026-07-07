@@ -12,32 +12,34 @@ export class PackingService {
   ) {}
 
   async deleteSession(tenantId: string, sessionId: bigint) {
-    return this.prisma.packing_sessions.deleteMany({
+    const session = await this.findSessionById(tenantId, sessionId);
+    await this.prisma.packing_sessions.deleteMany({
       where: { tenant_id: tenantId, id: sessionId },
     });
+    return session;
   }
 
   /** Start a packing session at a station */
   async startSession(tenantId: string, dto: any) {
-    const station = dto.stationId
+    const station = dto.station_id
       ? await this.prisma.packing_stations.findFirst({
-          where: { tenant_id: tenantId, station_id: BigInt(dto.stationId), is_active: true },
+          where: { tenant_id: tenantId, station_id: BigInt(dto.station_id), is_active: true },
         })
       : null;
 
-    if (dto.stationId && !station) throw new BadRequestException('Station not found or inactive');
+    if (dto.station_id && !station) throw new BadRequestException('Station not found or inactive');
 
     const session = await this.prisma.packing_sessions.create({
       data: {
         tenant_id: tenantId,
-        facility_id: dto.facilityId ? BigInt(dto.facilityId) : BigInt(1),
-        session_number: dto.sessionNumber || `PACK-${Date.now()}`,
-        user_id: dto.userId,
-        station_id: dto.stationId ? BigInt(dto.stationId) : undefined,
+        facility_id: dto.facility_id ? BigInt(dto.facility_id) : BigInt(1),
+        session_number: dto.session_number || `PACK-${Date.now()}`,
+        user_id: dto.user_id,
+        station_id: dto.station_id ? BigInt(dto.station_id) : undefined,
         station_code: station?.station_code,
         start_time: new Date(),
         last_activity_time: new Date(),
-        current_order_id: dto.orderId ? BigInt(dto.orderId) : undefined,
+        current_order_id: dto.order_id ? BigInt(dto.order_id) : undefined,
         status: 'STATION_ASSIGNED',
       },
     });
@@ -47,7 +49,7 @@ export class PackingService {
         tenant_id: tenantId,
         session_id: session.id,
         current_status: 'STATION_ASSIGNED',
-        changed_by: dto.userId,
+        changed_by: dto.user_id,
       },
     });
 
@@ -58,7 +60,7 @@ export class PackingService {
       });
     }
 
-    return session;
+    return this.findSessionById(tenantId, session.id);
   }
 
   /** Assign an order to the packing session */
@@ -87,7 +89,7 @@ export class PackingService {
     });
     if (!session) throw new BadRequestException('Session not found');
 
-    const orderId = dto.orderId || session.current_order_id;
+    const orderId = dto.order_id || session.current_order_id;
     if (!orderId) throw new BadRequestException('No order assigned to session');
 
     if (!session.facility_id) throw new BadRequestException('Session missing facility_id');
@@ -96,7 +98,7 @@ export class PackingService {
       data: {
         tenant_id: tenantId,
         facility_id: session.facility_id,
-        packing_slip_number: dto.packingSlipNumber || `SLIP-${session.session_number}-${(session.cartons_completed || 0) + 1}`,
+        packing_slip_number: dto.packing_slip_number || `SLIP-${session.session_number}-${(session.cartons_completed || 0) + 1}`,
         order_id: orderId,
         session_id: sessionId,
         packed_by_user_id: session.user_id,
@@ -112,13 +114,13 @@ export class PackingService {
           tenant_id: tenantId,
           facility_id: session.facility_id,
           packing_slip_id: slip.packing_slip_id,
-          picking_task_id: item.pickingTaskId ? BigInt(item.pickingTaskId) : undefined,
+          picking_task_id: item.picking_task_id ? BigInt(item.picking_task_id) : undefined,
           product_id: BigInt(item.productId),
-          quantity_packed: item.quantityPacked,
-          uom_id: item.uomId ? BigInt(item.uomId) : BigInt(1),
-          lot_number: item.lotNumber,
-          serial_numbers_json: item.serialNumbers ? JSON.stringify(item.serialNumbers) : undefined,
-          container_id: item.containerId ? BigInt(item.containerId) : undefined,
+          quantity_packed: item.quantity_packed,
+          uom_id: item.uom_id ? BigInt(item.uom_id) : BigInt(1),
+          lot_number: item.lot_number,
+          serial_numbers_json: item.serial_numbers ? JSON.stringify(item.serial_numbers) : undefined,
+          container_id: item.container_id ? BigInt(item.container_id) : undefined,
         },
       });
     }
@@ -144,10 +146,10 @@ export class PackingService {
     }
 
     // GAP-9.1: Nest pick LPNs into this carton
-    if (dto.pickLpnIds && Array.isArray(dto.pickLpnIds)) {
-      const slipLpnId = dto.cartonLpnId ? BigInt(dto.cartonLpnId) : null;
+    if (dto.pick_lpn_ids && Array.isArray(dto.pick_lpn_ids)) {
+      const slipLpnId = dto.carton_lpn_id ? BigInt(dto.carton_lpn_id) : null;
       if (slipLpnId) {
-        for (const pickLpnId of dto.pickLpnIds) {
+        for (const pickLpnId of dto.pick_lpn_ids) {
           try {
             await this.nestPickLpn(tenantId, slipLpnId, BigInt(pickLpnId));
           } catch (e) {
@@ -159,13 +161,13 @@ export class PackingService {
 
     // Create or assign container
     let containerId: bigint | undefined;
-    if (dto.containerCode) {
+    if (dto.container_code) {
       const container = await this.prisma.packing_containers.create({
         data: {
           tenant_id: tenantId,
           facility_id: session.facility_id,
-          container_code: dto.containerCode,
-          container_type: dto.containerType || 'BOX',
+          container_code: dto.container_code,
+          container_type: dto.container_type || 'BOX',
           packing_slip_id: slip.packing_slip_id,
           seal_number: dto.sealNumber,
         },
@@ -199,11 +201,11 @@ export class PackingService {
     });
     if (!session) throw new BadRequestException('Session not found');
 
-    const orderId = dto.orderId || session.current_order_id;
+    const orderId = dto.order_id || session.current_order_id;
     if (!orderId) throw new BadRequestException('No order assigned to session');
 
     // Find or create the shipping LPN
-    const lpnNumber = dto.cartonBarcode || `CARTON-${session.session_number}-${(session.cartons_completed || 0) + 1}`;
+    const lpnNumber = dto.carton_barcode || `CARTON-${session.session_number}-${(session.cartons_completed || 0) + 1}`;
     let lpn = await this.prisma.license_plate_numbers.findFirst({
       where: { tenant_id: tenantId, facility_id: facilityId, lpn_number: lpnNumber },
     });
@@ -218,7 +220,7 @@ export class PackingService {
           facility_id: facilityId,
           lpn_number: lpnNumber,
           location_id: stagingLocation?.location_id || 0,
-          product_id: dto.productId ? BigInt(dto.productId) : null,
+          product_id: dto.product_id ? BigInt(dto.product_id) : null,
           lpn_type: 'CARTON',
           status: 'PACKED',
           gross_weight: dto.weight ? dto.weight : null,
@@ -258,7 +260,7 @@ export class PackingService {
     const unnestedPickLpns = await this.prisma.license_plate_numbers.count({
       where: { tenant_id: tenantId, facility_id: facilityId, assigned_shipment_id: lpn.assigned_shipment_id, status: 'PICKED' },
     });
-    if (unnestedPickLpns > 0 && !dto.forceClose) {
+    if (unnestedPickLpns > 0 && !dto.force_close) {
       return { blocked: true, message: `${unnestedPickLpns} pick LPNs not yet nested into carton`, unnestedCount: unnestedPickLpns };
     }
 
@@ -415,6 +417,20 @@ export class PackingService {
       where: { tenant_id: tenantId, id: sessionId },
     });
     if (!session) return null;
+    let stationName: string | undefined;
+    let orderNumber: string | undefined;
+    if (session.station_id) {
+      const station = await this.prisma.packing_stations.findFirst({
+        where: { tenant_id: tenantId, station_id: session.station_id },
+      });
+      stationName = station?.station_name;
+    }
+    if (session.current_order_id) {
+      const order = await this.prisma.sales_orders.findFirst({
+        where: { tenant_id: tenantId, order_id: session.current_order_id },
+      });
+      orderNumber = order?.order_number;
+    }
     const slips = await this.prisma.packing_slips.findMany({
       where: { tenant_id: tenantId, session_id: sessionId },
     });
@@ -422,7 +438,7 @@ export class PackingService {
       where: { tenant_id: tenantId, session_id: sessionId },
       orderBy: { changed_at: 'asc' },
     });
-    return { ...session, packingSlips: slips, statusHistory: history };
+    return { ...session, station_name: stationName, order_number: orderNumber, packingSlips: slips, statusHistory: history };
   }
 
   async getStations(tenantId: string, facilityId: bigint) {
@@ -524,11 +540,11 @@ export class PackingService {
     const exception = await this.prisma.packing_exceptions.create({
       data: {
         tenant_id: tenantId, facility_id: facilityId,
-        session_id: sessionId, order_id: BigInt(dto.orderId),
+        session_id: sessionId, order_id: BigInt(dto.order_id),
         exception_type: 'SHORTAGE',
-        product_id: dto.productId ? BigInt(dto.productId) : undefined,
-        expected_qty: dto.expectedQty, packed_qty: dto.packedQty,
-        reason_code: dto.reasonCode, status: 'OPEN',
+        product_id: dto.product_id ? BigInt(dto.product_id) : undefined,
+        expected_qty: dto.expected_qty, packed_qty: dto.packed_qty,
+        reason_code: dto.reason_code, status: 'OPEN',
         notes: dto.notes,
       },
     });
@@ -540,11 +556,11 @@ export class PackingService {
     const exception = await this.prisma.packing_exceptions.create({
       data: {
         tenant_id: tenantId, facility_id: facilityId,
-        session_id: sessionId, order_id: BigInt(dto.orderId),
+        session_id: sessionId, order_id: BigInt(dto.order_id),
         exception_type: 'DAMAGE',
-        product_id: dto.productId ? BigInt(dto.productId) : undefined,
-        expected_qty: dto.expectedQty, packed_qty: 0,
-        reason_code: dto.reasonCode || 'DAMAGE', status: 'OPEN',
+        product_id: dto.product_id ? BigInt(dto.product_id) : undefined,
+        expected_qty: dto.expected_qty, packed_qty: 0,
+        reason_code: dto.reason_code || 'DAMAGE', status: 'OPEN',
         notes: dto.notes,
       },
     });
@@ -553,18 +569,18 @@ export class PackingService {
         tenant_id: tenantId, facility_id: facilityId,
         hold_number: `HOLD-PACK-${Date.now()}`,
         reference_type: 'PACKING', reference_id: exception.exception_id,
-        product_id: dto.productId ? BigInt(dto.productId) : undefined,
-        hold_reason: dto.reasonCode || 'PACKING_DAMAGE',
+        product_id: dto.product_id ? BigInt(dto.product_id) : undefined,
+        hold_reason: dto.reason_code || 'PACKING_DAMAGE',
         hold_reason_code: 'PACKING_DAMAGE',
-        placed_by_user_id: dto.userId || '', affected_quantity: dto.expectedQty || 0,
+        placed_by_user_id: dto.user_id || '', affected_quantity: dto.expected_qty || 0,
         status: 'OPEN',
       },
     });
 
     // GAP-6.1: Auto-create replacement pick task for damaged quantity
-    if (dto.productId && dto.expectedQty > 0) {
+    if (dto.product_id && dto.expected_qty > 0) {
       try {
-        await this.createReplacementPick(tenantId, facilityId, BigInt(dto.orderId), BigInt(dto.productId), Number(dto.expectedQty));
+        await this.createReplacementPick(tenantId, facilityId, BigInt(dto.order_id), BigInt(dto.product_id), Number(dto.expected_qty));
       } catch (e) {
         this.logger.warn(`Replacement pick creation failed: ${e.message}`);
       }
@@ -584,17 +600,21 @@ export class PackingService {
   async approveException(tenantId: string, exceptionId: bigint, supervisorId: string) {
     const exc = await this.prisma.packing_exceptions.findFirst({ where: { tenant_id: tenantId, exception_id: exceptionId } });
     if (!exc) throw new BadRequestException('Exception not found');
-    return this.prisma.packing_exceptions.updateMany({
+    await this.prisma.packing_exceptions.updateMany({
       where: { tenant_id: tenantId, exception_id: exceptionId },
       data: { status: 'RESOLVED', resolved_by: supervisorId, resolved_at: new Date() },
     });
+    return exc;
   }
 
   async rejectException(tenantId: string, exceptionId: bigint, supervisorId: string) {
-    return this.prisma.packing_exceptions.updateMany({
+    const exc = await this.prisma.packing_exceptions.findFirst({ where: { tenant_id: tenantId, exception_id: exceptionId } });
+    if (!exc) throw new BadRequestException('Exception not found');
+    await this.prisma.packing_exceptions.updateMany({
       where: { tenant_id: tenantId, exception_id: exceptionId },
       data: { status: 'RESOLVED', resolved_by: supervisorId, resolved_at: new Date(), notes: 'Rejected by supervisor' },
     });
+    return exc;
   }
 
   // GAP-3: Verify carton contents before close
@@ -731,7 +751,7 @@ export class PackingService {
     const session = await this.prisma.packing_sessions.findFirst({
       where: { tenant_id: tenantId, id: sessionId },
     });
-    const orderId = dto.orderId || session?.current_order_id;
+    const orderId = dto.order_id || session?.current_order_id;
     const cartonLpnId = (result as any).lpnId;
     if (orderId && cartonLpnId) {
       const nestedLpns = await this.prisma.license_plate_numbers.findMany({
@@ -859,11 +879,24 @@ export class PackingService {
 
   // GAP-7.2: List all packing sessions (web)
   async getSessions(tenantId: string, facilityId: bigint) {
-    return this.prisma.packing_sessions.findMany({
+    const sessions = await this.prisma.packing_sessions.findMany({
       where: { tenant_id: tenantId, facility_id: facilityId },
       orderBy: { start_time: 'desc' },
       take: 50,
     });
+    const stationIds = sessions.map(s => s.station_id).filter(Boolean) as bigint[];
+    const orderIds = sessions.map(s => s.current_order_id).filter(Boolean) as bigint[];
+    const [stations, orders] = await Promise.all([
+      stationIds.length ? this.prisma.packing_stations.findMany({ where: { tenant_id: tenantId, station_id: { in: stationIds } } }) : [],
+      orderIds.length ? this.prisma.sales_orders.findMany({ where: { tenant_id: tenantId, order_id: { in: orderIds } } }) : [],
+    ]);
+    const stationMap = new Map<bigint, string>(stations.map(s => [s.station_id, s.station_name] as [bigint, string]));
+    const orderMap = new Map<bigint, string>(orders.map(o => [o.order_id, o.order_number] as [bigint, string]));
+    return sessions.map(s => ({
+      ...s,
+      station_name: s.station_id ? stationMap.get(s.station_id) : undefined,
+      order_number: s.current_order_id ? orderMap.get(s.current_order_id) : undefined,
+    }));
   }
 
   // GAP-8.3: Get packing slip by order (web)
@@ -876,7 +909,8 @@ export class PackingService {
     const items = slipIds.length
       ? await this.prisma.packing_slip_items.findMany({ where: { tenant_id: tenantId, packing_slip_id: { in: slipIds } } })
       : [];
-    return { slips, items };
+    const order = orderId ? await this.prisma.sales_orders.findFirst({ where: { tenant_id: tenantId, order_id: orderId } }) : null;
+    return { slips: slips.map(s => ({ ...s, order_number: order?.order_number })), items };
   }
 
   // GAP-7.2: List all exceptions (web)
@@ -895,11 +929,11 @@ export class PackingService {
     const exception = await this.prisma.packing_exceptions.create({
       data: {
         tenant_id: tenantId, facility_id: facilityId,
-        session_id: sessionId, order_id: BigInt(dto.orderId),
+        session_id: sessionId, order_id: BigInt(dto.order_id),
         exception_type: 'CARTON_TYPE_OVERRIDE',
-        reason_code: dto.reasonCode || 'CARTON_OVERRIDE',
+        reason_code: dto.reason_code || 'CARTON_OVERRIDE',
         status: 'OPEN',
-        notes: `Requested carton type: ${dto.requestedCartonType}. Reason: ${dto.reason || ''}`,
+        notes: `Requested carton type: ${dto.requested_carton_type}. Reason: ${dto.reason || ''}`,
       },
     });
     return exception;

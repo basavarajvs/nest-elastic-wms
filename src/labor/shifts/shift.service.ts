@@ -9,27 +9,30 @@ export class ShiftService {
 
   async create(tenantId: string, userId: string, dto: any) {
     const existing = await this.prisma.labor_shifts.findFirst({
-      where: { tenant_id: tenantId, facility_id: BigInt(dto.facilityId), shift_code: dto.shiftCode },
+      where: { tenant_id: tenantId, facility_id: BigInt(dto.facility_id), shift_code: dto.shift_code },
     });
     if (existing) {
       throw new BadRequestException('Shift code already exists for this facility');
     }
 
-    return this.prisma.labor_shifts.create({
+    const created = await this.prisma.labor_shifts.create({
       data: {
         tenant_id: tenantId,
-        facility_id: BigInt(dto.facilityId),
-        shift_name: dto.shiftName,
-        shift_code: dto.shiftCode,
+        facility_id: BigInt(dto.facility_id),
+        shift_name: dto.shift_name,
+        shift_code: dto.shift_code,
         description: dto.description,
-        start_time: dto.startTime,
-        end_time: dto.endTime,
-        break_duration_minutes: dto.breakDurationMinutes ?? 0,
-        scheduled_days_json: dto.scheduledDaysJson ? JSON.stringify(dto.scheduledDaysJson) : null,
-        is_active: dto.isActive ?? true,
+        start_time: dto.start_time,
+        end_time: dto.end_time,
+        break_duration_minutes: dto.break_duration_minutes ?? 0,
+        scheduled_days_json: dto.scheduled_days_json ? JSON.stringify(dto.scheduled_days_json) : null,
+        is_active: dto.is_active ?? true,
         created_by: userId,
       },
+      include: { warehouse_facilities: { select: { facility_name: true } } },
     });
+    const { warehouse_facilities: wf, ...restCreate } = created;
+    return { ...restCreate, facility_name: wf?.facility_name ?? null };
   }
 
   async findAll(tenantId: string, query: any) {
@@ -42,57 +45,67 @@ export class ShiftService {
         { shift_code: { contains: query.search, mode: 'insensitive' } },
       ];
     }
-    const page = query.page || 1;
-    const limit = query.limit || 20;
-    const [data, total] = await Promise.all([
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
+    const [rawData, total] = await Promise.all([
       this.prisma.labor_shifts.findMany({
         where,
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { shift_code: 'asc' },
+        include: { warehouse_facilities: { select: { facility_name: true } } },
       }),
       this.prisma.labor_shifts.count({ where }),
     ]);
+    const data = rawData.map(({ warehouse_facilities, ...rest }) => ({
+      ...rest,
+      facility_name: warehouse_facilities?.facility_name ?? null,
+    }));
     return { data, total, page, limit };
   }
 
   async findById(tenantId: string, shiftId: bigint) {
     const shift = await this.prisma.labor_shifts.findFirst({
       where: { tenant_id: tenantId, shift_id: shiftId },
+      include: { warehouse_facilities: { select: { facility_name: true } } },
     });
     if (!shift) throw new NotFoundException('Shift not found');
-    return shift;
+    const { warehouse_facilities, ...rest } = shift;
+    return { ...rest, facility_name: warehouse_facilities?.facility_name ?? null };
   }
 
   async update(tenantId: string, userId: string, shiftId: bigint, dto: any) {
     const shift = await this.findById(tenantId, shiftId);
 
-    if (dto.shiftCode && dto.shiftCode !== shift.shift_code) {
+    if (dto.shift_code && dto.shift_code !== shift.shift_code) {
       const existing = await this.prisma.labor_shifts.findFirst({
         where: {
           tenant_id: tenantId,
           facility_id: shift.facility_id,
-          shift_code: dto.shiftCode,
+          shift_code: dto.shift_code,
           shift_id: { not: shiftId },
         },
       });
       if (existing) throw new BadRequestException('Shift code already exists');
     }
 
-    return this.prisma.labor_shifts.update({
+    const updated = await this.prisma.labor_shifts.update({
       where: { shift_id: shiftId },
       data: {
-        shift_name: dto.shiftName,
-        shift_code: dto.shiftCode,
+        shift_name: dto.shift_name,
+        shift_code: dto.shift_code,
         description: dto.description,
-        start_time: dto.startTime,
-        end_time: dto.endTime,
-        break_duration_minutes: dto.breakDurationMinutes,
-        scheduled_days_json: dto.scheduledDaysJson ? JSON.stringify(dto.scheduledDaysJson) : undefined,
-        is_active: dto.isActive,
+        start_time: dto.start_time,
+        end_time: dto.end_time,
+        break_duration_minutes: dto.break_duration_minutes,
+        scheduled_days_json: dto.scheduled_days_json ? JSON.stringify(dto.scheduled_days_json) : undefined,
+        is_active: dto.is_active,
         updated_by: userId,
       },
+      include: { warehouse_facilities: { select: { facility_name: true } } },
     });
+    const { warehouse_facilities: wf2, ...restUpdate } = updated;
+    return { ...restUpdate, facility_name: wf2?.facility_name ?? null };
   }
 
   async delete(tenantId: string, shiftId: bigint) {
@@ -105,9 +118,12 @@ export class ShiftService {
       throw new BadRequestException('Cannot delete shift with active assignments');
     }
 
-    return this.prisma.labor_shifts.delete({
+    const deleted = await this.prisma.labor_shifts.delete({
       where: { shift_id: shiftId },
+      include: { warehouse_facilities: { select: { facility_name: true } } },
     });
+    const { warehouse_facilities: wf3, ...restDel } = deleted;
+    return { ...restDel, facility_name: wf3?.facility_name ?? null };
   }
 
   async createAssignment(tenantId: string, userId: string, dto: any) {
@@ -149,8 +165,8 @@ export class ShiftService {
     if (query.assignmentDate) where.assignment_date = new Date(query.assignmentDate);
     if (query.status) where.status = query.status;
 
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const [data, total] = await Promise.all([
       this.prisma.labor_shift_assignments.findMany({
         where,

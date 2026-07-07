@@ -8,43 +8,58 @@ export class AllocationService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(tenantId: string, dto: any) {
-    const { orderId, productId, facilityId, lotId, locationId, ...rest } = dto;
-    return this.prisma.inventory_allocations.create({
+    const { allocated_for_reference_id, product_id, facility_id, lot_id, location_id, item_id, uom_id, ...rest } = dto;
+    const created = await this.prisma.inventory_allocations.create({
       data: {
         tenant_id: tenantId,
-        ...(orderId !== undefined ? { allocated_for_reference_id: BigInt(orderId) } : {}),
-        ...(productId !== undefined ? { product_id: BigInt(productId) } : {}),
-        ...(facilityId !== undefined ? { facility_id: BigInt(facilityId) } : {}),
-        ...(lotId !== undefined ? { lot_id: BigInt(lotId) } : {}),
-        ...(locationId !== undefined ? { location_id: BigInt(locationId) } : {}),
+        ...(allocated_for_reference_id !== undefined ? { allocated_for_reference_id: BigInt(allocated_for_reference_id) } : {}),
+        ...(product_id !== undefined ? { product_id: BigInt(product_id) } : {}),
+        ...(facility_id !== undefined ? { facility_id: BigInt(facility_id) } : {}),
+        ...(lot_id !== undefined ? { lot_id: BigInt(lot_id) } : {}),
+        ...(location_id !== undefined ? { location_id: BigInt(location_id) } : {}),
+        ...(item_id !== undefined ? { item_id: BigInt(item_id) } : {}),
+        ...(uom_id !== undefined ? { uom_id: BigInt(uom_id) } : {}),
         ...rest,
       },
+      include: { warehouse_facilities: true, units_of_measure: true },
     });
+    const mapped = await this.mapAllocations(tenantId, [created]);
+    return mapped[0] || created;
   }
 
   async findAll(tenantId: string, query: any) {
-    const { orderId, productId, facilityId, page = 1, limit = 50 } = query;
+    const { orderId, productId, facilityId } = query;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 50;
     const where: any = { tenant_id: tenantId };
     if (orderId) where.allocated_for_reference_id = BigInt(orderId);
     if (productId) where.product_id = BigInt(productId);
     if (facilityId) where.facility_id = BigInt(facilityId);
-    const skip = (page - 1) * Number(limit);
+    const skip = (page - 1) * limit;
     const [data, total] = await Promise.all([
       this.prisma.inventory_allocations.findMany({
         where,
         skip,
-        take: Number(limit),
+        take: limit,
         orderBy: { created_at: 'desc' },
+        include: { warehouse_facilities: true, units_of_measure: true },
       }),
       this.prisma.inventory_allocations.count({ where }),
     ]);
-    return { data, total, page, limit };
+    return { data: await this.mapAllocations(tenantId, data), total, page, limit };
   }
 
   async delete(tenantId: string, id: bigint) {
-    return this.prisma.inventory_allocations.deleteMany({
+    const entity = await this.prisma.inventory_allocations.findFirst({
+      where: { tenant_id: tenantId, allocation_id: id },
+      include: { warehouse_facilities: true, units_of_measure: true },
+    });
+    await this.prisma.inventory_allocations.deleteMany({
       where: { tenant_id: tenantId, allocation_id: id },
     });
+    if (!entity) return null;
+    const mapped = await this.mapAllocations(tenantId, [entity]);
+    return mapped[0] || entity;
   }
 
   /** FIFO lot allocation engine: picks oldest-received lots first */
@@ -186,15 +201,17 @@ export class AllocationService {
   }
 
   async findRules(tenantId: string, query: any) {
-    const { facilityId, page = 1, limit = 50 } = query;
+    const { facilityId } = query;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 50;
     const where: any = { tenant_id: tenantId };
     if (facilityId) where.facility_id = BigInt(facilityId);
-    const skip = (page - 1) * Number(limit);
+    const skip = (page - 1) * limit;
     const [data, total] = await Promise.all([
       this.prisma.inventory_allocation_rules.findMany({
         where,
         skip,
-        take: Number(limit),
+        take: limit,
         include: { inventory_allocation_rule_constraints: true, inventory_allocation_rule_locations: true },
         orderBy: { created_at: 'desc' },
       }),
@@ -204,24 +221,54 @@ export class AllocationService {
   }
 
   async createRule(tenantId: string, dto: any) {
-    const { facilityId, ...rest } = dto;
+    const { facility_id, client_id, product_category_id, ...rest } = dto;
     return this.prisma.inventory_allocation_rules.create({
       data: {
         tenant_id: tenantId,
-        ...(facilityId !== undefined ? { facility_id: BigInt(facilityId) } : {}),
+        ...(facility_id !== undefined ? { facility_id: BigInt(facility_id) } : {}),
+        ...(client_id !== undefined ? { client_id: BigInt(client_id) } : {}),
+        ...(product_category_id !== undefined ? { product_category_id: BigInt(product_category_id) } : {}),
         ...rest,
       },
     });
   }
 
   async updateRule(tenantId: string, id: string, dto: any) {
-    const { facilityId, ...rest } = dto;
+    const { facility_id, client_id, product_category_id, ...rest } = dto;
     return this.prisma.inventory_allocation_rules.update({
       where: { rule_id: BigInt(id) },
       data: {
-        ...(facilityId !== undefined ? { facility_id: BigInt(facilityId) } : {}),
+        ...(facility_id !== undefined ? { facility_id: BigInt(facility_id) } : {}),
+        ...(client_id !== undefined ? { client_id: BigInt(client_id) } : {}),
+        ...(product_category_id !== undefined ? { product_category_id: BigInt(product_category_id) } : {}),
         ...rest,
       },
     });
+  }
+
+  private async mapAllocations(tenantId: string, data: any[]) {
+    const productIds = [...new Set(data.map(d => d.product_id).filter(Boolean))];
+    const lotIds = [...new Set(data.map(d => d.lot_id).filter(Boolean))];
+    const locationIds = [...new Set(data.map(d => d.location_id).filter(Boolean))];
+
+    const [products, lots, locations] = await Promise.all([
+      productIds.length ? this.prisma.products.findMany({ where: { tenant_id: tenantId, product_id: { in: productIds } }, select: { product_id: true, product_name: true } }) : Promise.resolve([]),
+      lotIds.length ? this.prisma.inventory_lots.findMany({ where: { tenant_id: tenantId, lot_id: { in: lotIds } }, select: { lot_id: true, lot_number: true } }) : Promise.resolve([]),
+      locationIds.length ? this.prisma.storage_locations.findMany({ where: { tenant_id: tenantId, location_id: { in: locationIds } }, select: { location_id: true, location_name: true } }) : Promise.resolve([]),
+    ]);
+
+    const productMap = new Map<bigint, string>(); (products as any[]).forEach((p: any) => productMap.set(p.product_id, p.product_name));
+    const lotMap = new Map<bigint, string>(); (lots as any[]).forEach((l: any) => lotMap.set(l.lot_id, l.lot_number));
+    const locationMap = new Map<bigint, string>(); (locations as any[]).forEach((l: any) => locationMap.set(l.location_id, l.location_name));
+
+    return data.map(d => ({
+      ...d,
+      facility_name: d.warehouse_facilities?.facility_name,
+      product_name: productMap.get(d.product_id),
+      lot_number: lotMap.get(d.lot_id),
+      location_name: locationMap.get(d.location_id),
+      warehouse_facilities: undefined,
+      units_of_measure: undefined,
+    }));
   }
 }

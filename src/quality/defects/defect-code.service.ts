@@ -37,7 +37,8 @@ export class DefectCodeService {
   }
 
   async update(tenantId: string, defectCodeId: bigint, dto: any) {
-    return this.prisma.defect_codes.updateMany({
+    await this.findById(tenantId, defectCodeId);
+    await this.prisma.defect_codes.updateMany({
       where: { tenant_id: tenantId, defect_code_id: defectCodeId },
       data: {
         code: dto.code,
@@ -47,12 +48,15 @@ export class DefectCodeService {
         is_active: dto.isActive,
       },
     });
+    return this.findById(tenantId, defectCodeId);
   }
 
   async delete(tenantId: string, defectCodeId: bigint) {
-    return this.prisma.defect_codes.deleteMany({
+    const entity = await this.findById(tenantId, defectCodeId);
+    await this.prisma.defect_codes.deleteMany({
       where: { tenant_id: tenantId, defect_code_id: defectCodeId },
     });
+    return entity;
   }
 
   async seedDefaults(tenantId: string) {

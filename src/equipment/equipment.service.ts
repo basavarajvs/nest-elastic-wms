@@ -15,29 +15,32 @@ export class EquipmentService {
       throw new BadRequestException('Equipment code already exists');
     }
 
-    return this.prisma.warehouse_equipment.create({
+    const created = await this.prisma.warehouse_equipment.create({
       data: {
         tenant_id: tenantId,
-        facility_id: BigInt(dto.facilityId),
-        equipment_name: dto.equipmentName,
-        equipment_code: dto.equipmentCode,
-        equipment_type: dto.equipmentType,
+        facility_id: BigInt(dto.facility_id),
+        equipment_name: dto.equipment_name,
+        equipment_code: dto.equipment_code,
+        equipment_type: dto.equipment_type,
         description: dto.description,
-        model_number: dto.modelNumber,
-        serial_number: dto.serialNumber,
+        model_number: dto.model_number,
+        serial_number: dto.serial_number,
         manufacturer: dto.manufacturer,
-        purchase_date: dto.purchaseDate ? new Date(dto.purchaseDate) : null,
-        purchase_cost: dto.purchaseCost,
+        purchase_date: dto.purchase_date ? new Date(dto.purchase_date) : null,
+        purchase_cost: dto.purchase_cost,
         status: dto.status || 'AVAILABLE',
-        current_location_id: dto.currentLocationId ? BigInt(dto.currentLocationId) : null,
-        assigned_user_id: dto.assignedUserId,
-        last_maintenance_date: dto.lastMaintenanceDate ? new Date(dto.lastMaintenanceDate) : null,
-        next_maintenance_date: dto.nextMaintenanceDate ? new Date(dto.nextMaintenanceDate) : null,
-        maintenance_interval_months: dto.maintenanceIntervalMonths ?? 3,
-        is_active: dto.isActive ?? true,
+        current_location_id: dto.current_location_id ? BigInt(dto.current_location_id) : null,
+        assigned_user_id: dto.assigned_user_id,
+        last_maintenance_date: dto.last_maintenance_date ? new Date(dto.last_maintenance_date) : null,
+        next_maintenance_date: dto.next_maintenance_date ? new Date(dto.next_maintenance_date) : null,
+        maintenance_interval_months: dto.maintenance_interval_months ?? 3,
+        is_active: dto.is_active ?? true,
         created_by: userId,
       },
+      include: { warehouse_facilities: { select: { facility_name: true } } },
     });
+    const { warehouse_facilities: wf, ...restCreate } = created;
+    return { ...restCreate, facility_name: wf?.facility_name ?? null };
   }
 
   async findAll(tenantId: string, query: any) {
@@ -54,63 +57,73 @@ export class EquipmentService {
       ];
     }
 
-    const page = query.page || 1;
-    const limit = query.limit || 20;
-    const [data, total] = await Promise.all([
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
+    const [rawData, total] = await Promise.all([
       this.prisma.warehouse_equipment.findMany({
         where,
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { equipment_code: 'asc' },
+        include: { warehouse_facilities: { select: { facility_name: true } } },
       }),
       this.prisma.warehouse_equipment.count({ where }),
     ]);
+    const data = rawData.map(({ warehouse_facilities, ...rest }) => ({
+      ...rest,
+      facility_name: warehouse_facilities?.facility_name ?? null,
+    }));
     return { data, total, page, limit };
   }
 
   async findById(tenantId: string, equipmentId: bigint) {
     const equipment = await this.prisma.warehouse_equipment.findFirst({
       where: { tenant_id: tenantId, equipment_id: equipmentId, is_deleted: false },
+      include: { warehouse_facilities: { select: { facility_name: true } } },
     });
     if (!equipment) throw new NotFoundException('Equipment not found');
-    return equipment;
+    const { warehouse_facilities, ...rest } = equipment;
+    return { ...rest, facility_name: warehouse_facilities?.facility_name ?? null };
   }
 
   async update(tenantId: string, userId: string, equipmentId: bigint, dto: any) {
     await this.findById(tenantId, equipmentId);
 
-    if (dto.equipmentCode) {
+    if (dto.equipment_code) {
       const existing = await this.prisma.warehouse_equipment.findFirst({
         where: {
           tenant_id: tenantId,
-          equipment_code: dto.equipmentCode,
+          equipment_code: dto.equipment_code,
           equipment_id: { not: equipmentId },
         },
       });
       if (existing) throw new BadRequestException('Equipment code already exists');
     }
 
-    return this.prisma.warehouse_equipment.update({
+    const updated = await this.prisma.warehouse_equipment.update({
       where: { equipment_id: equipmentId },
       data: {
-        equipment_name: dto.equipmentName,
-        equipment_code: dto.equipmentCode,
-        equipment_type: dto.equipmentType,
+        equipment_name: dto.equipment_name,
+        equipment_code: dto.equipment_code,
+        equipment_type: dto.equipment_type,
         description: dto.description,
-        model_number: dto.modelNumber,
-        serial_number: dto.serialNumber,
+        model_number: dto.model_number,
+        serial_number: dto.serial_number,
         manufacturer: dto.manufacturer,
-        purchase_date: dto.purchaseDate ? new Date(dto.purchaseDate) : undefined,
-        purchase_cost: dto.purchaseCost,
-        current_location_id: dto.currentLocationId ? BigInt(dto.currentLocationId) : undefined,
-        assigned_user_id: dto.assignedUserId,
-        last_maintenance_date: dto.lastMaintenanceDate ? new Date(dto.lastMaintenanceDate) : undefined,
-        next_maintenance_date: dto.nextMaintenanceDate ? new Date(dto.nextMaintenanceDate) : undefined,
-        maintenance_interval_months: dto.maintenanceIntervalMonths,
-        is_active: dto.isActive,
+        purchase_date: dto.purchase_date ? new Date(dto.purchase_date) : undefined,
+        purchase_cost: dto.purchase_cost,
+        current_location_id: dto.current_location_id ? BigInt(dto.current_location_id) : undefined,
+        assigned_user_id: dto.assigned_user_id,
+        last_maintenance_date: dto.last_maintenance_date ? new Date(dto.last_maintenance_date) : undefined,
+        next_maintenance_date: dto.next_maintenance_date ? new Date(dto.next_maintenance_date) : undefined,
+        maintenance_interval_months: dto.maintenance_interval_months,
+        is_active: dto.is_active,
         updated_by: userId,
       },
+      include: { warehouse_facilities: { select: { facility_name: true } } },
     });
+    const { warehouse_facilities: wf2, ...restUpdate } = updated;
+    return { ...restUpdate, facility_name: wf2?.facility_name ?? null };
   }
 
   async updateStatus(tenantId: string, userId: string, equipmentId: bigint, status: string) {
@@ -135,13 +148,16 @@ export class EquipmentService {
       );
     }
 
-    return this.prisma.warehouse_equipment.update({
+    const updated = await this.prisma.warehouse_equipment.update({
       where: { equipment_id: equipmentId },
       data: {
         status: status as any,
         updated_by: userId,
       },
+      include: { warehouse_facilities: { select: { facility_name: true } } },
     });
+    const { warehouse_facilities: wf3, ...restStatus } = updated;
+    return { ...restStatus, facility_name: wf3?.facility_name ?? null };
   }
 
   async delete(tenantId: string, equipmentId: bigint) {

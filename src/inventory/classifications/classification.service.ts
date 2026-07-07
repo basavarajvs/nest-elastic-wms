@@ -6,18 +6,27 @@ export class ClassificationService {
   constructor(private readonly prisma: PrismaService) {}
 
   async delete(tenantId: string, id: bigint) {
-    return this.prisma.product_velocity_classification.deleteMany({
+    const entity = await this.prisma.product_velocity_classification.findFirst({
       where: { tenant_id: tenantId, classification_id: id },
     });
+    await this.prisma.product_velocity_classification.deleteMany({
+      where: { tenant_id: tenantId, classification_id: id },
+    });
+    return entity;
   }
 
   async getAbcClassifications(tenantId: string, facilityId?: string) {
     const where: any = { tenant_id: tenantId };
     if (facilityId) where.facility_id = BigInt(facilityId);
 
-    return this.prisma.product_velocity_classification.findMany({
+    const data = await this.prisma.product_velocity_classification.findMany({
       where,
       orderBy: [{ abc_class: 'asc' }, { velocity_rank: 'asc' }],
+      include: { products: true },
+    });
+    return data.map(c => {
+      const { products, ...rest } = c as any;
+      return { ...rest, product_name: products?.product_name ?? null };
     });
   }
 
@@ -32,8 +41,11 @@ export class ClassificationService {
       data: { abc_class: abcClass },
     });
 
-    return this.prisma.product_velocity_classification.findFirst({
+    const result = await this.prisma.product_velocity_classification.findFirst({
       where: { tenant_id: tenantId, product_id: BigInt(productId) },
+      include: { products: true },
     });
+    const { products, ...rest } = result as any;
+    return { ...rest, product_name: products?.product_name ?? null };
   }
 }

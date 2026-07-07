@@ -24,17 +24,17 @@ export class TransfersService {
   }
 
   async create(tenantId: string, dto: any) {
-    const transferNumber = await this.getNextTransferNumber(tenantId, BigInt(dto.facilityId));
+    const transferNumber = await this.getNextTransferNumber(tenantId, BigInt(dto.facility_id));
     const result = await this.prisma.$queryRawUnsafe<Record<string, any>[]>(
       `INSERT INTO inventory_transfers
          (tenant_id, facility_id, transfer_number, status, source_warehouse_id, destination_warehouse_id, notes, created_by, created_at, updated_at)
        VALUES ($1::uuid, $2::bigint, $3, 'DRAFT', $4::bigint, $5::bigint, $6, $7::uuid, NOW(), NOW())
        RETURNING *`,
       tenantId,
-      BigInt(dto.facilityId),
+      BigInt(dto.facility_id),
       transferNumber,
-      BigInt(dto.sourceWarehouseId),
-      BigInt(dto.destinationWarehouseId),
+      BigInt(dto.source_warehouse_id),
+      BigInt(dto.destination_warehouse_id),
       dto.notes || null,
       tenantId,
     );
@@ -49,21 +49,21 @@ export class TransfersService {
            VALUES ($1::bigint, $2, $3::bigint, $4, $5, $6, $7, NOW(), NOW())`,
           transfer.id,
           i + 1,
-          BigInt(line.productId),
+          BigInt(line.product_id),
           line.quantity,
           line.uom || 'EA',
-          line.lotNumber || null,
+          line.lot_number || null,
           line.notes || null,
         );
       }
     }
 
-    return transfer;
+    return this.findById(tenantId, transfer.id);
   }
 
   async findAll(tenantId: string, query: any) {
-    const page = query.page || 1;
-    const limit = query.limit || 50;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 50;
     const offset = (page - 1) * limit;
     const status = query.status;
     let where = `WHERE t.tenant_id = $1::uuid`;
@@ -82,7 +82,7 @@ export class TransfersService {
     );
 
     const rows = await this.prisma.$queryRawUnsafe<Record<string, any>[]>(
-      `SELECT t.*, f.code AS facility_code, sw.name AS source_warehouse, dw.name AS dest_warehouse
+      `SELECT t.*, f.code AS facility_code, sw.name AS source_warehouse_name, dw.name AS destination_warehouse_name
        FROM inventory_transfers t
        LEFT JOIN warehouse_facilities f ON f.id = t.facility_id
        LEFT JOIN warehouses sw ON sw.id = t.source_warehouse_id
@@ -108,7 +108,7 @@ export class TransfersService {
 
   async findById(tenantId: string, id: bigint) {
     const rows = await this.prisma.$queryRawUnsafe<Record<string, any>[]>(
-      `SELECT t.*, f.code AS facility_code, sw.name AS source_warehouse, dw.name AS dest_warehouse
+      `SELECT t.*, f.code AS facility_code, sw.name AS source_warehouse_name, dw.name AS destination_warehouse_name
        FROM inventory_transfers t
        LEFT JOIN warehouse_facilities f ON f.id = t.facility_id
        LEFT JOIN warehouses sw ON sw.id = t.source_warehouse_id
@@ -147,7 +147,7 @@ export class TransfersService {
     );
 
     for (const line of lines) {
-      const qtyToDispatch = dto.lines?.find((l: any) => l.lineId === line.id)?.quantity || line.quantity;
+      const qtyToDispatch = dto.lines?.find((l: any) => l.line_id === line.id)?.quantity || line.quantity;
 
       const onHand = await this.prisma.$queryRawUnsafe<Record<string, any>[]>(
         `SELECT id, quantity FROM inventory_on_hand
@@ -185,18 +185,17 @@ export class TransfersService {
       );
     }
 
-    const result = await this.prisma.$queryRawUnsafe<Record<string, any>[]>(
+    await this.prisma.$executeRawUnsafe(
       `UPDATE inventory_transfers
        SET status = 'DISPATCHED', dispatched_by = $1::uuid, dispatched_at = NOW(), updated_at = NOW(), notes = COALESCE($2, notes)
-       WHERE id = $3::bigint AND tenant_id = $4::uuid
-       RETURNING *`,
+       WHERE id = $3::bigint AND tenant_id = $4::uuid`,
       tenantId,
       dto.notes || null,
       id,
       tenantId,
     );
 
-    return result[0];
+    return this.findById(tenantId, id);
   }
 
   async receive(tenantId: string, id: bigint, dto: any) {
@@ -210,7 +209,7 @@ export class TransfersService {
     );
 
     for (const line of lines) {
-      const qtyToReceive = dto.lines?.find((l: any) => l.lineId === line.id)?.quantity || line.quantity_dispatched || line.quantity;
+      const qtyToReceive = dto.lines?.find((l: any) => l.line_id === line.id)?.quantity || line.quantity_dispatched || line.quantity;
 
       const existing = await this.prisma.$queryRawUnsafe<Record<string, any>[]>(
         `SELECT id, quantity FROM inventory_on_hand
@@ -247,18 +246,17 @@ export class TransfersService {
       );
     }
 
-    const result = await this.prisma.$queryRawUnsafe<Record<string, any>[]>(
+    await this.prisma.$executeRawUnsafe(
       `UPDATE inventory_transfers
        SET status = 'RECEIVED', received_by = $1::uuid, received_at = NOW(), updated_at = NOW(), notes = COALESCE($2, notes)
-       WHERE id = $3::bigint AND tenant_id = $4::uuid
-       RETURNING *`,
+       WHERE id = $3::bigint AND tenant_id = $4::uuid`,
       tenantId,
       dto.notes || null,
       id,
       tenantId,
     );
 
-    return result[0];
+    return this.findById(tenantId, id);
   }
 
   async cancel(tenantId: string, id: bigint, dto: any) {
@@ -295,16 +293,15 @@ export class TransfersService {
       }
     }
 
-    const result = await this.prisma.$queryRawUnsafe<Record<string, any>[]>(
+    await this.prisma.$executeRawUnsafe(
       `UPDATE inventory_transfers
        SET status = 'CANCELLED', updated_at = NOW(), notes = COALESCE($1, notes)
-       WHERE id = $2::bigint AND tenant_id = $3::uuid
-       RETURNING *`,
+       WHERE id = $2::bigint AND tenant_id = $3::uuid`,
       dto?.notes || null,
       id,
       tenantId,
     );
 
-    return result[0];
+    return this.findById(tenantId, id);
   }
 }

@@ -5,28 +5,41 @@ import { PrismaService } from '../../prisma/prisma.service';
 export class BarcodeLabelService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private flattenLabel(label: any) {
+    if (!label) return null;
+    return {
+      ...label,
+      facility_name: label.warehouse_facilities?.facility_name,
+      warehouse_facilities: undefined,
+    };
+  }
+
   async generate(tenantId: string, dto: any) {
     const labelNumber = `LBL-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    return this.prisma.barcode_labels.create({
+    const label = await this.prisma.barcode_labels.create({
       data: {
         tenant_id: tenantId,
-        facility_id: dto.facilityId ? BigInt(dto.facilityId) : undefined,
+        facility_id: dto.facility_id ? BigInt(dto.facility_id) : undefined,
         label_number: labelNumber,
-        barcode_value: dto.barcodeValue,
-        label_type: dto.labelType,
-        label_format: dto.labelFormat ?? 'CODE128',
-        entity_type: dto.entityType,
-        entity_id: BigInt(dto.entityId),
-        entity_reference: dto.entityReference,
-        label_data_json: dto.labelDataJson,
-        human_readable_text: dto.humanReadableText,
-        label_template_name: dto.labelTemplateName,
-        label_size_mm: dto.labelSizeMm,
-        label_format_file: dto.labelFormatFile,
+        barcode_value: dto.barcode_value,
+        label_type: dto.label_type,
+        label_format: dto.label_format ?? 'CODE128',
+        entity_type: dto.entity_type,
+        entity_id: BigInt(dto.entity_id),
+        entity_reference: dto.entity_reference,
+        label_data_json: dto.label_data_json,
+        human_readable_text: dto.human_readable_text,
+        label_template_name: dto.label_template_name,
+        label_size_mm: dto.label_size_mm,
+        label_format_file: dto.label_format_file,
         is_active: true,
-        created_by: dto.createdBy ? BigInt(dto.createdBy) : undefined,
+        created_by: dto.created_by ? BigInt(dto.created_by) : undefined,
+      },
+      include: {
+        warehouse_facilities: { select: { facility_name: true } },
       },
     });
+    return this.flattenLabel(label);
   }
 
   async findAll(tenantId: string, query: any) {
@@ -42,34 +55,43 @@ export class BarcodeLabelService {
         { entity_reference: { contains: query.search, mode: 'insensitive' } },
       ];
     }
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const [data, total] = await Promise.all([
       this.prisma.barcode_labels.findMany({
         where,
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { created_at: 'desc' },
+        include: {
+          warehouse_facilities: { select: { facility_name: true } },
+        },
       }),
       this.prisma.barcode_labels.count({ where }),
     ]);
-    return { data, total, page, limit };
+    return { data: data.map((l) => this.flattenLabel(l)), total, page, limit };
   }
 
   async findById(tenantId: string, labelId: bigint) {
-    return this.prisma.barcode_labels.findFirst({
+    const label = await this.prisma.barcode_labels.findFirst({
       where: { tenant_id: tenantId, label_id: labelId },
+      include: {
+        warehouse_facilities: { select: { facility_name: true } },
+      },
     });
+    return this.flattenLabel(label);
   }
 
   async delete(tenantId: string, labelId: bigint) {
-    return this.prisma.barcode_labels.deleteMany({
+    const record = await this.findById(tenantId, labelId);
+    await this.prisma.barcode_labels.deleteMany({
       where: { tenant_id: tenantId, label_id: labelId },
     });
+    return record;
   }
 
   async updatePrintStatus(tenantId: string, labelId: bigint, dto: { printStatus: string; printedBy?: bigint }) {
-    return this.prisma.barcode_labels.updateMany({
+    await this.prisma.barcode_labels.updateMany({
       where: { tenant_id: tenantId, label_id: labelId },
       data: {
         print_status: dto.printStatus,
@@ -78,5 +100,6 @@ export class BarcodeLabelService {
         print_count: { increment: 1 },
       },
     });
+    return this.findById(tenantId, labelId);
   }
 }

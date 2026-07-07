@@ -39,32 +39,32 @@ export class EventService {
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 50;
     const offset = (page - 1) * limit;
-    const conditions: string[] = ['tenant_id = $1::uuid'];
+    const conditions: string[] = ['we.tenant_id = $1::uuid'];
     const params: any[] = [tenantId];
     let idx = 2;
 
     if (query.eventType) {
-      conditions.push(`event_type = $${idx}`);
+      conditions.push(`we.event_type = $${idx}`);
       params.push(query.eventType);
       idx++;
     }
     if (query.severity) {
-      conditions.push(`severity = $${idx}`);
+      conditions.push(`we.severity = $${idx}`);
       params.push(query.severity);
       idx++;
     }
     if (query.relatedObjectType) {
-      conditions.push(`related_object_type = $${idx}`);
+      conditions.push(`we.related_object_type = $${idx}`);
       params.push(query.relatedObjectType);
       idx++;
     }
     if (query.dateFrom) {
-      conditions.push(`created_at >= $${idx}::timestamp`);
+      conditions.push(`we.created_at >= $${idx}::timestamp`);
       params.push(query.dateFrom);
       idx++;
     }
     if (query.dateTo) {
-      conditions.push(`created_at <= $${idx}::timestamp`);
+      conditions.push(`we.created_at <= $${idx}::timestamp`);
       params.push(query.dateTo);
       idx++;
     }
@@ -74,11 +74,13 @@ export class EventService {
 
     const countResult = await this.prisma.$queryRawUnsafe<
       Record<string, any>[]
-    >(`SELECT COUNT(*) AS total FROM ${table} ${where}`, ...params);
+    >(`SELECT COUNT(*) AS total FROM ${table} we ${where}`, ...params);
 
     const rows = await this.prisma.$queryRawUnsafe<Record<string, any>[]>(
-      `SELECT * FROM ${table} ${where}
-       ORDER BY created_at DESC
+      `SELECT we.*, wf.facility_name FROM ${table} we
+       LEFT JOIN multitenant.warehouse_facilities wf ON we.facility_id = wf.facility_id AND we.tenant_id = wf.tenant_id
+       ${where}
+       ORDER BY we.created_at DESC
        LIMIT $${idx} OFFSET $${idx + 1}`,
       ...params,
       limit,
@@ -94,16 +96,19 @@ export class EventService {
   }
 
   async delete(tenantId: string, id: bigint) {
-    return this.prisma.$executeRawUnsafe(
+    const entity = await this.findById(tenantId, id);
+    await this.prisma.$executeRawUnsafe(
       `DELETE FROM multitenant.warehouse_events WHERE event_id = $2::bigint AND tenant_id = $1::uuid`,
       tenantId, id,
     );
+    return entity;
   }
 
   async findById(tenantId: string, id: bigint) {
     const rows = await this.prisma.$queryRawUnsafe<Record<string, any>[]>(
-      `SELECT * FROM multitenant.warehouse_events
-       WHERE tenant_id = $1::uuid AND event_id = $2::bigint`,
+      `SELECT we.*, wf.facility_name FROM multitenant.warehouse_events we
+       LEFT JOIN multitenant.warehouse_facilities wf ON we.facility_id = wf.facility_id AND we.tenant_id = wf.tenant_id
+       WHERE we.tenant_id = $1::uuid AND we.event_id = $2::bigint`,
       tenantId,
       id,
     );

@@ -2,6 +2,14 @@ import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { task_status_old } from '@prisma/client';
 
+interface NamedTask {
+  facility_name: string | null;
+  product_name: string | null;
+  uom_name: string | null;
+  from_location_name: string | null;
+  to_location_name: string | null;
+}
+
 @Injectable()
 export class PutawayService {
   private readonly logger = new Logger(PutawayService.name);
@@ -9,29 +17,31 @@ export class PutawayService {
   constructor(private readonly prisma: PrismaService) {}
 
   async createTask(tenantId: string, dto: any) {
-    return this.prisma.putaway_tasks.create({
+    const task = await this.prisma.putaway_tasks.create({
       data: {
         tenant_id: tenantId,
-        facility_id: BigInt(dto.facilityId),
-        task_number: dto.taskNumber,
-        task_name: dto.taskName,
+        facility_id: BigInt(dto.facility_id),
+        task_number: dto.task_number,
+        task_name: dto.task_name,
         description: dto.description,
-        receipt_line_id: dto.receiptLineId ? BigInt(dto.receiptLineId) : undefined,
-        receipt_item_id: dto.receiptItemId ? BigInt(dto.receiptItemId) : undefined,
-        product_id: BigInt(dto.productId),
+        receipt_line_id: dto.receipt_line_id ? BigInt(dto.receipt_line_id) : undefined,
+        receipt_item_id: dto.receipt_item_id ? BigInt(dto.receipt_item_id) : undefined,
+        product_id: BigInt(dto.product_id),
+        lot_id: dto.lot_id ? BigInt(dto.lot_id) : undefined,
         quantity: dto.quantity,
-        uom_id: BigInt(dto.uomId),
-        from_location_id: BigInt(dto.fromLocationId),
-        to_location_id: dto.toLocationId ? BigInt(dto.toLocationId) : undefined,
+        uom_id: BigInt(dto.uom_id),
+        from_location_id: BigInt(dto.from_location_id),
+        to_location_id: dto.to_location_id ? BigInt(dto.to_location_id) : undefined,
         priority: dto.priority || 10,
-        due_date: dto.dueDate ? new Date(dto.dueDate) : undefined,
+        due_date: dto.due_date ? new Date(dto.due_date) : undefined,
         notes: dto.notes,
-        lot_number: dto.lotNumber,
-        suggested_location_barcode: dto.suggestedLocationBarcode,
-        grn_number: dto.grnNumber,
-        lpn_barcode: dto.lpnBarcode,
+        lot_number: dto.lot_number,
+        suggested_location_barcode: dto.suggested_location_barcode,
+        grn_number: dto.grn_number,
+        lpn_barcode: dto.lpn_barcode,
       },
     });
+    return this.enrichTaskWithNames(task);
   }
 
   async findAllTasks(tenantId: string, query: any) {
@@ -39,8 +49,8 @@ export class PutawayService {
     if (query.facilityId) where.facility_id = BigInt(query.facilityId);
     if (query.status) where.status = query.status;
     if (query.assignedToUserId) where.assigned_to_user_id = query.assignedToUserId;
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const [data, total] = await Promise.all([
       this.prisma.putaway_tasks.findMany({
         where, skip: (page - 1) * limit, take: limit,
@@ -48,7 +58,7 @@ export class PutawayService {
       }),
       this.prisma.putaway_tasks.count({ where }),
     ]);
-    return { data, total, page, limit };
+    return { data: await this.enrichTasksWithNames(data), total, page, limit };
   }
 
   async delete(tenantId: string, taskId: bigint) {
@@ -56,16 +66,18 @@ export class PutawayService {
   }
 
   async findTaskById(tenantId: string, taskId: bigint) {
-    return this.prisma.putaway_tasks.findFirst({
+    const task = await this.prisma.putaway_tasks.findFirst({
       where: { tenant_id: tenantId, task_id: taskId },
     });
+    return this.enrichTaskWithNames(task);
   }
 
   async nextTask(tenantId: string, facilityId: bigint) {
-    return this.prisma.putaway_tasks.findFirst({
+    const task = await this.prisma.putaway_tasks.findFirst({
       where: { tenant_id: tenantId, facility_id: facilityId, status: 'PENDING' },
       orderBy: [{ priority: 'asc' }, { created_at: 'asc' }],
     });
+    return this.enrichTaskWithNames(task);
   }
 
   async findTaskByLpn(tenantId: string, facilityId: bigint, lpnBarcode: string) {
@@ -76,9 +88,10 @@ export class PutawayService {
     if (lpn.status !== 'PUTAWAY_PENDING') {
       throw new BadRequestException(`LPN ${lpnBarcode} status is ${lpn.status}, must be PUTAWAY_PENDING`);
     }
-    return this.prisma.putaway_tasks.findFirst({
+    const task = await this.prisma.putaway_tasks.findFirst({
       where: { tenant_id: tenantId, facility_id: facilityId, lpn_barcode: lpnBarcode, status: { not: 'COMPLETED' } },
     });
+    return this.enrichTaskWithNames(task);
   }
 
   async startTask(tenantId: string, taskId: bigint) {
@@ -154,7 +167,7 @@ export class PutawayService {
         data: { status: 'IN_QC', updated_at: new Date() },
       });
     }
-    return rec;
+    return this.enrichDamageRecordWithNames(rec);
   }
 
   /**
@@ -323,11 +336,11 @@ export class PutawayService {
       throw new BadRequestException('Task must be ASSIGNED or IN_PROGRESS to complete');
     }
 
-    const toLocationId = dto.toLocationId ? BigInt(dto.toLocationId) : task.to_location_id;
+    const toLocationId = dto.to_location_id ? BigInt(dto.to_location_id) : task.to_location_id;
     if (!toLocationId) throw new BadRequestException('Destination location is required');
 
     // APP-PUT-H: Validate scanned location matches directed (or require override reason)
-    if (dto.actualLocationBarcode && !dto.overrideReasonCode) {
+    if (dto.actual_location_barcode && !dto.override_reason_code) {
       const location = await this.prisma.storage_locations.findFirst({
         where: { tenant_id: tenantId, OR: [{ location_code: dto.actualLocationBarcode }, { barcode_value: dto.actualLocationBarcode }] },
       });
@@ -340,17 +353,17 @@ export class PutawayService {
     const completedAt = new Date();
     const startedAt = task.created_at;
     const durationSeconds = startedAt ? Math.floor((completedAt.getTime() - new Date(startedAt).getTime()) / 1000) : 0;
-    const damageQty = Number(dto.damageQuantity || 0);
+    const damageQty = Number(dto.damage_quantity || 0);
 
     // GAP-2.1: Handle damage during putaway movement
     if (damageQty > 0) {
       await this.prisma.putaway_damage_records.create({
         data: {
           tenant_id: tenantId, facility_id: task.facility_id, task_id: taskId,
-          damage_code_id: dto.damageCodeId ? BigInt(dto.damageCodeId) : undefined,
+          damage_code_id: dto.damage_code_id ? BigInt(dto.damage_code_id) : undefined,
           damage_quantity: damageQty, lpn_barcode: task.lpn_barcode,
-          product_id: task.product_id, notes: dto.damageNotes || dto.notes || 'Damaged during putaway',
-          reported_by: dto.reportedBy || null, reported_at: new Date(),
+          product_id: task.product_id, notes: dto.damage_notes || dto.notes || 'Damaged during putaway',
+          reported_by: dto.reported_by || null, reported_at: new Date(),
         },
       });
       if (task.lpn_barcode) {
@@ -368,8 +381,8 @@ export class PutawayService {
         status: task_status_old.COMPLETED,
         completed_at: completedAt,
         to_location_id: toLocationId,
-        actual_location_barcode: dto.actualLocationBarcode || undefined,
-        override_reason_code: dto.overrideReasonCode || undefined,
+        actual_location_barcode: dto.actual_location_barcode || undefined,
+        override_reason_code: dto.override_reason_code || undefined,
         notes: dto.notes || undefined,
       },
     });
@@ -408,7 +421,7 @@ export class PutawayService {
         tenant_id: tenantId, facility_id: task.facility_id, reference_type: 'PUTAWAY', reference_id: task.task_id,
         product_id: task.product_id, from_location_id: task.from_location_id, to_location_id: toLocationId,
         transaction_type: 'PUTAWAY', transaction_status: 'COMPLETED', quantity: qtyGood, uom_id: task.uom_id,
-        lot_number: task.lot_number, reason_code: dto.overrideReasonCode || 'STANDARD',
+        lot_number: task.lot_number,         reason_code: dto.override_reason_code || 'STANDARD',
         reference_document_type: 'GRN', reference_document_number: task.grn_number,
       },
     });
@@ -456,6 +469,65 @@ export class PutawayService {
   }
 
   async findTasksByGrn(tenantId: string, grnNumber: string) {
-    return this.prisma.putaway_tasks.findMany({ where: { tenant_id: tenantId, grn_number: grnNumber }, orderBy: { priority: 'asc' } });
+    const tasks = await this.prisma.putaway_tasks.findMany({ where: { tenant_id: tenantId, grn_number: grnNumber }, orderBy: { priority: 'asc' } });
+    return this.enrichTasksWithNames(tasks);
+  }
+
+  private async enrichTasksWithNames(tasks: any[]): Promise<any[]> {
+    if (!tasks.length) return tasks;
+    const tenantId = tasks[0].tenant_id;
+    const facilityIds = [...new Set(tasks.map(t => t.facility_id).filter(Boolean))];
+    const productIds = [...new Set(tasks.map(t => t.product_id).filter(Boolean))];
+    const lotIds = [...new Set(tasks.map(t => t.lot_id).filter(Boolean))];
+    const uomIds = [...new Set(tasks.map(t => t.uom_id).filter(Boolean))];
+    const fromLocIds = [...new Set(tasks.map(t => t.from_location_id).filter(Boolean))];
+    const toLocIds = [...new Set(tasks.map(t => t.to_location_id).filter(Boolean))];
+    const allLocationIds = [...new Set([...fromLocIds, ...toLocIds])];
+    const [facilities, products, lots, uoms, locations] = await Promise.all([
+      facilityIds.length ? this.prisma.warehouse_facilities.findMany({ where: { tenant_id: tenantId, facility_id: { in: facilityIds } } }) : [],
+      productIds.length ? this.prisma.products.findMany({ where: { tenant_id: tenantId, product_id: { in: productIds } } }) : [],
+      lotIds.length ? this.prisma.inventory_lots.findMany({ where: { tenant_id: tenantId, lot_id: { in: lotIds } } }) : [],
+      uomIds.length ? this.prisma.units_of_measure.findMany({ where: { tenant_id: tenantId, uom_id: { in: uomIds } } }) : [],
+      allLocationIds.length ? this.prisma.storage_locations.findMany({ where: { tenant_id: tenantId, location_id: { in: allLocationIds } } }) : [],
+    ]) as [any[], any[], any[], any[], any[]];
+    const facMap = new Map<string, string>();
+    facilities.forEach(f => facMap.set(String(f.facility_id), f.facility_name));
+    const prodMap = new Map<string, string>();
+    products.forEach(p => prodMap.set(String(p.product_id), p.product_name));
+    const lotMap = new Map<string, string>();
+    lots.forEach(l => lotMap.set(String(l.lot_id), l.lot_number));
+    const uomMap = new Map<string, string>();
+    uoms.forEach(u => uomMap.set(String(u.uom_id), u.uom_name));
+    const locMap = new Map<string, string>();
+    locations.forEach(l => locMap.set(String(l.location_id), l.location_name));
+    return tasks.map(t => ({
+      ...t,
+      facility_name: facMap.get(String(t.facility_id)) ?? null,
+      product_name: prodMap.get(String(t.product_id)) ?? null,
+      lot_number: lotMap.get(String(t.lot_id)) ?? t.lot_number,
+      uom_name: uomMap.get(String(t.uom_id)) ?? null,
+      from_location_name: locMap.get(String(t.from_location_id)) ?? null,
+      to_location_name: locMap.get(String(t.to_location_id)) ?? null,
+    }));
+  }
+
+  private async enrichTaskWithNames(task: any): Promise<any> {
+    if (!task) return task;
+    const [tasks] = await this.enrichTasksWithNames([task]);
+    return tasks;
+  }
+
+  private async enrichDamageRecordWithNames(rec: any): Promise<any> {
+    if (!rec) return rec;
+    const tenantId = rec.tenant_id;
+    const facility = rec.facility_id ? await this.prisma.warehouse_facilities.findFirst({ where: { tenant_id: tenantId, facility_id: rec.facility_id } }) : null;
+    const damageCode = rec.damage_code_id ? await this.prisma.damage_codes.findFirst({ where: { tenant_id: tenantId, damage_code_id: rec.damage_code_id } }) : null;
+    const product = rec.product_id ? await this.prisma.products.findFirst({ where: { tenant_id: tenantId, product_id: rec.product_id } }) : null;
+    return {
+      ...rec,
+      facility_name: facility?.facility_name ?? null,
+      damage_code_name: damageCode?.description ?? null,
+      product_name: product?.product_name ?? null,
+    };
   }
 }

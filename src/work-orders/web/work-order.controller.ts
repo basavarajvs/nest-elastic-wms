@@ -1,5 +1,7 @@
 import { Controller, Get, Post, Patch, Delete, Param, Body, Query, Req, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse } from '@nestjs/swagger';
+import { WorkOrderResponseDto, WorkOrderOperationResponseDto, WorkOrderComponentResponseDto, ActionResponseDto, CreateWorkOrderDto, UpdateWorkOrderDto, StartOperationDto, CreateWorkOrderComponentDto } from '../dtos/work-order.dto';
+import { PaginatedResponseDto } from '../../common/dto/paginated-response.dto';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { CaslGuard } from '../../common/guards/casl.guard';
 import { CheckAbility } from '../../common/decorators/check-ability.decorator';
@@ -22,14 +24,16 @@ export class WorkOrderWebController {
   @Post()
   @CheckAbility({ action: WmsAction.Create, subject: 'WorkOrder' })
   @AuditLog({ eventType: 'WORK_ORDER_CREATE' })
-  async create(@Req() req: any, @Body() dto: any) {
+  @ApiCreatedResponse({ type: WorkOrderResponseDto })
+  async create(@Req() req: any, @Body() dto: CreateWorkOrderDto) {
     const tenantId = req.tenantContext.getTenantId();
     const userId = req.user?.sub;
-    return this.workOrdersService.create(tenantId, { ...dto, createdBy: userId });
+    return this.workOrdersService.create(tenantId, { ...dto, created_by: userId });
   }
 
   @Get()
   @CheckAbility({ action: WmsAction.List, subject: 'WorkOrder' })
+  @ApiOkResponse({ type: PaginatedResponseDto })
   async findAll(@Req() req: any, @Query() query: any) {
     const tenantId = req.tenantContext.getTenantId();
     return this.workOrdersService.findAll(tenantId, query);
@@ -37,6 +41,7 @@ export class WorkOrderWebController {
 
   @Get(':id')
   @CheckAbility({ action: WmsAction.Read, subject: 'WorkOrder' })
+  @ApiOkResponse({ type: WorkOrderResponseDto })
   async findById(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.workOrdersService.findById(tenantId, BigInt(id));
@@ -45,15 +50,17 @@ export class WorkOrderWebController {
   @Patch(':id')
   @CheckAbility({ action: WmsAction.Update, subject: 'WorkOrder' })
   @AuditLog({ eventType: 'WORK_ORDER_UPDATE' })
-  async update(@Req() req: any, @Param('id') id: string, @Body() dto: any) {
+  @ApiOkResponse({ type: WorkOrderResponseDto })
+  async update(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateWorkOrderDto) {
     const tenantId = req.tenantContext.getTenantId();
     const userId = req.user?.sub;
-    return this.workOrdersService.update(tenantId, BigInt(id), { ...dto, updatedBy: userId });
+    return this.workOrdersService.update(tenantId, BigInt(id), { ...dto, updated_by: userId });
   }
 
   @Delete(':id')
   @CheckAbility({ action: WmsAction.Delete, subject: 'WorkOrder' })
   @AuditLog({ eventType: 'WORK_ORDER_DELETE' })
+  @ApiOkResponse({ type: WorkOrderResponseDto })
   async delete(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.workOrdersService.delete(tenantId, BigInt(id));
@@ -62,6 +69,7 @@ export class WorkOrderWebController {
   @Post(':id/release')
   @CheckAbility({ action: WmsAction.Release, subject: 'WorkOrder' })
   @AuditLog({ eventType: 'WORK_ORDER_RELEASE' })
+  @ApiCreatedResponse({ type: ActionResponseDto })
   async release(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     const userId = req.user?.sub || req.rfSession?.userId;
@@ -71,6 +79,7 @@ export class WorkOrderWebController {
   @Post(':id/complete')
   @CheckAbility({ action: WmsAction.Update, subject: 'WorkOrder' })
   @AuditLog({ eventType: 'WORK_ORDER_COMPLETE' })
+  @ApiCreatedResponse({ type: ActionResponseDto })
   async complete(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     const userId = req.user?.sub || req.rfSession?.userId;
@@ -80,6 +89,7 @@ export class WorkOrderWebController {
   @Post(':id/cancel')
   @CheckAbility({ action: WmsAction.Cancel, subject: 'WorkOrder' })
   @AuditLog({ eventType: 'WORK_ORDER_CANCEL' })
+  @ApiCreatedResponse({ type: ActionResponseDto })
   async cancel(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     const userId = req.user?.sub || req.rfSession?.userId;
@@ -88,6 +98,7 @@ export class WorkOrderWebController {
 
   @Get(':id/operations')
   @CheckAbility({ action: WmsAction.List, subject: 'WorkOrderOperation' })
+  @ApiOkResponse({ type: WorkOrderOperationResponseDto, isArray: true })
   async findOperations(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.operationsService.findOperationsByWorkOrderId(tenantId, BigInt(id));
@@ -96,15 +107,17 @@ export class WorkOrderWebController {
   @Post(':id/operations')
   @CheckAbility({ action: WmsAction.Create, subject: 'WorkOrderOperation' })
   @AuditLog({ eventType: 'WORK_ORDER_OPERATION_CREATE' })
-  async startOperation(@Req() req: any, @Param('id') id: string, @Body() dto: any) {
+  @ApiCreatedResponse({ type: WorkOrderOperationResponseDto })
+  async startOperation(@Req() req: any, @Param('id') id: string, @Body() dto: StartOperationDto) {
     const tenantId = req.tenantContext.getTenantId();
     const userId = req.user?.sub;
-    return this.operationsService.startOperation(tenantId, BigInt(dto.operationId), userId);
+    return this.operationsService.startOperation(tenantId, BigInt(dto.operation_id), userId);
   }
 
   @Delete(':id/operations/:operationId')
   @CheckAbility({ action: WmsAction.Delete, subject: 'WorkOrderOperation' })
   @AuditLog({ eventType: 'WORK_ORDER_OPERATION_DELETE' })
+  @ApiOkResponse({ type: WorkOrderOperationResponseDto })
   async deleteOperation(@Req() req: any, @Param('id') id: string, @Param('operationId') operationId: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.operationsService.delete(tenantId, BigInt(id), BigInt(operationId));
@@ -112,6 +125,7 @@ export class WorkOrderWebController {
 
   @Get(':id/components')
   @CheckAbility({ action: WmsAction.List, subject: 'WorkOrderComponent' })
+  @ApiOkResponse({ type: WorkOrderComponentResponseDto, isArray: true })
   async findComponents(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.componentsService.findComponentsByWorkOrderId(tenantId, BigInt(id));
@@ -120,7 +134,8 @@ export class WorkOrderWebController {
   @Post(':id/components')
   @CheckAbility({ action: WmsAction.Create, subject: 'WorkOrderComponent' })
   @AuditLog({ eventType: 'WORK_ORDER_COMPONENT_ADD' })
-  async addComponent(@Req() req: any, @Param('id') id: string, @Body() dto: any) {
+  @ApiCreatedResponse({ type: WorkOrderComponentResponseDto })
+  async addComponent(@Req() req: any, @Param('id') id: string, @Body() dto: CreateWorkOrderComponentDto) {
     const tenantId = req.tenantContext.getTenantId();
     const userId = req.user?.sub;
     return this.componentsService.addComponent(tenantId, BigInt(id), { ...dto, createdBy: userId });
@@ -129,6 +144,7 @@ export class WorkOrderWebController {
   @Delete(':id/components/:componentId')
   @CheckAbility({ action: WmsAction.Delete, subject: 'WorkOrderComponent' })
   @AuditLog({ eventType: 'WORK_ORDER_COMPONENT_DELETE' })
+  @ApiOkResponse({ type: WorkOrderComponentResponseDto })
   async deleteComponent(@Req() req: any, @Param('id') id: string, @Param('componentId') componentId: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.componentsService.delete(tenantId, BigInt(id), BigInt(componentId));

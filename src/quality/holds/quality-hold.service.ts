@@ -6,32 +6,40 @@ export class QualityHoldService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(tenantId: string, dto: any) {
-    return this.prisma.quality_holds.create({
+    const hold = await this.prisma.quality_holds.create({
       data: {
         tenant_id: tenantId,
-        facility_id: BigInt(dto.facilityId),
-        hold_number: dto.holdNumber,
-        hold_name: dto.holdName,
+        facility_id: BigInt(dto.facility_id),
+        hold_number: dto.hold_number,
+        hold_name: dto.hold_name,
         description: dto.description,
-        reference_type: dto.referenceType,
-        reference_id: BigInt(dto.referenceId || 0),
-        product_id: dto.productId ? BigInt(dto.productId) : undefined,
-        lot_id: dto.lotId ? BigInt(dto.lotId) : undefined,
-        location_id: dto.locationId ? BigInt(dto.locationId) : undefined,
-        hold_reason: dto.holdReason,
-        hold_reason_code: dto.holdReasonCode,
-        placed_by_user_id: dto.placedByUserId,
-        affected_quantity: dto.affectedQuantity ? dto.affectedQuantity : undefined,
-        uom_id: dto.uomId ? BigInt(dto.uomId) : undefined,
+        reference_type: dto.reference_type,
+        reference_id: BigInt(dto.reference_id || 0),
+        product_id: dto.product_id ? BigInt(dto.product_id) : undefined,
+        lot_id: dto.lot_id ? BigInt(dto.lot_id) : undefined,
+        location_id: dto.location_id ? BigInt(dto.location_id) : undefined,
+        hold_reason: dto.hold_reason,
+        hold_reason_code: dto.hold_reason_code,
+        placed_by_user_id: dto.placed_by_user_id,
+        affected_quantity: dto.affected_quantity ? dto.affected_quantity : undefined,
+        uom_id: dto.uom_id ? BigInt(dto.uom_id) : undefined,
         notes: dto.notes,
-        created_by: dto.createdBy,
+        created_by: dto.created_by,
         status: 'OPEN',
       },
     });
+    let product_name: string | undefined;
+    if (hold.product_id) {
+      const product = await this.prisma.products.findFirst({ where: { tenant_id: tenantId, product_id: hold.product_id } });
+      product_name = product?.product_name;
+    }
+    return { ...hold, product_name };
   }
 
   async findAll(tenantId: string, query: any) {
-    const { facilityId, status, holdReason, productId, referenceType, page = 1, limit = 50 } = query;
+    const { facilityId, status, holdReason, productId, referenceType, page: queryPage, limit: queryLimit } = query;
+    const page = Number(queryPage) || 1;
+    const limit = Number(queryLimit) || 50;
     const skip = (page - 1) * limit;
     const where: any = { tenant_id: tenantId };
     if (facilityId) where.facility_id = BigInt(facilityId);
@@ -48,7 +56,16 @@ export class QualityHoldService {
       }),
       this.prisma.quality_holds.count({ where }),
     ]);
-    return { data, total, page, limit };
+    const productIds = [...new Set(data.filter(d => d.product_id).map(d => d.product_id))] as bigint[];
+    const products = productIds.length
+      ? await this.prisma.products.findMany({ where: { tenant_id: tenantId, product_id: { in: productIds } } })
+      : [];
+    const productMap = new Map(products.map(p => [p.product_id, p.product_name]));
+    const mapped = data.map(d => ({
+      ...d,
+      product_name: d.product_id ? productMap.get(d.product_id) : undefined,
+    }));
+    return { data: mapped, total, page, limit };
   }
 
   async findById(tenantId: string, id: string) {
@@ -56,30 +73,42 @@ export class QualityHoldService {
       where: { hold_id: BigInt(id) },
     });
     if (!hold) throw new NotFoundException('Quality hold not found');
-    return hold;
+    let product_name: string | undefined;
+    if (hold.product_id) {
+      const product = await this.prisma.products.findFirst({ where: { tenant_id: tenantId, product_id: hold.product_id } });
+      product_name = product?.product_name;
+    }
+    return { ...hold, product_name };
   }
 
   async update(tenantId: string, id: string, dto: any) {
     await this.findById(tenantId, id);
-    return this.prisma.quality_holds.update({
+    const updated = await this.prisma.quality_holds.update({
       where: { hold_id: BigInt(id) },
       data: {
-        hold_name: dto.holdName,
+        hold_name: dto.hold_name,
         description: dto.description,
-        hold_reason: dto.holdReason,
-        hold_reason_code: dto.holdReasonCode,
-        affected_quantity: dto.affectedQuantity ? dto.affectedQuantity : undefined,
+        hold_reason: dto.hold_reason,
+        hold_reason_code: dto.hold_reason_code,
+        affected_quantity: dto.affected_quantity ? dto.affected_quantity : undefined,
         notes: dto.notes,
-        updated_by: dto.updatedBy,
+        updated_by: dto.updated_by,
       },
     });
+    let product_name: string | undefined;
+    if (updated.product_id) {
+      const product = await this.prisma.products.findFirst({ where: { tenant_id: tenantId, product_id: updated.product_id } });
+      product_name = product?.product_name;
+    }
+    return { ...updated, product_name };
   }
 
   async delete(tenantId: string, id: string) {
+    const entity = await this.findById(tenantId, id);
     await this.prisma.quality_holds.deleteMany({
       where: { tenant_id: tenantId, hold_id: BigInt(id) },
     });
-    return { message: 'Quality hold deleted successfully' };
+    return entity;
   }
 
   async release(tenantId: string, id: string, userId: string, reason?: string) {

@@ -12,9 +12,11 @@ export class ShipmentService {
    * Auto-populates carrier info, delivery address from order.
    */
   async delete(tenantId: string, shipmentId: bigint) {
-    return this.prisma.outbound_shipments.deleteMany({
+    const shipment = await this.findShipmentById(tenantId, shipmentId);
+    await this.prisma.outbound_shipments.deleteMany({
       where: { tenant_id: tenantId, shipment_id: shipmentId },
     });
+    return shipment;
   }
 
   async create(tenantId: string, dto: any) {
@@ -35,9 +37,9 @@ export class ShipmentService {
 
     // If orderId given, pull delivery address from sales order
     let deliveryFields: any = {};
-    if (dto.orderId) {
+    if (dto.order_id) {
       const order = await this.prisma.sales_orders.findFirst({
-        where: { tenant_id: tenantId, order_id: BigInt(dto.orderId) },
+        where: { tenant_id: tenantId, order_id: BigInt(dto.order_id) },
       });
       if (order) {
         deliveryFields = {
@@ -57,18 +59,29 @@ export class ShipmentService {
     const shipment = await this.prisma.outbound_shipments.create({
       data: {
         tenant_id: tenantId,
-        facility_id: BigInt(dto.facilityId),
-        shipment_number: dto.shipmentNumber || `SHIP-${Date.now()}`,
-        order_id: dto.orderId ? BigInt(dto.orderId) : undefined,
-        client_id: dto.clientId ? BigInt(dto.clientId) : BigInt(0),
+        facility_id: BigInt(dto.facility_id),
+        shipment_number: dto.shipment_number || `SHIP-${Date.now()}`,
+        shipment_name: dto.shipment_name,
+        description: dto.description,
+        order_id: dto.order_id ? BigInt(dto.order_id) : undefined,
+        client_id: dto.client_id ? BigInt(dto.client_id) : BigInt(0),
         carrier_id: carrierId,
-        carrier_code: dto.carrierCode || carrierCode,
-        carrier_name: dto.carrierName || carrierName,
-        service_level: dto.serviceLevel,
-        scheduled_ship_date: dto.scheduledShipDate ? new Date(dto.scheduledShipDate) : undefined,
-        driver_name: dto.driverName,
-        trailer_number: dto.trailerNumber,
-        total_cartons: dto.totalCartons || 0,
+        carrier_code: dto.carrier_code || carrierCode,
+        carrier_name: dto.carrier_name || carrierName,
+        service_level: dto.service_level,
+        scheduled_ship_date: dto.scheduled_ship_date ? new Date(dto.scheduled_ship_date) : undefined,
+        driver_name: dto.driver_name,
+        trailer_number: dto.trailer_number,
+        total_cartons: dto.total_cartons || 0,
+        total_weight: dto.total_weight,
+        total_volume: dto.total_volume,
+        number_of_packages: dto.number_of_packages,
+        expected_carton_count: dto.expected_carton_count,
+        staging_lane_id: dto.staging_lane_id ? BigInt(dto.staging_lane_id) : undefined,
+        tracking_number: dto.tracking_number,
+        tracking_url: dto.tracking_url,
+        pro_number: dto.pro_number,
+        notes: dto.notes,
         ...deliveryFields,
       },
     });
@@ -86,23 +99,42 @@ export class ShipmentService {
         { carrier_name: { contains: query.search, mode: 'insensitive' } },
       ];
     }
-    const page = query.page || 1;
-    const limit = query.limit || 20;
-    const [data, total] = await Promise.all([
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
+    const [rows, total] = await Promise.all([
       this.prisma.outbound_shipments.findMany({
         where,
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { scheduled_ship_date: 'asc' },
+        include: { warehouse_facilities: true, loads: true },
       }),
       this.prisma.outbound_shipments.count({ where }),
     ]);
+    const orderIds = rows.map(r => r.order_id).filter(Boolean) as bigint[];
+    const laneIds = rows.map(r => r.staging_lane_id).filter(Boolean) as bigint[];
+    const [orders, lanes] = await Promise.all([
+      orderIds.length ? this.prisma.sales_orders.findMany({ where: { tenant_id: tenantId, order_id: { in: orderIds } } }) : [],
+      laneIds.length ? this.prisma.staging_lanes.findMany({ where: { tenant_id: tenantId, lane_id: { in: laneIds } } }) : [],
+    ]);
+    const orderMap = new Map<bigint, string>(orders.map(o => [o.order_id, o.order_number] as [bigint, string]));
+    const laneMap = new Map<bigint, string>(lanes.map(l => [l.lane_id, l.lane_code] as [bigint, string]));
+    const data = rows.map(r => ({
+      ...r,
+      facility_name: r.warehouse_facilities?.facility_name,
+      order_number: r.order_id ? orderMap.get(r.order_id) : undefined,
+      load_number: r.loads?.load_number,
+      lane_name: r.staging_lane_id ? laneMap.get(r.staging_lane_id) : undefined,
+      warehouse_facilities: undefined,
+      loads: undefined,
+    }));
     return { data, total, page, limit };
   }
 
   async findShipmentById(tenantId: string, shipmentId: bigint) {
     const shipment = await this.prisma.outbound_shipments.findFirst({
       where: { tenant_id: tenantId, shipment_id: shipmentId },
+      include: { warehouse_facilities: true, loads: true },
     });
     if (!shipment) return null;
     const items = await this.prisma.outbound_shipment_items.findMany({
@@ -115,7 +147,26 @@ export class ShipmentService {
       where: { tenant_id: tenantId, shipment_id: shipmentId },
       orderBy: { changed_at: 'asc' },
     });
-    return { ...shipment, items, labels, statusHistory: history };
+    let orderNumber: string | undefined;
+    let laneName: string | undefined;
+    if (shipment.order_id) {
+      const order = await this.prisma.sales_orders.findFirst({ where: { tenant_id: tenantId, order_id: shipment.order_id } });
+      orderNumber = order?.order_number;
+    }
+    if (shipment.staging_lane_id) {
+      const lane = await this.prisma.staging_lanes.findFirst({ where: { tenant_id: tenantId, lane_id: shipment.staging_lane_id } });
+      laneName = lane?.lane_code;
+    }
+    return {
+      ...shipment,
+      facility_name: shipment.warehouse_facilities?.facility_name,
+      order_number: orderNumber,
+      load_number: shipment.loads?.load_number,
+      lane_name: laneName,
+      warehouse_facilities: undefined,
+      loads: undefined,
+      items, labels, statusHistory: history,
+    };
   }
 
   /** Assign a carrier to the shipment */
@@ -220,27 +271,27 @@ export class ShipmentService {
       data: {
         status: 'SHIPPED',
         shipped_date: new Date(),
-        tracking_number: dto.trackingNumber || shipment.tracking_number,
-        tracking_url: dto.trackingUrl || shipment.tracking_url,
-        pro_number: dto.proNumber || shipment.pro_number,
-        driver_name: dto.driverName || shipment.driver_name,
-        total_cartons: dto.totalCartons || shipment.total_cartons,
-        total_weight: dto.totalWeight || shipment.total_weight,
-        total_volume: dto.totalVolume || shipment.total_volume,
-        number_of_packages: dto.numberOfPackages || shipment.number_of_packages,
+        tracking_number: dto.tracking_number || shipment.tracking_number,
+        tracking_url: dto.tracking_url || shipment.tracking_url,
+        pro_number: dto.pro_number || shipment.pro_number,
+        driver_name: dto.driver_name || shipment.driver_name,
+        total_cartons: dto.total_cartons || shipment.total_cartons,
+        total_weight: dto.total_weight || shipment.total_weight,
+        total_volume: dto.total_volume || shipment.total_volume,
+        number_of_packages: dto.number_of_packages || shipment.number_of_packages,
       },
     });
 
     // Generate shipping label
-    if (dto.generateLabel !== false) {
+    if (dto.generate_label !== false) {
       await this.prisma.shipping_labels.create({
         data: {
           tenant_id: tenantId,
           facility_id: shipment.facility_id,
           shipment_id: shipmentId,
-          tracking_number: dto.trackingNumber || shipment.tracking_number || `TRK-${Date.now()}`,
+          tracking_number: dto.tracking_number || shipment.tracking_number || `TRK-${Date.now()}`,
           service_level: shipment.service_level,
-          weight: dto.totalWeight || shipment.total_weight,
+          weight: dto.total_weight || shipment.total_weight,
           status: 'GENERATED',
           generated_at: new Date(),
         },

@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Patch, Param, Body, Req, UseGuards } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Post, Patch, Param, Body, Req, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOkResponse, ApiCreatedResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { CaslGuard } from '../../common/guards/casl.guard';
 import { CheckAbility } from '../../common/decorators/check-ability.decorator';
@@ -7,6 +7,27 @@ import { WmsAction } from '../../casl/casl.types';
 import { RootCauseService } from '../counts/root-cause.service';
 import { CycleCountService } from '../counts/cycle-count.service';
 import { CountSchedulerService } from '../counts/count-scheduler.service';
+import {
+  CycleCountResponseDto,
+  CycleCountLineResponseDto,
+  VarianceInvestigationResponseDto,
+  CompareRecountResponseDto,
+  CycleCountEventResponseDto,
+  CountProgressResponseDto,
+  RootCauseCategoryResponseDto,
+  CountSchedulerMetricsResponseDto,
+  SchedulerGenerateResponseDto,
+  ReclassifyAbcResponseDto,
+  RejectVarianceDto,
+  CompareRecountDto,
+  GetNextCountWorkDto,
+  SaveDraftLineDto,
+  CreateRootCauseCategoryDto,
+  AssignRootCauseDto,
+  GenerateScheduledCountsDto,
+  ReclassifyAbcDto,
+  CreateCycleCountDto,
+} from '../dtos/inventory-response.dto';
 
 @ApiTags('Inventory')
 @Controller('web/cycle-counts')
@@ -20,6 +41,7 @@ export class CycleCountWebSupervisorController {
   // GAP-4.3: Web supervisor review endpoints
   @Get('pending-reviews')
   @CheckAbility({ action: WmsAction.List, subject: 'CycleCount' })
+  @ApiOkResponse({ type: [VarianceInvestigationResponseDto] })
   async pendingReviews(@Req() req: any) {
     const tenantId = req.tenantContext.getTenantId();
     const facilityId = BigInt(req.query?.facilityId || 0);
@@ -28,6 +50,7 @@ export class CycleCountWebSupervisorController {
 
   @Post(':id/approve')
   @CheckAbility({ action: WmsAction.Approve, subject: 'CycleCount' })
+  @ApiCreatedResponse({ type: VarianceInvestigationResponseDto })
   async approve(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     const userId = req.user?.sub;
@@ -36,7 +59,8 @@ export class CycleCountWebSupervisorController {
 
   @Post(':id/reject')
   @CheckAbility({ action: WmsAction.Approve, subject: 'CycleCount' })
-  async reject(@Req() req: any, @Param('id') id: string, @Body() dto: any) {
+  @ApiCreatedResponse({ type: VarianceInvestigationResponseDto })
+  async reject(@Req() req: any, @Param('id') id: string, @Body() dto: RejectVarianceDto) {
     const tenantId = req.tenantContext.getTenantId();
     const userId = req.user?.sub;
     return this.cycleCountService.rejectVariance(tenantId, BigInt(id), userId, dto?.reason || 'Rejected by supervisor');
@@ -44,6 +68,7 @@ export class CycleCountWebSupervisorController {
 
   @Post(':id/recount')
   @CheckAbility({ action: WmsAction.Update, subject: 'CycleCount' })
+  @ApiCreatedResponse({ type: VarianceInvestigationResponseDto })
   async recount(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     const userId = req.user?.sub;
@@ -53,14 +78,16 @@ export class CycleCountWebSupervisorController {
   // GAP-3.3: Recount comparison
   @Post(':id/compare-recount')
   @CheckAbility({ action: WmsAction.Read, subject: 'CycleCount' })
-  async compareRecount(@Req() req: any, @Param('id') id: string, @Body() dto: any) {
+  @ApiCreatedResponse({ type: CompareRecountResponseDto })
+  async compareRecount(@Req() req: any, @Param('id') id: string, @Body() dto: CompareRecountDto) {
     const tenantId = req.tenantContext.getTenantId();
-    return this.cycleCountService.compareRecount(tenantId, id, dto.recountCountId);
+    return this.cycleCountService.compareRecount(tenantId, id, dto.recount_count_id);
   }
 
   // APP-CC-E: Audit timeline
   @Get(':id/timeline')
   @CheckAbility({ action: WmsAction.Read, subject: 'CycleCount' })
+  @ApiOkResponse({ type: [CycleCountEventResponseDto] })
   async timeline(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.cycleCountService.getAuditTimeline(tenantId, id);
@@ -69,17 +96,19 @@ export class CycleCountWebSupervisorController {
   // APP-CC-F: getNextCountWork
   @Post('next-count-work')
   @CheckAbility({ action: WmsAction.ExecuteCycleCount, subject: 'CycleCount' })
-  async nextCountWork(@Req() req: any, @Body() dto: any) {
+  @ApiCreatedResponse({ type: CycleCountResponseDto })
+  async nextCountWork(@Req() req: any, @Body() dto: GetNextCountWorkDto) {
     const tenantId = req.tenantContext.getTenantId();
     const userId = req.user?.sub;
-    const facilityId = BigInt(dto.facilityId || 0);
+    const facilityId = BigInt(dto.facility_id || 0);
     return this.cycleCountService.getNextCountWork(tenantId, facilityId, userId);
   }
 
   // APP-CC-K: Ad-hoc count creation
   @Post('create-ad-hoc')
   @CheckAbility({ action: WmsAction.ExecuteCycleCount, subject: 'CycleCount' })
-  async createAdHoc(@Req() req: any, @Body() dto: any) {
+  @ApiCreatedResponse({ type: CycleCountResponseDto })
+  async createAdHoc(@Req() req: any, @Body() dto: CreateCycleCountDto) {
     const tenantId = req.tenantContext.getTenantId();
     return this.cycleCountService.createAdHoc(tenantId, dto);
   }
@@ -87,7 +116,8 @@ export class CycleCountWebSupervisorController {
   // APP-CC-G: Save draft line
   @Post(':id/save-draft-line')
   @CheckAbility({ action: WmsAction.Count, subject: 'CycleCountLine' })
-  async saveDraftLine(@Req() req: any, @Param('id') id: string, @Body() dto: any) {
+  @ApiCreatedResponse({ type: CycleCountLineResponseDto })
+  async saveDraftLine(@Req() req: any, @Param('id') id: string, @Body() dto: SaveDraftLineDto) {
     const tenantId = req.tenantContext.getTenantId();
     return this.cycleCountService.saveDraftLine(tenantId, id, dto);
   }
@@ -95,6 +125,7 @@ export class CycleCountWebSupervisorController {
   // APP-CC-G: Get count progress
   @Get(':id/progress')
   @CheckAbility({ action: WmsAction.Read, subject: 'CycleCount' })
+  @ApiOkResponse({ type: CountProgressResponseDto })
   async getProgress(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.cycleCountService.getCountProgress(tenantId, id);
@@ -110,13 +141,15 @@ export class RootCauseWebController {
 
   @Post()
   @CheckAbility({ action: WmsAction.Create, subject: 'CycleCount' })
-  async create(@Req() req: any, @Body() dto: any) {
+  @ApiCreatedResponse({ type: RootCauseCategoryResponseDto })
+  async create(@Req() req: any, @Body() dto: CreateRootCauseCategoryDto) {
     const tenantId = req.tenantContext.getTenantId();
     return this.rootCauseService.createCategory(tenantId, dto);
   }
 
   @Get()
   @CheckAbility({ action: WmsAction.List, subject: 'CycleCount' })
+  @ApiOkResponse({ type: [RootCauseCategoryResponseDto] })
   async findAll(@Req() req: any) {
     const tenantId = req.tenantContext.getTenantId();
     return this.rootCauseService.findAllCategories(tenantId);
@@ -124,9 +157,10 @@ export class RootCauseWebController {
 
   @Post(':categoryId/assign')
   @CheckAbility({ action: WmsAction.Update, subject: 'CycleCount' })
-  async assign(@Req() req: any, @Param('categoryId') categoryId: string, @Body() dto: any) {
+  @ApiCreatedResponse({ type: VarianceInvestigationResponseDto })
+  async assign(@Req() req: any, @Param('categoryId') categoryId: string, @Body() dto: AssignRootCauseDto) {
     const tenantId = req.tenantContext.getTenantId();
-    return this.rootCauseService.assignRootCause(tenantId, BigInt(dto.investigationId), BigInt(categoryId), dto.description);
+    return this.rootCauseService.assignRootCause(tenantId, BigInt(dto.investigation_id), BigInt(categoryId), dto.description);
   }
 }
 
@@ -139,20 +173,23 @@ export class CountSchedulerWebController {
 
   @Post('generate')
   @CheckAbility({ action: WmsAction.ManageCycleCountSchedule, subject: 'CycleCount' })
-  async generate(@Req() req: any, @Body() dto: any) {
+  @ApiCreatedResponse({ type: SchedulerGenerateResponseDto })
+  async generate(@Req() req: any, @Body() dto: GenerateScheduledCountsDto) {
     const tenantId = req.tenantContext.getTenantId();
-    return this.schedulerService.generateScheduledCounts(tenantId, BigInt(dto.facilityId));
+    return this.schedulerService.generateScheduledCounts(tenantId, BigInt(dto.facility_id));
   }
 
   @Post('reclassify-abc')
   @CheckAbility({ action: WmsAction.ManageCycleCountSchedule, subject: 'CycleCount' })
-  async reclassify(@Req() req: any, @Body() dto: any) {
+  @ApiCreatedResponse({ type: ReclassifyAbcResponseDto })
+  async reclassify(@Req() req: any, @Body() dto: ReclassifyAbcDto) {
     const tenantId = req.tenantContext.getTenantId();
-    return this.schedulerService.reclassifyABC(tenantId, BigInt(dto.facilityId));
+    return this.schedulerService.reclassifyABC(tenantId, BigInt(dto.facility_id));
   }
 
   @Get('metrics')
   @CheckAbility({ action: WmsAction.Read, subject: 'CycleCount' })
+  @ApiOkResponse({ type: [CountSchedulerMetricsResponseDto] })
   async metrics(@Req() req: any) {
     const tenantId = req.tenantContext.getTenantId();
     const facilityId = BigInt(req.query?.facilityId || 0);

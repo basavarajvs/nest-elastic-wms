@@ -1,5 +1,6 @@
 import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse } from '@nestjs/swagger';
+import { ExecutionInstanceResponseDto, BpmnExecutionResponseDto, ExecutionListResponseDto } from '../dtos/execution.dto';
 import { JwtAuthGuard } from '../../../common/auth/jwt-auth.guard';
 import { CaslGuard } from '../../../common/guards/casl.guard';
 import { CheckAbility } from '../../../common/decorators/check-ability.decorator';
@@ -14,10 +15,11 @@ export class ExecutionController {
   @Get()
   @CheckAbility({ action: 'read', subject: 'Workflow' })
   @ApiOperation({ summary: 'List execution instances' })
+  @ApiOkResponse({ type: ExecutionListResponseDto })
   async findAll(@Req() req: any, @Query() query: any): Promise<any> {
     const tenantId = req.tenantContext.getTenantId();
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const offset = (page - 1) * limit;
 
     const where: string[] = [`tenant_id = $1`];
@@ -75,6 +77,7 @@ export class ExecutionController {
   @Get(':id')
   @CheckAbility({ action: 'read', subject: 'Workflow' })
   @ApiOperation({ summary: 'Get execution instance by ID' })
+  @ApiOkResponse({ type: ExecutionInstanceResponseDto })
   async findById(@Req() req: any, @Param('id') id: string): Promise<any> {
     const tenantId = req.tenantContext.getTenantId();
 

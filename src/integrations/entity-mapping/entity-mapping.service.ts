@@ -6,11 +6,12 @@ export class EntityMappingService {
   constructor(private readonly prisma: PrismaService) {}
 
   async delete(tenantId: string, id: string) {
-    await this.prisma.$queryRawUnsafe(
+    const result = await this.prisma.$executeRawUnsafe(
       `DELETE FROM external_entity_mappings WHERE tenant_id = $1::uuid AND mapping_id = $2::uuid`,
       tenantId,
       id,
     );
+    return { count: result };
   }
 
   async create(tenantId: string, dto: any) {
@@ -24,18 +25,18 @@ export class EntityMappingService {
        RETURNING *`,
       tenantId,
       dto.platform,
-      dto.externalEntityType,
-      dto.externalEntityId,
-      dto.wmsEntityType,
-      BigInt(dto.wmsEntityId),
+      dto.external_entity_type,
+      dto.external_entity_id,
+      dto.wms_entity_type,
+      BigInt(dto.wms_entity_id),
       JSON.stringify(dto.metadata || {}),
     );
     return result[0];
   }
 
   async findAll(tenantId: string, query: any) {
-    const page = query.page || 1;
-    const limit = query.limit || 50;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 50;
     const offset = (page - 1) * limit;
     const platform = query.platform;
     let where = `WHERE tenant_id = $1::uuid`;

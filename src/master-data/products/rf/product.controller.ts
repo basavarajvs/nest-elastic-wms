@@ -1,7 +1,8 @@
 import { Controller, Post, Body, Req } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse } from '@nestjs/swagger';
 import { RfAction } from '../../../common/decorators/rf-action.decorator';
 import { ProductService } from '../product.service';
+import { RfProductLookupRequestDto, RfProductLookupDto } from '../dtos/product-response.dto';
 
 @ApiTags('WMS-RF')
 @Controller('rf/products')
@@ -11,7 +12,8 @@ export class RfProductController {
   @Post('lookup')
   @ApiOperation({ summary: 'RF: Scan product barcode' })
   @RfAction('read')
-  async lookup(@Req() req: any, @Body() dto: { barcode: string }) {
+  @ApiOkResponse({ type: RfProductLookupDto })
+  async lookup(@Req() req: any, @Body() dto: RfProductLookupRequestDto) {
     const tenantId = req.tenantContext.getTenantId();
     return this.productService.rfLookup(tenantId, dto.barcode);
   }

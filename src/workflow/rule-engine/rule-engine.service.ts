@@ -52,12 +52,12 @@ export class RuleEngineService {
     const existing = await this.prisma.$queryRawUnsafe<RuleDefinition[]>(
       `SELECT * FROM wms_rules WHERE tenant_id = $1 AND rule_key = $2 AND is_active = true LIMIT 1`,
       tenantId,
-      dto.ruleKey,
+      dto.rule_key,
     );
 
     if (existing.length > 0) {
       throw new BadRequestException(
-        `Rule with key '${dto.ruleKey}' already exists`,
+        `Rule with key '${dto.rule_key}' already exists`,
       );
     }
 
@@ -66,10 +66,10 @@ export class RuleEngineService {
        VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7)
        RETURNING *`,
       tenantId,
-      dto.ruleKey,
+      dto.rule_key,
       dto.name,
-      dto.ruleType || 'DMN',
-      JSON.stringify(dto.definitionJson),
+      dto.rule_type || 'DMN',
+      JSON.stringify(dto.definition_json),
       userId,
       userId,
     );
@@ -78,8 +78,8 @@ export class RuleEngineService {
   }
 
   async findAll(tenantId: string, query: any) {
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const offset = (page - 1) * limit;
 
     const where: string[] = [`tenant_id = $1`];
@@ -145,13 +145,13 @@ export class RuleEngineService {
       clause.push(`name = $${idx++}`);
       params.push(dto.name);
     }
-    if (dto.definitionJson !== undefined) {
+    if (dto.definition_json !== undefined) {
       clause.push(`definition_json = $${idx++}::jsonb`);
-      params.push(JSON.stringify(dto.definitionJson));
+      params.push(JSON.stringify(dto.definition_json));
     }
-    if (dto.isActive !== undefined) {
+    if (dto.is_active !== undefined) {
       clause.push(`is_active = $${idx++}`);
-      params.push(dto.isActive);
+      params.push(dto.is_active);
     }
     clause.push(`updated_by = $${idx++}`);
     params.push(userId);
@@ -170,13 +170,13 @@ export class RuleEngineService {
   }
 
   async delete(tenantId: string, id: string) {
-    await this.findById(tenantId, id);
+    const entity = await this.findById(tenantId, id);
     await this.prisma.$executeRawUnsafe(
       `DELETE FROM wms_rules WHERE tenant_id = $1 AND id = $2`,
       tenantId,
       id,
     );
-    return { success: true, message: 'Rule definition deleted' };
+    return entity;
   }
 
   async evaluate(

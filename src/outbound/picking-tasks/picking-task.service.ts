@@ -17,9 +17,11 @@ export class PickingTaskService {
   ) {}
 
   async deleteTask(tenantId: string, taskId: bigint) {
-    return this.prisma.picking_tasks.deleteMany({
+    const task = await this.findTaskById(tenantId, taskId);
+    await this.prisma.picking_tasks.deleteMany({
       where: { tenant_id: tenantId, task_id: taskId },
     });
+    return task;
   }
 
   // APP-PICK-I: Atomic nextTask with APP-PICK-B equipment filtering and route optimization
@@ -121,7 +123,7 @@ export class PickingTaskService {
     });
     if (!task) return null;
 
-    const [product, location, orderLine, picker] = await Promise.all([
+    const [product, location, orderLine, picker, facility, order, wave] = await Promise.all([
       this.prisma.products.findFirst({ where: { tenant_id: tenantId, product_id: task.product_id } }),
       task.from_location_id
         ? this.prisma.storage_locations.findFirst({ where: { tenant_id: tenantId, location_id: task.from_location_id } })
@@ -134,6 +136,13 @@ export class PickingTaskService {
             `SELECT id FROM multitenant.db_rf_sessions WHERE tenant_id = $1::uuid AND user_id = $2::uuid LIMIT 1`,
             tenantId, task.assigned_to_user_id,
           ).then((r) => r[0] || null)
+        : null,
+      this.prisma.warehouse_facilities.findFirst({ where: { tenant_id: tenantId, facility_id: task.facility_id }, select: { facility_name: true } }),
+      task.order_id
+        ? this.prisma.sales_orders.findFirst({ where: { tenant_id: tenantId, order_id: task.order_id }, select: { order_number: true } })
+        : null,
+      task.wave_id
+        ? this.prisma.picking_waves.findFirst({ where: { tenant_id: tenantId, wave_id: task.wave_id }, select: { wave_name: true } })
         : null,
     ]);
 
@@ -155,6 +164,14 @@ export class PickingTaskService {
 
     return {
       ...task,
+      facility_name: facility?.facility_name || null,
+      product_name: product?.product_name || null,
+      order_number: order?.order_number || null,
+      wave_name: wave?.wave_name || null,
+      from_location_name: location?.location_name || null,
+      to_location_name: task.to_location_id
+        ? (await this.prisma.storage_locations.findFirst({ where: { tenant_id: tenantId, location_id: task.to_location_id }, select: { location_name: true } }))?.location_name || null
+        : null,
       product,
       location,
       orderLine,
@@ -528,10 +545,11 @@ export class PickingTaskService {
     if (facilityId) where.facility_id = facilityId;
     where.status = { not: 'COMPLETED' };
 
-    return this.prisma.picking_tasks.findMany({
+    const tasks = await this.prisma.picking_tasks.findMany({
       where,
       orderBy: { priority: 'asc' },
     });
+    return this.enrichTasksWithNames(tenantId, tasks);
   }
 
   async findAllTasks(tenantId: string, query: any) {
@@ -541,8 +559,8 @@ export class PickingTaskService {
     if (query.status) where.status = query.status;
     if (query.assignedToUserId) where.assigned_to_user_id = query.assignedToUserId;
 
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const [data, total] = await Promise.all([
       this.prisma.picking_tasks.findMany({
         where,
@@ -552,7 +570,7 @@ export class PickingTaskService {
       }),
       this.prisma.picking_tasks.count({ where }),
     ]);
-    return { data, total, page, limit };
+    return { data: await this.enrichTasksWithNames(tenantId, data), total, page, limit };
   }
 
   // GAP-7: Pre-pick allocation validation
@@ -631,6 +649,52 @@ export class PickingTaskService {
     return this.prisma.backorder_records.create({
       data: { tenant_id: tenantId, order_line_id: orderLineId, shortfall_qty: shortfallQty, status: 'OPEN' },
     });
+  }
+
+  private async enrichTasksWithNames(tenantId: string, tasks: any[]): Promise<any[]> {
+    if (!tasks.length) return tasks;
+
+    const facilityIds = [...new Set(tasks.map(t => t.facility_id).filter(Boolean))];
+    const productIds = [...new Set(tasks.map(t => t.product_id).filter(Boolean))];
+    const orderIds = [...new Set(tasks.map(t => t.order_id).filter(Boolean))];
+    const waveIds = [...new Set(tasks.map(t => t.wave_id).filter(Boolean))];
+    const fromLocationIds = [...new Set(tasks.map(t => t.from_location_id).filter(Boolean))];
+    const toLocationIds = [...new Set(tasks.map(t => t.to_location_id).filter(Boolean))];
+    const locationIds = [...new Set([...fromLocationIds, ...toLocationIds])];
+
+    const [facilities, products, orders, waves, locations] = await Promise.all([
+      facilityIds.length
+        ? this.prisma.warehouse_facilities.findMany({ where: { tenant_id: tenantId, facility_id: { in: facilityIds } }, select: { facility_id: true, facility_name: true } })
+        : [],
+      productIds.length
+        ? this.prisma.products.findMany({ where: { tenant_id: tenantId, product_id: { in: productIds } }, select: { product_id: true, product_name: true } })
+        : [],
+      orderIds.length
+        ? this.prisma.sales_orders.findMany({ where: { tenant_id: tenantId, order_id: { in: orderIds } }, select: { order_id: true, order_number: true } })
+        : [],
+      waveIds.length
+        ? this.prisma.picking_waves.findMany({ where: { tenant_id: tenantId, wave_id: { in: waveIds } }, select: { wave_id: true, wave_name: true } })
+        : [],
+      locationIds.length
+        ? this.prisma.storage_locations.findMany({ where: { tenant_id: tenantId, location_id: { in: locationIds } }, select: { location_id: true, location_name: true } })
+        : [],
+    ]);
+
+    const facilityMap = new Map(facilities.map(f => [Number(f.facility_id), f.facility_name] as [number, string]));
+    const productMap = new Map(products.map(p => [Number(p.product_id), p.product_name] as [number, string]));
+    const orderMap = new Map(orders.map(o => [Number(o.order_id), o.order_number] as [number, string]));
+    const waveMap = new Map(waves.map(w => [Number(w.wave_id), w.wave_name] as [number, string]));
+    const locationMap = new Map(locations.map(l => [Number(l.location_id), l.location_name] as [number, string]));
+
+    return tasks.map(task => ({
+      ...task,
+      facility_name: facilityMap.get(Number(task.facility_id)) || null,
+      product_name: productMap.get(Number(task.product_id)) || null,
+      order_number: orderMap.get(Number(task.order_id)) || null,
+      wave_name: waveMap.get(Number(task.wave_id)) || null,
+      from_location_name: locationMap.get(Number(task.from_location_id)) || null,
+      to_location_name: locationMap.get(Number(task.to_location_id)) || null,
+    }));
   }
 
   private async checkOrderPickedStatus(tenantId: string, orderId: bigint) {
@@ -876,7 +940,7 @@ export class PickingTaskService {
 
   // GAP-2.1: Create batch pick session (service layer)
   async createBatchPick(tenantId: string, dto: any) {
-    const waveId = BigInt(dto.waveId);
+    const waveId = BigInt(dto.wave_id);
     const wave = await this.prisma.picking_waves.findFirst({
       where: { tenant_id: tenantId, wave_id: waveId },
     });
@@ -900,8 +964,8 @@ export class PickingTaskService {
       data: {
         tenant_id: tenantId,
         wave_id: waveId,
-        status: 'CREATED',
-        created_by: dto.userId,
+        status: dto.status || 'CREATED',
+        created_by: dto.created_by,
       },
     });
 

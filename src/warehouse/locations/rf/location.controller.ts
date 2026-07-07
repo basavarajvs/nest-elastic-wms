@@ -1,7 +1,8 @@
 import { Controller, Post, Body, Req } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse } from '@nestjs/swagger';
 import { RfAction } from '../../../common/decorators/rf-action.decorator';
 import { LocationService } from '../location.service';
+import { RfLocationLookupRequestDto, RfLocationLookupDto } from '../dtos/location.dto';
 
 @ApiTags('WMS-RF')
 @Controller('rf/locations')
@@ -11,7 +12,8 @@ export class RfLocationController {
   @Post('lookup')
   @ApiOperation({ summary: 'RF: Scan location barcode' })
   @RfAction('read')
-  async lookup(@Req() req: any, @Body() dto: { barcode: string }) {
+  @ApiOkResponse({ type: RfLocationLookupDto })
+  async lookup(@Req() req: any, @Body() dto: RfLocationLookupRequestDto) {
     const tenantId = req.tenantContext.getTenantId();
     return this.locationService.rfLookup(tenantId, dto.barcode);
   }

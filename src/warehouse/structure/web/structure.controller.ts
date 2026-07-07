@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Patch, Delete, Param, Body, Query, Req } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse } from '@nestjs/swagger';
+import { AisleResponseDto, BayResponseDto, RackRowResponseDto, LevelResponseDto, LoadingDockResponseDto, CreateAisleDto, CreateBayDto, CreateRackRowDto, CreateLevelDto, CreateLoadingDockDto, UpdateLoadingDockDto } from '../dtos/structure.dto';
 import { StructureService } from '../structure.service';
 
 @ApiTags('Warehouse Structure')
@@ -9,13 +10,15 @@ export class StructureController {
 
   @Post('aisles')
   @ApiOperation({ summary: 'Create aisle' })
-  async createAisle(@Req() req: any, @Body() dto: any) {
+  @ApiCreatedResponse({ type: AisleResponseDto })
+  async createAisle(@Req() req: any, @Body() dto: CreateAisleDto) {
     const tenantId = req.tenantContext.getTenantId();
     return this.structureService.createAisle(tenantId, dto);
   }
 
   @Get('aisles')
   @ApiOperation({ summary: 'List aisles by facility/zone' })
+  @ApiOkResponse({ type: AisleResponseDto, isArray: true })
   async findAisles(@Req() req: any, @Query() query: any) {
     const tenantId = req.tenantContext.getTenantId();
     return this.structureService.findAisles(tenantId, BigInt(query.facilityId), query.zoneId ? BigInt(query.zoneId) : undefined);
@@ -23,6 +26,7 @@ export class StructureController {
 
   @Delete('aisles/:id')
   @ApiOperation({ summary: 'Delete aisle' })
+  @ApiOkResponse({ type: AisleResponseDto })
   async deleteAisle(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.structureService.deleteAisle(tenantId, BigInt(id));
@@ -30,13 +34,15 @@ export class StructureController {
 
   @Post('bays')
   @ApiOperation({ summary: 'Create bay' })
-  async createBay(@Req() req: any, @Body() dto: any) {
+  @ApiCreatedResponse({ type: BayResponseDto })
+  async createBay(@Req() req: any, @Body() dto: CreateBayDto) {
     const tenantId = req.tenantContext.getTenantId();
     return this.structureService.createBay(tenantId, dto);
   }
 
   @Get('bays')
   @ApiOperation({ summary: 'List bays by aisle' })
+  @ApiOkResponse({ type: BayResponseDto, isArray: true })
   async findBays(@Req() req: any, @Query() query: any) {
     const tenantId = req.tenantContext.getTenantId();
     return this.structureService.findBays(tenantId, BigInt(query.facilityId), BigInt(query.aisleId));
@@ -44,6 +50,7 @@ export class StructureController {
 
   @Delete('bays/:id')
   @ApiOperation({ summary: 'Delete bay' })
+  @ApiOkResponse({ type: BayResponseDto })
   async deleteBay(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.structureService.deleteBay(tenantId, BigInt(id));
@@ -51,13 +58,15 @@ export class StructureController {
 
   @Post('rack-rows')
   @ApiOperation({ summary: 'Create rack row' })
-  async createRackRow(@Req() req: any, @Body() dto: any) {
+  @ApiCreatedResponse({ type: RackRowResponseDto })
+  async createRackRow(@Req() req: any, @Body() dto: CreateRackRowDto) {
     const tenantId = req.tenantContext.getTenantId();
     return this.structureService.createRackRow(tenantId, dto);
   }
 
   @Get('rack-rows')
   @ApiOperation({ summary: 'List rack rows by aisle' })
+  @ApiOkResponse({ type: RackRowResponseDto, isArray: true })
   async findRackRows(@Req() req: any, @Query() query: any) {
     const tenantId = req.tenantContext.getTenantId();
     return this.structureService.findRackRows(tenantId, BigInt(query.facilityId), BigInt(query.aisleId));
@@ -65,6 +74,7 @@ export class StructureController {
 
   @Delete('rack-rows/:id')
   @ApiOperation({ summary: 'Delete rack row' })
+  @ApiOkResponse({ type: RackRowResponseDto })
   async deleteRackRow(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.structureService.deleteRackRow(tenantId, BigInt(id));
@@ -72,13 +82,15 @@ export class StructureController {
 
   @Post('levels')
   @ApiOperation({ summary: 'Create rack level' })
-  async createLevel(@Req() req: any, @Body() dto: any) {
+  @ApiCreatedResponse({ type: LevelResponseDto })
+  async createLevel(@Req() req: any, @Body() dto: CreateLevelDto) {
     const tenantId = req.tenantContext.getTenantId();
     return this.structureService.createLevel(tenantId, dto);
   }
 
   @Get('levels')
   @ApiOperation({ summary: 'List levels by bay' })
+  @ApiOkResponse({ type: LevelResponseDto, isArray: true })
   async findLevels(@Req() req: any, @Query() query: any) {
     const tenantId = req.tenantContext.getTenantId();
     return this.structureService.findLevels(tenantId, BigInt(query.facilityId), BigInt(query.bayId));
@@ -86,6 +98,7 @@ export class StructureController {
 
   @Delete('levels/:id')
   @ApiOperation({ summary: 'Delete rack level' })
+  @ApiOkResponse({ type: LevelResponseDto })
   async deleteLevel(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.structureService.deleteLevel(tenantId, BigInt(id));
@@ -93,13 +106,15 @@ export class StructureController {
 
   @Post('loading-docks')
   @ApiOperation({ summary: 'Create loading dock' })
-  async createLoadingDock(@Req() req: any, @Body() dto: any) {
+  @ApiCreatedResponse({ type: LoadingDockResponseDto })
+  async createLoadingDock(@Req() req: any, @Body() dto: CreateLoadingDockDto) {
     const tenantId = req.tenantContext.getTenantId();
     return this.structureService.createLoadingDock(tenantId, dto);
   }
 
   @Get('loading-docks')
   @ApiOperation({ summary: 'List loading docks by facility' })
+  @ApiOkResponse({ type: LoadingDockResponseDto, isArray: true })
   async findLoadingDocks(@Req() req: any, @Query() query: any) {
     const tenantId = req.tenantContext.getTenantId();
     return this.structureService.findLoadingDocks(tenantId, BigInt(query.facilityId), query);
@@ -107,6 +122,7 @@ export class StructureController {
 
   @Get('loading-docks/:id')
   @ApiOperation({ summary: 'Get loading dock by ID' })
+  @ApiOkResponse({ type: LoadingDockResponseDto })
   async findLoadingDockById(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.structureService.findLoadingDockById(tenantId, BigInt(id));
@@ -114,13 +130,15 @@ export class StructureController {
 
   @Patch('loading-docks/:id')
   @ApiOperation({ summary: 'Update loading dock' })
-  async updateLoadingDock(@Req() req: any, @Param('id') id: string, @Body() dto: any) {
+  @ApiOkResponse({ type: LoadingDockResponseDto })
+  async updateLoadingDock(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateLoadingDockDto) {
     const tenantId = req.tenantContext.getTenantId();
     return this.structureService.updateLoadingDock(tenantId, BigInt(id), dto);
   }
 
   @Delete('loading-docks/:id')
   @ApiOperation({ summary: 'Delete loading dock' })
+  @ApiOkResponse({ type: LoadingDockResponseDto })
   async deleteLoadingDock(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.structureService.deleteLoadingDock(tenantId, BigInt(id));

@@ -10,19 +10,36 @@ export class HoldService {
   ) {}
 
   async delete(tenantId: string, id: bigint) {
-    return this.prisma.inventory_holds.deleteMany({
+    const entity = await this.prisma.inventory_holds.findFirst({
       where: { tenant_id: tenantId, hold_id: id },
     });
+    await this.prisma.inventory_holds.deleteMany({
+      where: { tenant_id: tenantId, hold_id: id },
+    });
+    if (!entity) return null;
+    const mapped = await this.mapHolds(tenantId, [entity]);
+    return mapped[0];
   }
 
   async create(tenantId: string, dto: any) {
-    return this.prisma.inventory_holds.create({
-      data: { tenant_id: tenantId, ...dto },
+    const { facility_id, lpn_id, inventory_item_id, ...rest } = dto;
+    const created = await this.prisma.inventory_holds.create({
+      data: {
+        tenant_id: tenantId,
+        facility_id: facility_id ? BigInt(facility_id) : undefined,
+        lpn_id: lpn_id ? BigInt(lpn_id) : undefined,
+        inventory_item_id: inventory_item_id ? BigInt(inventory_item_id) : undefined,
+        ...rest,
+      },
     });
+    const mapped = await this.mapHolds(tenantId, [created]);
+    return mapped[0];
   }
 
   async findAll(tenantId: string, query: any) {
-    const { productId, locationId, status, holdReason, facilityId, page = 1, limit = 50 } = query;
+    const { productId, locationId, status, holdReason, facilityId } = query;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 50;
     const skip = (page - 1) * limit;
     const where: any = { tenant_id: tenantId };
     if (productId) where.product_id = BigInt(productId);
@@ -39,7 +56,7 @@ export class HoldService {
       }),
       this.prisma.inventory_holds.count({ where }),
     ]);
-    return { data, total, page, limit };
+    return { data: await this.mapHolds(tenantId, data), total, page, limit };
   }
 
   async findById(tenantId: string, id: string) {
@@ -47,19 +64,22 @@ export class HoldService {
       where: { tenant_id: tenantId, hold_id: BigInt(id) },
     });
     if (!hold) throw new NotFoundException('Hold not found');
-    return hold;
+    const mapped = await this.mapHolds(tenantId, [hold]);
+    return mapped[0];
   }
 
   async update(tenantId: string, id: string, dto: any) {
     await this.findById(tenantId, id);
-    const { facilityId, ...rest } = dto;
-    return this.prisma.inventory_holds.update({
+    const { facility_id, ...rest } = dto;
+    const updated = await this.prisma.inventory_holds.update({
       where: { hold_id: BigInt(id) },
       data: {
-        ...(facilityId !== undefined ? { facility_id: BigInt(facilityId) } : {}),
+        ...(facility_id !== undefined ? { facility_id: BigInt(facility_id) } : {}),
         ...rest,
       },
     });
+    const mapped = await this.mapHolds(tenantId, [updated]);
+    return mapped[0];
   }
 
   async release(tenantId: string, id: string, userId: string, reason?: string, supervisorPin?: string) {
@@ -73,7 +93,7 @@ export class HoldService {
       }
     }
 
-    return this.prisma.inventory_holds.update({
+    const updated = await this.prisma.inventory_holds.update({
       where: { hold_id: BigInt(id) },
       data: {
         status: 'RELEASED',
@@ -82,11 +102,23 @@ export class HoldService {
         release_notes: reason || null,
       },
     });
+    const mapped = await this.mapHolds(tenantId, [updated]);
+    return mapped[0];
   }
 
   async findByLpnId(tenantId: string, lpnId: string) {
-    return this.prisma.inventory_holds.findMany({
+    const data = await this.prisma.inventory_holds.findMany({
       where: { tenant_id: tenantId, lpn_id: BigInt(lpnId), status: 'ACTIVE' },
     });
+    return this.mapHolds(tenantId, data);
+  }
+
+  private async mapHolds(tenantId: string, data: any[]) {
+    const facilityIds = [...new Set(data.map(d => d.facility_id).filter(Boolean))];
+    const facilities = facilityIds.length
+      ? await this.prisma.warehouse_facilities.findMany({ where: { tenant_id: tenantId, facility_id: { in: facilityIds } }, select: { facility_id: true, facility_name: true } })
+      : [];
+    const facilityMap = new Map(facilities.map(f => [f.facility_id, f.facility_name]));
+    return data.map(d => ({ ...d, facility_name: facilityMap.get(d.facility_id) }));
   }
 }

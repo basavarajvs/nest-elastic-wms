@@ -8,27 +8,29 @@ export class VasCatalogService {
   constructor(private readonly prisma: PrismaService) {}
 
   async deleteService(tenantId: string, id: bigint) {
-    return this.prisma.vas_services.deleteMany({
+    const service = await this.findServiceById(tenantId, id);
+    await this.prisma.vas_services.deleteMany({
       where: { tenant_id: tenantId, vas_id: id },
     });
+    return service;
   }
 
   async createService(tenantId: string, userId: string | undefined, dto: any) {
     return this.prisma.vas_services.create({
       data: {
         tenant_id: tenantId,
-        facility_id: BigInt(dto.facilityId),
-        vas_code: dto.vasCode,
-        vas_name: dto.vasName,
+        facility_id: BigInt(dto.facility_id),
+        vas_code: dto.vas_code,
+        vas_name: dto.vas_name,
         description: dto.description,
-        service_category: dto.serviceCategory,
-        charge_type: dto.chargeType,
-        base_charge: dto.baseCharge,
-        currency_code: dto.currencyCode || 'USD',
-        uom_id: dto.uomId ? BigInt(dto.uomId) : undefined,
-        minimum_charge: dto.minimumCharge,
-        maximum_charge: dto.maximumCharge,
-        requires_approval: dto.requiresApproval ?? false,
+        service_category: dto.service_category,
+        charge_type: dto.charge_type,
+        base_charge: dto.base_charge,
+        currency_code: dto.currency_code || 'USD',
+        uom_id: dto.uom_id ? BigInt(dto.uom_id) : undefined,
+        minimum_charge: dto.minimum_charge,
+        maximum_charge: dto.maximum_charge,
+        requires_approval: dto.requires_approval ?? false,
         is_active: dto.isActive ?? true,
         created_by: userId,
         updated_by: userId,
@@ -41,41 +43,52 @@ export class VasCatalogService {
     if (query.facilityId) where.facility_id = BigInt(query.facilityId);
     if (query.serviceCategory) where.service_category = query.serviceCategory;
     if (query.isActive !== undefined) where.is_active = query.isActive === 'true' || query.isActive === true;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
 
-    const page = query.page || 1;
-    const limit = query.limit || 20;
-    const [data, total] = await Promise.all([
+    const [rows, total] = await Promise.all([
       this.prisma.vas_services.findMany({
         where,
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { created_at: 'desc' },
+        include: { warehouse_facilities: true },
       }),
       this.prisma.vas_services.count({ where }),
     ]);
+    const data = rows.map(r => ({
+      ...r,
+      facility_name: r.warehouse_facilities?.facility_name,
+      warehouse_facilities: undefined,
+    }));
     return { data, total, page, limit };
   }
 
   async findServiceById(tenantId: string, id: bigint) {
     const service = await this.prisma.vas_services.findFirst({
       where: { tenant_id: tenantId, vas_id: id },
+      include: { warehouse_facilities: true },
     });
     if (!service) throw new NotFoundException('VAS service not found');
-    return service;
+    return {
+      ...service,
+      facility_name: service.warehouse_facilities?.facility_name,
+      warehouse_facilities: undefined,
+    };
   }
 
   async updateService(tenantId: string, id: bigint, userId: string | undefined, dto: any) {
     await this.findServiceById(tenantId, id);
     const data: Record<string, any> = { updated_by: userId };
-    if (dto.vasName !== undefined) data.vas_name = dto.vasName;
+    if (dto.vas_name !== undefined) data.vas_name = dto.vas_name;
     if (dto.description !== undefined) data.description = dto.description;
-    if (dto.serviceCategory !== undefined) data.service_category = dto.serviceCategory;
-    if (dto.chargeType !== undefined) data.charge_type = dto.chargeType;
-    if (dto.baseCharge !== undefined) data.base_charge = dto.baseCharge;
-    if (dto.currencyCode !== undefined) data.currency_code = dto.currencyCode;
-    if (dto.minimumCharge !== undefined) data.minimum_charge = dto.minimumCharge;
-    if (dto.maximumCharge !== undefined) data.maximum_charge = dto.maximumCharge;
-    if (dto.requiresApproval !== undefined) data.requires_approval = dto.requiresApproval;
+    if (dto.service_category !== undefined) data.service_category = dto.service_category;
+    if (dto.charge_type !== undefined) data.charge_type = dto.charge_type;
+    if (dto.base_charge !== undefined) data.base_charge = dto.base_charge;
+    if (dto.currency_code !== undefined) data.currency_code = dto.currency_code;
+    if (dto.minimum_charge !== undefined) data.minimum_charge = dto.minimum_charge;
+    if (dto.maximum_charge !== undefined) data.maximum_charge = dto.maximum_charge;
+    if (dto.requires_approval !== undefined) data.requires_approval = dto.requires_approval;
     if (dto.isActive !== undefined) data.is_active = dto.isActive;
 
     await this.prisma.vas_services.updateMany({
@@ -88,9 +101,9 @@ export class VasCatalogService {
   async createClientRate(tenantId: string, dto: any) {
     return this.prisma.vas_service_client_rates.create({
       data: {
-        service_code: dto.serviceCode,
+        service_code: dto.service_code,
         client_id: BigInt(dto.clientId),
-        client_specific_rate: dto.clientSpecificRate,
+        client_specific_rate: dto.client_specific_rate,
         currency: dto.currency || 'USD',
         tenant_id: tenantId,
       },
@@ -124,16 +137,16 @@ export class VasCatalogService {
     return this.prisma.vas_workstations.create({
       data: {
         tenant_id: tenantId,
-        facility_id: BigInt(dto.facilityId),
-        workstation_code: dto.workstationCode,
-        workstation_name: dto.workstationName,
+        facility_id: BigInt(dto.facility_id),
+        workstation_code: dto.workstation_code,
+        workstation_name: dto.workstation_name,
         zone_id: dto.zoneId ? BigInt(dto.zoneId) : undefined,
         aisle: dto.aisle,
-        floor_level: dto.floorLevel,
-        station_type: dto.stationType,
-        supported_services: dto.supportedServices ?? undefined,
-        equipment_json: dto.equipmentJson ?? undefined,
-        max_concurrent_tasks: dto.maxConcurrentTasks ?? 1,
+        floor_level: dto.floor_level,
+        station_type: dto.station_type,
+        supported_services: dto.supported_services ?? undefined,
+        equipment_json: dto.equipment_json ?? undefined,
+        max_concurrent_tasks: dto.max_concurrent_tasks ?? 1,
         current_active_tasks: 0,
         status: 'AVAILABLE',
         is_active: true,
@@ -148,36 +161,53 @@ export class VasCatalogService {
     if (query.facilityId) where.facility_id = BigInt(query.facilityId);
     if (query.stationType) where.station_type = query.stationType;
     if (query.status) where.status = query.status;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
 
-    const page = query.page || 1;
-    const limit = query.limit || 20;
-    const [data, total] = await Promise.all([
+    const [rows, total] = await Promise.all([
       this.prisma.vas_workstations.findMany({
         where,
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { created_at: 'desc' },
+        include: { warehouse_facilities: true },
       }),
       this.prisma.vas_workstations.count({ where }),
     ]);
+    const data = rows.map(r => ({
+      ...r,
+      facility_name: r.warehouse_facilities?.facility_name,
+      warehouse_facilities: undefined,
+    }));
     return { data, total, page, limit };
   }
 
   async findWorkstationById(tenantId: string, id: bigint) {
     const ws = await this.prisma.vas_workstations.findFirst({
       where: { tenant_id: tenantId, workstation_id: id },
+      include: { warehouse_facilities: true },
     });
     if (!ws) throw new NotFoundException('Workstation not found');
-    return ws;
+    return {
+      ...ws,
+      facility_name: ws.warehouse_facilities?.facility_name,
+      warehouse_facilities: undefined,
+    };
   }
 
   async updateWorkstation(tenantId: string, id: bigint, userId: string | undefined, dto: any) {
     await this.findWorkstationById(tenantId, id);
     const data: Record<string, any> = { updated_by: userId ? BigInt(userId) : undefined };
-    if (dto.workstationName !== undefined) data.workstation_name = dto.workstationName;
-    if (dto.stationType !== undefined) data.station_type = dto.stationType;
-    if (dto.supportedServices !== undefined) data.supported_services = dto.supportedServices;
-    if (dto.maxConcurrentTasks !== undefined) data.max_concurrent_tasks = dto.maxConcurrentTasks;
+    if (dto.workstation_name !== undefined) data.workstation_name = dto.workstation_name;
+    if (dto.zone_id !== undefined) data.zone_id = dto.zone_id ? BigInt(dto.zone_id) : null;
+    if (dto.aisle !== undefined) data.aisle = dto.aisle;
+    if (dto.floor_level !== undefined) data.floor_level = dto.floor_level;
+    if (dto.station_type !== undefined) data.station_type = dto.station_type;
+    if (dto.supported_services !== undefined) data.supported_services = dto.supported_services;
+    if (dto.equipment_json !== undefined) data.equipment_json = dto.equipment_json;
+    if (dto.max_concurrent_tasks !== undefined) data.max_concurrent_tasks = dto.max_concurrent_tasks;
+    if (dto.status !== undefined) data.status = dto.status;
+    if (dto.is_active !== undefined) data.is_active = dto.is_active;
 
     await this.prisma.vas_workstations.updateMany({
       where: { tenant_id: tenantId, workstation_id: id },

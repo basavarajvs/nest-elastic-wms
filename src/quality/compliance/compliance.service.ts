@@ -9,31 +9,33 @@ export class ComplianceService {
     return this.prisma.compliance_requirements.create({
       data: {
         tenant_id: tenantId,
-        facility_id: dto.facilityId ? BigInt(dto.facilityId) : undefined,
-        requirement_code: dto.requirementCode,
-        requirement_name: dto.requirementName,
+        facility_id: dto.facility_id ? BigInt(dto.facility_id) : undefined,
+        requirement_code: dto.requirement_code,
+        requirement_name: dto.requirement_name,
         description: dto.description,
         category: dto.category,
-        sub_category: dto.subCategory,
-        regulatory_body: dto.regulatoryBody,
-        regulation_reference: dto.regulationReference,
-        compliance_frequency: dto.complianceFrequency,
-        due_day_of_period: dto.dueDayOfPeriod,
-        next_due_date: dto.nextDueDate ? new Date(dto.nextDueDate) : undefined,
-        last_completed_date: dto.lastCompletedDate ? new Date(dto.lastCompletedDate) : undefined,
+        sub_category: dto.sub_category,
+        regulatory_body: dto.regulatory_body,
+        regulation_reference: dto.regulation_reference,
+        compliance_frequency: dto.compliance_frequency,
+        due_day_of_period: dto.due_day_of_period,
+        next_due_date: dto.next_due_date ? new Date(dto.next_due_date) : undefined,
+        last_completed_date: dto.last_completed_date ? new Date(dto.last_completed_date) : undefined,
         status: dto.status || 'ACTIVE',
         priority: dto.priority || 'NORMAL',
-        responsible_role: dto.responsibleRole,
-        assigned_to: dto.assignedTo,
-        documentation_required: dto.documentationRequired,
-        documentation_template_url: dto.documentationTemplateUrl,
-        created_by: dto.createdBy,
+        responsible_role: dto.responsible_role,
+        assigned_to: dto.assigned_to,
+        documentation_required: dto.documentation_required,
+        documentation_template_url: dto.documentation_template_url,
+        created_by: dto.created_by,
       },
     });
   }
 
   async findAllRequirements(tenantId: string, query: any) {
-    const { facilityId, category, status, assignedTo, page = 1, limit = 50 } = query;
+    const { facilityId, category, status, assignedTo, page: queryPage, limit: queryLimit } = query;
+    const page = Number(queryPage) || 1;
+    const limit = Number(queryLimit) || 50;
     const skip = (page - 1) * limit;
     const where: any = { tenant_id: tenantId };
     if (facilityId) where.facility_id = BigInt(facilityId);
@@ -61,10 +63,11 @@ export class ComplianceService {
   }
 
   async deleteRequirement(tenantId: string, id: string) {
+    const entity = await this.findRequirementById(tenantId, id);
     await this.prisma.compliance_requirements.deleteMany({
       where: { tenant_id: tenantId, requirement_id: BigInt(id) },
     });
-    return { message: 'Compliance requirement deleted successfully' };
+    return entity;
   }
 
   async updateRequirement(tenantId: string, id: string, dto: any) {
@@ -72,21 +75,21 @@ export class ComplianceService {
     return this.prisma.compliance_requirements.update({
       where: { requirement_id: BigInt(id) },
       data: {
-        requirement_name: dto.requirementName,
+        requirement_name: dto.requirement_name,
         description: dto.description,
         category: dto.category,
-        sub_category: dto.subCategory,
-        regulatory_body: dto.regulatoryBody,
-        regulation_reference: dto.regulationReference,
-        compliance_frequency: dto.complianceFrequency,
-        due_day_of_period: dto.dueDayOfPeriod,
-        next_due_date: dto.nextDueDate ? new Date(dto.nextDueDate) : undefined,
-        last_completed_date: dto.lastCompletedDate ? new Date(dto.lastCompletedDate) : undefined,
+        sub_category: dto.sub_category,
+        regulatory_body: dto.regulatory_body,
+        regulation_reference: dto.regulation_reference,
+        compliance_frequency: dto.compliance_frequency,
+        due_day_of_period: dto.due_day_of_period,
+        next_due_date: dto.next_due_date ? new Date(dto.next_due_date) : undefined,
+        last_completed_date: dto.last_completed_date ? new Date(dto.last_completed_date) : undefined,
         status: dto.status,
         priority: dto.priority,
-        responsible_role: dto.responsibleRole,
-        assigned_to: dto.assignedTo,
-        updated_by: dto.updatedBy,
+        responsible_role: dto.responsible_role,
+        assigned_to: dto.assigned_to,
+        updated_by: dto.updated_by,
       },
     });
   }
@@ -95,29 +98,31 @@ export class ComplianceService {
     return this.prisma.compliance_audits.create({
       data: {
         tenant_id: tenantId,
-        facility_id: BigInt(dto.facilityId),
-        audit_number: dto.auditNumber,
-        requirement_id: dto.requirementId ? BigInt(dto.requirementId) : undefined,
-        audit_type: dto.auditType,
-        audit_date: new Date(dto.auditDate),
-        auditor_name: dto.auditorName,
-        auditor_organization: dto.auditorOrganization,
+        facility_id: BigInt(dto.facility_id),
+        audit_number: dto.audit_number,
+        requirement_id: dto.requirement_id ? BigInt(dto.requirement_id) : undefined,
+        audit_type: dto.audit_type,
+        audit_date: new Date(dto.audit_date),
+        auditor_name: dto.auditor_name,
+        auditor_organization: dto.auditor_organization,
         status: dto.status || 'PENDING',
         score: dto.score ? dto.score : undefined,
         findings: dto.findings,
         recommendations: dto.recommendations,
-        corrective_actions: dto.correctiveActions,
-        follow_up_required: dto.followUpRequired,
-        follow_up_due_date: dto.followUpDueDate ? new Date(dto.followUpDueDate) : undefined,
-        report_url: dto.reportUrl,
-        evidence_urls: dto.evidenceUrls,
-        created_by: dto.createdBy,
+        corrective_actions: dto.corrective_actions,
+        follow_up_required: dto.follow_up_required,
+        follow_up_due_date: dto.follow_up_due_date ? new Date(dto.follow_up_due_date) : undefined,
+        report_url: dto.report_url,
+        evidence_urls: dto.evidence_urls,
+        created_by: dto.created_by,
       },
     });
   }
 
   async findAllAudits(tenantId: string, query: any) {
-    const { facilityId, requirementId, status, auditType, page = 1, limit = 50 } = query;
+    const { facilityId, requirementId, status, auditType, page: queryPage, limit: queryLimit } = query;
+    const page = Number(queryPage) || 1;
+    const limit = Number(queryLimit) || 50;
     const skip = (page - 1) * limit;
     const where: any = { tenant_id: tenantId };
     if (facilityId) where.facility_id = BigInt(facilityId);
@@ -145,10 +150,11 @@ export class ComplianceService {
   }
 
   async deleteAudit(tenantId: string, id: string) {
+    const entity = await this.findAuditById(tenantId, id);
     await this.prisma.compliance_audits.deleteMany({
       where: { tenant_id: tenantId, audit_id: BigInt(id) },
     });
-    return { message: 'Compliance audit deleted successfully' };
+    return entity;
   }
 
   async updateAudit(tenantId: string, id: string, dto: any) {
@@ -156,20 +162,20 @@ export class ComplianceService {
     return this.prisma.compliance_audits.update({
       where: { audit_id: BigInt(id) },
       data: {
-        audit_type: dto.auditType,
-        audit_date: dto.auditDate ? new Date(dto.auditDate) : undefined,
-        auditor_name: dto.auditorName,
-        auditor_organization: dto.auditorOrganization,
+        audit_type: dto.audit_type,
+        audit_date: dto.audit_date ? new Date(dto.audit_date) : undefined,
+        auditor_name: dto.auditor_name,
+        auditor_organization: dto.auditor_organization,
         status: dto.status,
         score: dto.score ? dto.score : undefined,
         findings: dto.findings,
         recommendations: dto.recommendations,
-        corrective_actions: dto.correctiveActions,
-        follow_up_required: dto.followUpRequired,
-        follow_up_due_date: dto.followUpDueDate ? new Date(dto.followUpDueDate) : undefined,
-        report_url: dto.reportUrl,
-        evidence_urls: dto.evidenceUrls,
-        updated_by: dto.updatedBy,
+        corrective_actions: dto.corrective_actions,
+        follow_up_required: dto.follow_up_required,
+        follow_up_due_date: dto.follow_up_due_date ? new Date(dto.follow_up_due_date) : undefined,
+        report_url: dto.report_url,
+        evidence_urls: dto.evidence_urls,
+        updated_by: dto.updated_by,
       },
     });
   }
@@ -178,37 +184,39 @@ export class ComplianceService {
     return this.prisma.hazmat_materials.create({
       data: {
         tenant_id: tenantId,
-        facility_id: BigInt(dto.facilityId),
-        material_code: dto.materialCode,
-        material_name: dto.materialName,
-        un_number: dto.unNumber,
-        hazard_class: dto.hazardClass,
-        packing_group: dto.packingGroup,
-        product_id: dto.productId ? BigInt(dto.productId) : undefined,
-        required_storage_conditions: dto.requiredStorageConditions,
-        max_storage_quantity: dto.maxStorageQuantity ? dto.maxStorageQuantity : undefined,
-        storage_temperature_min: dto.storageTemperatureMin ? dto.storageTemperatureMin : undefined,
-        storage_temperature_max: dto.storageTemperatureMax ? dto.storageTemperatureMax : undefined,
-        requires_ventilation: dto.requiresVentilation,
-        requires_grounding: dto.requiresGrounding,
-        incompatible_materials: dto.incompatibleMaterials,
-        handling_instructions: dto.handlingInstructions,
-        ppe_requirements: dto.ppeRequirements,
-        emergency_procedures: dto.emergencyProcedures,
-        spill_response: dto.spillResponse,
-        sds_document_url: dto.sdsDocumentUrl,
-        sds_last_updated: dto.sdsLastUpdated ? new Date(dto.sdsLastUpdated) : undefined,
-        dot_regulated: dto.dotRegulated,
-        epa_regulated: dto.epaRegulated,
-        osha_regulated: dto.oshaRegulated,
-        is_active: dto.isActive !== undefined ? dto.isActive : true,
-        created_by: dto.createdBy,
+        facility_id: BigInt(dto.facility_id),
+        material_code: dto.material_code,
+        material_name: dto.material_name,
+        un_number: dto.un_number,
+        hazard_class: dto.hazard_class,
+        packing_group: dto.packing_group,
+        product_id: dto.product_id ? BigInt(dto.product_id) : undefined,
+        required_storage_conditions: dto.required_storage_conditions,
+        max_storage_quantity: dto.max_storage_quantity ? dto.max_storage_quantity : undefined,
+        storage_temperature_min: dto.storage_temperature_min ? dto.storage_temperature_min : undefined,
+        storage_temperature_max: dto.storage_temperature_max ? dto.storage_temperature_max : undefined,
+        requires_ventilation: dto.requires_ventilation,
+        requires_grounding: dto.requires_grounding,
+        incompatible_materials: dto.incompatible_materials,
+        handling_instructions: dto.handling_instructions,
+        ppe_requirements: dto.ppe_requirements,
+        emergency_procedures: dto.emergency_procedures,
+        spill_response: dto.spill_response,
+        sds_document_url: dto.sds_document_url,
+        sds_last_updated: dto.sds_last_updated ? new Date(dto.sds_last_updated) : undefined,
+        dot_regulated: dto.dot_regulated,
+        epa_regulated: dto.epa_regulated,
+        osha_regulated: dto.osha_regulated,
+        is_active: dto.is_active !== undefined ? dto.is_active : true,
+        created_by: dto.created_by,
       },
     });
   }
 
   async findAllHazmat(tenantId: string, query: any) {
-    const { facilityId, hazardClass, isActive, productId, page = 1, limit = 50 } = query;
+    const { facilityId, hazardClass, isActive, productId, page: queryPage, limit: queryLimit } = query;
+    const page = Number(queryPage) || 1;
+    const limit = Number(queryLimit) || 50;
     const skip = (page - 1) * limit;
     const where: any = { tenant_id: tenantId };
     if (facilityId) where.facility_id = BigInt(facilityId);
@@ -236,10 +244,11 @@ export class ComplianceService {
   }
 
   async deleteHazmat(tenantId: string, id: string) {
+    const entity = await this.findHazmatById(tenantId, id);
     await this.prisma.hazmat_materials.deleteMany({
       where: { tenant_id: tenantId, hazmat_id: BigInt(id) },
     });
-    return { message: 'Hazmat material deleted successfully' };
+    return entity;
   }
 
   async updateHazmat(tenantId: string, id: string, dto: any) {
@@ -247,28 +256,28 @@ export class ComplianceService {
     return this.prisma.hazmat_materials.update({
       where: { hazmat_id: BigInt(id) },
       data: {
-        material_name: dto.materialName,
-        un_number: dto.unNumber,
-        hazard_class: dto.hazardClass,
-        packing_group: dto.packingGroup,
-        required_storage_conditions: dto.requiredStorageConditions,
-        max_storage_quantity: dto.maxStorageQuantity ? dto.maxStorageQuantity : undefined,
-        storage_temperature_min: dto.storageTemperatureMin ? dto.storageTemperatureMin : undefined,
-        storage_temperature_max: dto.storageTemperatureMax ? dto.storageTemperatureMax : undefined,
-        requires_ventilation: dto.requiresVentilation,
-        requires_grounding: dto.requiresGrounding,
-        incompatible_materials: dto.incompatibleMaterials,
-        handling_instructions: dto.handlingInstructions,
-        ppe_requirements: dto.ppeRequirements,
-        emergency_procedures: dto.emergencyProcedures,
-        spill_response: dto.spillResponse,
-        sds_document_url: dto.sdsDocumentUrl,
-        sds_last_updated: dto.sdsLastUpdated ? new Date(dto.sdsLastUpdated) : undefined,
-        dot_regulated: dto.dotRegulated,
-        epa_regulated: dto.epaRegulated,
-        osha_regulated: dto.oshaRegulated,
-        is_active: dto.isActive,
-        updated_by: dto.updatedBy,
+        material_name: dto.material_name,
+        un_number: dto.un_number,
+        hazard_class: dto.hazard_class,
+        packing_group: dto.packing_group,
+        required_storage_conditions: dto.required_storage_conditions,
+        max_storage_quantity: dto.max_storage_quantity ? dto.max_storage_quantity : undefined,
+        storage_temperature_min: dto.storage_temperature_min ? dto.storage_temperature_min : undefined,
+        storage_temperature_max: dto.storage_temperature_max ? dto.storage_temperature_max : undefined,
+        requires_ventilation: dto.requires_ventilation,
+        requires_grounding: dto.requires_grounding,
+        incompatible_materials: dto.incompatible_materials,
+        handling_instructions: dto.handling_instructions,
+        ppe_requirements: dto.ppe_requirements,
+        emergency_procedures: dto.emergency_procedures,
+        spill_response: dto.spill_response,
+        sds_document_url: dto.sds_document_url,
+        sds_last_updated: dto.sds_last_updated ? new Date(dto.sds_last_updated) : undefined,
+        dot_regulated: dto.dot_regulated,
+        epa_regulated: dto.epa_regulated,
+        osha_regulated: dto.osha_regulated,
+        is_active: dto.is_active,
+        updated_by: dto.updated_by,
       },
     });
   }

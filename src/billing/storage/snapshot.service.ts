@@ -96,21 +96,46 @@ export class SnapshotService {
   }
 
   async findSnapshots(tenantId: string, query: any) {
-    const { facilityId, cycleId, snapshotDate, page = 1, limit = 50 } = query;
+    const { facilityId, cycleId, snapshotDate } = query;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 50;
     const skip = (page - 1) * limit;
-    const where: any = { tenant_id: tenantId };
-    if (facilityId) where.facility_id = BigInt(facilityId);
-    if (cycleId) where.cycle_id = BigInt(cycleId);
-    if (snapshotDate) where.snapshot_date = new Date(snapshotDate);
-    const [data, total] = await Promise.all([
-      this.prisma.storage_inventory_snapshots.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { snapshot_date: 'desc' },
-      }),
-      this.prisma.storage_inventory_snapshots.count({ where }),
-    ]);
+
+    let whereSql = 'WHERE sis.tenant_id = $1';
+    const params: any[] = [tenantId];
+    let idx = 2;
+    if (facilityId) {
+      whereSql += ` AND sis.facility_id = $${idx++}`;
+      params.push(BigInt(facilityId));
+    }
+    if (cycleId) {
+      whereSql += ` AND sis.cycle_id = $${idx++}`;
+      params.push(BigInt(cycleId));
+    }
+    if (snapshotDate) {
+      whereSql += ` AND sis.snapshot_date = $${idx++}::date`;
+      params.push(new Date(snapshotDate));
+    }
+
+    const countSql = `SELECT COUNT(*) as cnt FROM multitenant.storage_inventory_snapshots sis ${whereSql}`;
+    const countResult = await this.prisma.$queryRawUnsafe<any[]>(countSql, ...params);
+    const total = Number(countResult[0].cnt);
+
+    const dataSql = `
+      SELECT sis.*, wf.facility_name, bc.cycle_name, p.product_name, il.lot_number, sl.location_name
+      FROM multitenant.storage_inventory_snapshots sis
+      LEFT JOIN multitenant.warehouse_facilities wf ON sis.tenant_id = wf.tenant_id AND sis.facility_id = wf.facility_id
+      LEFT JOIN multitenant.billing_cycles bc ON sis.cycle_id = bc.billing_cycle_id
+      LEFT JOIN multitenant.products p ON sis.product_id = p.product_id
+      LEFT JOIN multitenant.inventory_lots il ON sis.lot_id = il.lot_id
+      LEFT JOIN multitenant.storage_locations sl ON sis.location_id = sl.location_id
+      ${whereSql}
+      ORDER BY sis.snapshot_date DESC
+      LIMIT $${idx++} OFFSET $${idx++}
+    `;
+    params.push(limit, skip);
+    const data = await this.prisma.$queryRawUnsafe<any[]>(dataSql, ...params);
+
     return { data, total, page, limit };
   }
 

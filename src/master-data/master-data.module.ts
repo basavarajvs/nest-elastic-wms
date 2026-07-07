@@ -3,6 +3,7 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { ClientService } from './clients/client.service';
 import { VendorService } from './vendors/vendor.service';
 import { ProductService } from './products/product.service';
+import { ProductBarcodeService } from './products/product-barcode.service';
 import { CarrierService } from './carriers/carrier.service';
 import { CustomerService } from './customers/customer.service';
 import { UomService } from './uom/uom.service';
@@ -19,6 +20,7 @@ import { BarcodeLabelService } from './barcode-labels/barcode-label.service';
 import { ClientController } from './clients/web/client.controller';
 import { VendorController } from './vendors/web/vendor.controller';
 import { ProductController } from './products/web/product.controller';
+import { ProductBarcodeController } from './products/web/product-barcode.controller';
 import { RfProductController } from './products/rf/product.controller';
 import { CarrierController } from './carriers/web/carrier.controller';
 import { CustomerController } from './customers/web/customer.controller';
@@ -40,6 +42,7 @@ import { BarcodeLabelController } from './barcode-labels/web/barcode-label.contr
     ClientController,
     VendorController,
     ProductController,
+    ProductBarcodeController,
     RfProductController,
     CarrierController,
     CustomerController,
@@ -59,6 +62,7 @@ import { BarcodeLabelController } from './barcode-labels/web/barcode-label.contr
     ClientService,
     VendorService,
     ProductService,
+    ProductBarcodeService,
     CarrierService,
     CustomerService,
     UomService,
@@ -77,6 +81,7 @@ import { BarcodeLabelController } from './barcode-labels/web/barcode-label.contr
     ClientService,
     VendorService,
     ProductService,
+    ProductBarcodeService,
   ],
 })
 export class MasterDataModule {}

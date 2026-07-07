@@ -6,14 +6,14 @@ export class UomService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(tenantId: string, dto: any) {
-    return this.prisma.units_of_measure.create({
-      data: {
-        tenant_id: tenantId,
-        uom_code: dto.uomCode,
-        uom_name: dto.uomName,
-        is_active: dto.isActive ?? true,
-      },
-    });
+    const data: any = {
+      tenant_id: tenantId,
+      uom_code: dto.uom_code,
+      uom_name: dto.uom_name,
+    };
+    if (dto.description !== undefined) data.description = dto.description;
+    if (dto.is_active !== undefined) data.is_active = dto.is_active;
+    return this.prisma.units_of_measure.create({ data });
   }
 
   async findAll(tenantId: string) {
@@ -28,15 +28,23 @@ export class UomService {
   }
 
   async delete(tenantId: string, uomId: bigint) {
-    return this.prisma.units_of_measure.deleteMany({
+    const record = await this.findById(tenantId, uomId);
+    await this.prisma.units_of_measure.deleteMany({
       where: { tenant_id: tenantId, uom_id: uomId },
     });
+    return record;
   }
 
   async update(tenantId: string, uomId: bigint, dto: any) {
-    return this.prisma.units_of_measure.updateMany({
+    const data: any = {};
+    if (dto.uom_code !== undefined) data.uom_code = dto.uom_code;
+    if (dto.uom_name !== undefined) data.uom_name = dto.uom_name;
+    if (dto.description !== undefined) data.description = dto.description;
+    if (dto.is_active !== undefined) data.is_active = dto.is_active;
+    await this.prisma.units_of_measure.updateMany({
       where: { tenant_id: tenantId, uom_id: uomId },
-      data: { uom_code: dto.uomCode, uom_name: dto.uomName, is_active: dto.isActive },
+      data,
     });
+    return this.findById(tenantId, uomId);
   }
 }

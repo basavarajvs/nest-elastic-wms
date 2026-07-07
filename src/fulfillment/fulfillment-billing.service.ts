@@ -16,11 +16,11 @@ export class FulfillmentBillingService {
       data: {
         tenant_id: tenantId,
         run_number: runNumber,
-        run_type: dto.runType,
-        run_start_date: new Date(dto.runStartDate),
-        run_end_date: new Date(dto.runEndDate),
+        run_type: dto.run_type,
+        run_start_date: new Date(dto.run_start_date),
+        run_end_date: new Date(dto.run_end_date),
         execution_status: 'PENDING',
-        currency_code: dto.currencyCode ?? 'USD',
+        currency_code: dto.currency_code ?? 'USD',
       },
     });
   }
@@ -30,8 +30,8 @@ export class FulfillmentBillingService {
     if (query.executionStatus) where.execution_status = query.executionStatus;
     if (query.runType) where.run_type = query.runType;
 
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const [data, total] = await Promise.all([
       this.prisma.fulfillment_billing_runs.findMany({
         where,
@@ -57,7 +57,21 @@ export class FulfillmentBillingService {
       },
     });
     if (!run) throw new NotFoundException('Billing run not found');
-    return run;
+
+    const nestedEvents = run.fulfillment_billing_run_events
+      ?.map(re => re.fulfillment_billing_events)
+      .filter(Boolean) || [];
+    const enrichedMap = new Map(
+      (await this.enrichBillingEvents(tenantId, nestedEvents)).map(e => [e.billing_event_id, e]),
+    );
+
+    return {
+      ...run,
+      fulfillment_billing_run_events: run.fulfillment_billing_run_events?.map(re => ({
+        ...re,
+        fulfillment_billing_events: enrichedMap.get(Number(re.fulfillment_billing_events?.billing_event_id)) || re.fulfillment_billing_events,
+      })),
+    };
   }
 
   async updateBillingRunStatus(tenantId: string, id: bigint, status: string) {
@@ -80,21 +94,21 @@ export class FulfillmentBillingService {
     return this.prisma.fulfillment_billing_events.create({
       data: {
         tenant_id: tenantId,
-        facility_id: BigInt(dto.facilityId),
-        event_type: dto.eventType,
-        event_category: dto.eventCategory,
-        source_entity_type: dto.sourceEntityType,
-        source_entity_id: BigInt(dto.sourceEntityId),
-        source_entity_reference: dto.sourceEntityReference,
-        client_id: BigInt(dto.clientId),
-        charge_amount: dto.chargeAmount,
-        charge_quantity: dto.chargeQuantity,
-        charge_rate: dto.chargeRate,
-        currency_code: dto.currencyCode ?? 'USD',
-        charge_description: dto.chargeDescription,
-        charge_details: dto.chargeDetails,
+        facility_id: BigInt(dto.facility_id),
+        event_type: dto.event_type,
+        event_category: dto.event_category,
+        source_entity_type: dto.source_entity_type,
+        source_entity_id: BigInt(dto.source_entity_id),
+        source_entity_reference: dto.source_entity_reference,
+        client_id: BigInt(dto.client_id),
+        charge_amount: dto.charge_amount,
+        charge_quantity: dto.charge_quantity,
+        charge_rate: dto.charge_rate,
+        currency_code: dto.currency_code ?? 'USD',
+        charge_description: dto.charge_description,
+        charge_details: dto.charge_details,
         billing_status: 'UNBILLED',
-        event_date: new Date(dto.eventDate),
+        event_date: new Date(dto.event_date),
       },
     });
   }
@@ -106,8 +120,8 @@ export class FulfillmentBillingService {
     if (query.clientId) where.client_id = BigInt(query.clientId);
     if (query.facilityId) where.facility_id = BigInt(query.facilityId);
 
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const [data, total] = await Promise.all([
       this.prisma.fulfillment_billing_events.findMany({
         where,
@@ -117,7 +131,38 @@ export class FulfillmentBillingService {
       }),
       this.prisma.fulfillment_billing_events.count({ where }),
     ]);
-    return { data, total, page, limit };
+    return { data: await this.enrichBillingEvents(tenantId, data), total, page, limit };
+  }
+
+  private async enrichBillingEvents(tenantId: string, events: any[]): Promise<any[]> {
+    if (!events.length) return events;
+
+    const facilityIds = [...new Set(events.map(e => e.facility_id).filter(Boolean))];
+    const clientIds = [...new Set(events.map(e => e.client_id).filter(Boolean))];
+    const billingRunIds = [...new Set(events.map(e => e.billing_run_id).filter(Boolean))];
+
+    const [facilities, clients, billingRuns] = await Promise.all([
+      facilityIds.length
+        ? this.prisma.warehouse_facilities.findMany({ where: { tenant_id: tenantId, facility_id: { in: facilityIds } }, select: { facility_id: true, facility_name: true } })
+        : [],
+      clientIds.length
+        ? this.prisma.clients.findMany({ where: { tenant_id: tenantId, client_id: { in: clientIds } }, select: { client_id: true, client_name: true } })
+        : [],
+      billingRunIds.length
+        ? this.prisma.fulfillment_billing_runs.findMany({ where: { billing_run_id: { in: billingRunIds } }, select: { billing_run_id: true, run_number: true } })
+        : [],
+    ]);
+
+    const facilityMap = new Map(facilities.map(f => [Number(f.facility_id), f.facility_name] as [number, string]));
+    const clientMap = new Map(clients.map(c => [Number(c.client_id), c.client_name] as [number, string]));
+    const billingRunMap = new Map(billingRuns.map(r => [Number(r.billing_run_id), r.run_number] as [number, string]));
+
+    return events.map(event => ({
+      ...event,
+      facility_name: facilityMap.get(Number(event.facility_id)) || null,
+      client_name: clientMap.get(Number(event.client_id)) || null,
+      billing_run_number: billingRunMap.get(Number(event.billing_run_id)) || null,
+    }));
   }
 
   // ─── Link Events to Run ────────────────────────────────────────────

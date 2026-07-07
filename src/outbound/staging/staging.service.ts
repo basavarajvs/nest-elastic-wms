@@ -108,28 +108,47 @@ export class StagingService {
   }
 
   async findAllLanes(tenantId: string, facilityId: bigint) {
-    return this.prisma.staging_lanes.findMany({
+    const lanes = await this.prisma.staging_lanes.findMany({
       where: { tenant_id: tenantId, facility_id: facilityId, is_active: true },
       orderBy: { lane_code: 'asc' },
     });
+    const carrierIds = lanes.map(l => l.assigned_carrier_id).filter(Boolean) as bigint[];
+    const carriers = carrierIds.length
+      ? await this.prisma.carriers.findMany({ where: { tenant_id: tenantId, carrier_id: { in: carrierIds } } })
+      : [];
+    const carrierMap = new Map(carriers.map(c => [c.carrier_id, c.carrier_name]));
+    const facility = await this.prisma.warehouse_facilities.findFirst({ where: { tenant_id: tenantId, facility_id: facilityId } });
+    return lanes.map(l => ({
+      ...l,
+      facility_name: facility?.facility_name,
+      carrier_name: l.assigned_carrier_id ? carrierMap.get(l.assigned_carrier_id) : undefined,
+    }));
   }
 
   async createLane(tenantId: string, dto: any) {
-    return this.prisma.staging_lanes.create({
+    const lane = await this.prisma.staging_lanes.create({
       data: {
         tenant_id: tenantId,
-        facility_id: BigInt(dto.facilityId),
-        lane_code: dto.laneCode,
-        lane_type: dto.laneType || 'CARRIER',
+        facility_id: BigInt(dto.facility_id),
+        lane_code: dto.lane_code,
+        lane_type: dto.lane_type || 'CARRIER',
         description: dto.description,
-        zone_id: dto.zoneId ? BigInt(dto.zoneId) : undefined,
-        assigned_carrier_id: dto.assignedCarrierId ? BigInt(dto.assignedCarrierId) : undefined,
-        assigned_door_id: dto.assignedDoorId ? BigInt(dto.assignedDoorId) : undefined,
-        max_cartons: dto.maxCartons,
+        zone_id: dto.zone_id ? BigInt(dto.zone_id) : undefined,
+        assigned_carrier_id: dto.assigned_carrier_id ? BigInt(dto.assigned_carrier_id) : undefined,
+        assigned_door_id: dto.assigned_door_id ? BigInt(dto.assigned_door_id) : undefined,
+        assigned_route_id: dto.assigned_route_id ? BigInt(dto.assigned_route_id) : undefined,
+        max_cartons: dto.max_cartons,
         current_carton_count: 0,
-        is_active: dto.isActive ?? true,
+        is_active: dto.is_active ?? true,
       },
     });
+    let carrierName: string | undefined;
+    if (lane.assigned_carrier_id) {
+      const carrier = await this.prisma.carriers.findFirst({ where: { tenant_id: tenantId, carrier_id: lane.assigned_carrier_id } });
+      carrierName = carrier?.carrier_name;
+    }
+    const facility = await this.prisma.warehouse_facilities.findFirst({ where: { tenant_id: tenantId, facility_id: lane.facility_id } });
+    return { ...lane, facility_name: facility?.facility_name, carrier_name: carrierName };
   }
 
   async getLaneContents(tenantId: string, facilityId: bigint, laneId: bigint) {
@@ -139,7 +158,17 @@ export class StagingService {
     const lane = await this.prisma.staging_lanes.findFirst({
       where: { tenant_id: tenantId, lane_id: laneId },
     });
-    return { lane, cartons, cartonCount: cartons.length };
+    let carrierName: string | undefined;
+    if (lane?.assigned_carrier_id) {
+      const carrier = await this.prisma.carriers.findFirst({ where: { tenant_id: tenantId, carrier_id: lane.assigned_carrier_id } });
+      carrierName = carrier?.carrier_name;
+    }
+    const facility = await this.prisma.warehouse_facilities.findFirst({ where: { tenant_id: tenantId, facility_id: lane?.facility_id } });
+    return {
+      lane: { ...lane, facility_name: facility?.facility_name, carrier_name: carrierName },
+      cartons,
+      cartonCount: cartons.length,
+    };
   }
 
   // APP-SHIP-G: Undo staging — reverse STAGED → PACKED

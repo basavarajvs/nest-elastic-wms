@@ -9,26 +9,26 @@ export class ReceivingInspectionService {
     const inspection = await this.prisma.quality_inspections.create({
       data: {
         tenant_id: tenantId,
-        facility_id: BigInt(dto.facilityId),
+        facility_id: BigInt(dto.facility_id),
         inspection_number: `RI-${Date.now()}`,
-        inspection_name: dto.inspectionName || `Receiving Inspection ${dto.productId}`,
+        inspection_name: dto.inspection_name || `Receiving Inspection ${dto.product_id}`,
         description: dto.notes || null,
         reference_type: 'RECEIVING',
-        reference_id: BigInt(dto.receiptId || 0),
-        product_id: dto.productId ? BigInt(dto.productId) : undefined,
-        inspection_type: dto.inspectionType || 'RECEIVING',
+        reference_id: BigInt(dto.receipt_id || 0),
+        product_id: dto.product_id ? BigInt(dto.product_id) : undefined,
+        inspection_type: dto.inspection_type || 'RECEIVING',
         inspection_scope: 'RECEIVING',
         status: dto.status || 'PENDING',
         notes: dto.notes || null,
-        created_by: dto.createdBy || null,
+        created_by: dto.created_by || null,
       },
     });
 
     // Store lot_number in notes or as metadata since quality_inspections doesn't have lot_number
-    if (dto.lotNumber) {
+    if (dto.lot_number) {
       await this.prisma.quality_inspections.updateMany({
         where: { tenant_id: tenantId, inspection_id: inspection.inspection_id },
-        data: { notes: `Lot: ${dto.lotNumber} | ${dto.notes || ''}` },
+        data: { notes: `Lot: ${dto.lot_number} | ${dto.notes || ''}` },
       });
     }
 
@@ -36,7 +36,9 @@ export class ReceivingInspectionService {
   }
 
   async findAllInspections(tenantId: string, query: any) {
-    const { facilityId, status, receiptId, productId, page = 1, limit = 50 } = query;
+    const { facilityId, status, receiptId, productId, page: queryPage, limit: queryLimit } = query;
+    const page = Number(queryPage) || 1;
+    const limit = Number(queryLimit) || 50;
     const skip = (page - 1) * limit;
     const where: any = { tenant_id: tenantId };
     if (facilityId) where.facility_id = BigInt(facilityId);
@@ -53,7 +55,16 @@ export class ReceivingInspectionService {
       }),
       this.prisma.quality_inspections.count({ where }),
     ]);
-    return { data, total, page, limit };
+    const productIds = [...new Set(data.filter(d => d.product_id).map(d => d.product_id))] as bigint[];
+    const products = productIds.length
+      ? await this.prisma.products.findMany({ where: { tenant_id: tenantId, product_id: { in: productIds } } })
+      : [];
+    const productMap = new Map(products.map(p => [p.product_id, p.product_name]));
+    const mapped = data.map(d => ({
+      ...d,
+      product_name: d.product_id ? productMap.get(d.product_id) : undefined,
+    }));
+    return { data: mapped, total, page, limit };
   }
 
   async findInspectionById(tenantId: string, id: string) {
@@ -61,14 +72,20 @@ export class ReceivingInspectionService {
       where: { tenant_id: tenantId, inspection_id: BigInt(id) },
     });
     if (!inspection) throw new NotFoundException('Inspection not found');
-    return inspection;
+    let product_name: string | undefined;
+    if (inspection.product_id) {
+      const product = await this.prisma.products.findFirst({ where: { tenant_id: tenantId, product_id: inspection.product_id } });
+      product_name = product?.product_name;
+    }
+    return { ...inspection, product_name };
   }
 
   async deleteInspection(tenantId: string, id: string) {
+    const entity = await this.findInspectionById(tenantId, id);
     await this.prisma.quality_inspections.deleteMany({
       where: { tenant_id: tenantId, inspection_id: BigInt(id) },
     });
-    return { message: 'Inspection deleted successfully' };
+    return entity;
   }
 
   async deleteQcDisposition(tenantId: string, id: string) {
@@ -85,21 +102,23 @@ export class ReceivingInspectionService {
        VALUES ($1::uuid, $2::bigint, $3::bigint, $4::bigint, $5, $6, $7, $8::uuid, $9, $10::uuid, NOW())
        RETURNING *`,
       tenantId,
-      dto.facilityId,
-      dto.receiptLineId,
-      dto.productId,
-      dto.dispositionType,
-      dto.dispositionQty || 0,
-      dto.reasonCode || null,
-      dto.inspectorId || null,
+      dto.facility_id,
+      dto.receipt_line_id,
+      dto.product_id,
+      dto.disposition_type,
+      dto.disposition_qty || 0,
+      dto.reason_code || null,
+      dto.inspector_id || null,
       dto.notes || null,
-      dto.createdBy || null,
+      dto.created_by || null,
     );
     return result;
   }
 
   async findAllQcDispositions(tenantId: string, query: any) {
-    const { facilityId, receiptLineId, dispositionType, page = 1, limit = 50 } = query;
+    const { facilityId, receiptLineId, dispositionType, page: queryPage, limit: queryLimit } = query;
+    const page = Number(queryPage) || 1;
+    const limit = Number(queryLimit) || 50;
     const offset = (page - 1) * limit;
     const conditions: string[] = [`d.tenant_id = $1::uuid`];
     const params: any[] = [tenantId];

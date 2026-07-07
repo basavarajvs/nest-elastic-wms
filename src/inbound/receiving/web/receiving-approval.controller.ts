@@ -1,9 +1,12 @@
 import { Controller, Post, Get, Param, Body, Query, Req, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiOkResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../common/auth/jwt-auth.guard';
 import { CaslGuard } from '../../../common/guards/casl.guard';
 import { CheckAbility } from '../../../common/decorators/check-ability.decorator';
 import { ReceivingApprovalService } from '../receiving-approval.service';
+import { ReceivingToleranceConfigResponseDto } from '../dtos/receiving-response.dto';
 
+@ApiTags('Receiving Approvals')
 @Controller('web/receiving-approvals')
 @UseGuards(JwtAuthGuard, CaslGuard)
 export class ReceivingApprovalWebController {
@@ -14,18 +17,24 @@ export class ReceivingApprovalWebController {
   }
 
   @Get('pending')
+  @ApiOperation({ summary: 'Get pending receiving approvals for a facility' })
+  @ApiOkResponse({ type: [ReceivingToleranceConfigResponseDto] })
   @CheckAbility({ action: 'read', subject: 'ReceivingApproval' })
   async getPending(@Req() req: any, @Query('facilityId') facilityId: string) {
     return this.approvalService.getPendingApprovals(this.getTenant(req), BigInt(facilityId));
   }
 
   @Post(':id/approve')
+  @ApiOperation({ summary: 'Approve a receiving variance' })
+  @ApiOkResponse({ type: ReceivingToleranceConfigResponseDto })
   @CheckAbility({ action: 'update', subject: 'ReceivingApproval' })
   async approve(@Req() req: any, @Param('id') id: string) {
     return this.approvalService.approve(this.getTenant(req), BigInt(id), req.user?.userId || 'system');
   }
 
   @Post(':id/reject')
+  @ApiOperation({ summary: 'Reject a receiving variance' })
+  @ApiOkResponse({ type: ReceivingToleranceConfigResponseDto })
   @CheckAbility({ action: 'update', subject: 'ReceivingApproval' })
   async reject(@Req() req: any, @Param('id') id: string) {
     return this.approvalService.reject(this.getTenant(req), BigInt(id), req.user?.userId || 'system');

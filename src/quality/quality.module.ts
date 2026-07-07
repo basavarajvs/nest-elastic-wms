@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
 import { InspectionService } from './inspections/inspection.service';
+import { InspectionDefectService } from './inspection-defect.service';
+import { TemperatureLogService } from './temperature-log.service';
 import { QualityHoldService } from './holds/quality-hold.service';
 import { NcrService } from './ncr/ncr.service';
 import { ComplianceService } from './compliance/compliance.service';
@@ -8,6 +10,8 @@ import { ReceivingInspectionService } from './receiving-inspection/receiving-ins
 import { InspectionProfileService } from './inspections/inspection-profile.service';
 import { DefectCodeService } from './defects/defect-code.service';
 import { InspectionWebController } from './web/inspection.controller';
+import { InspectionDefectController } from './web/inspection-defect.controller';
+import { TemperatureLogController } from './web/temperature-log.controller';
 import { HoldController } from './web/hold.controller';
 import { NcrController } from './web/ncr.controller';
 import { ComplianceRequirementController, ComplianceAuditController, HazmatController } from './web/compliance.controller';
@@ -20,6 +24,8 @@ import { DefectCodeWebController } from './defects/web/defect-code.controller';
   imports: [PrismaModule],
   controllers: [
     InspectionWebController,
+    InspectionDefectController,
+    TemperatureLogController,
     HoldController,
     NcrController,
     ComplianceRequirementController,
@@ -33,6 +39,8 @@ import { DefectCodeWebController } from './defects/web/defect-code.controller';
   ],
   providers: [
     InspectionService,
+    InspectionDefectService,
+    TemperatureLogService,
     QualityHoldService,
     NcrService,
     ComplianceService,
@@ -42,6 +50,8 @@ import { DefectCodeWebController } from './defects/web/defect-code.controller';
   ],
   exports: [
     InspectionService,
+    InspectionDefectService,
+    TemperatureLogService,
     QualityHoldService,
     NcrService,
     ComplianceService,

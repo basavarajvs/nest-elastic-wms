@@ -8,24 +8,32 @@ export class ExceptionCommentService {
   constructor(private readonly prisma: PrismaService) {}
 
   async addComment(tenantId: string, exceptionId: bigint, dto: any) {
-    return this.prisma.exception_comments.create({
+    const record = await this.prisma.exception_comments.create({
       data: {
         tenant_id: tenantId,
-        facility_id: BigInt(dto.facilityId),
+        facility_id: BigInt(dto.facility_id),
         exception_id: exceptionId,
-        comment_text: dto.commentText,
-        comment_type: dto.commentType || 'GENERAL',
-        commented_by_user_id: dto.commentedByUserId,
-        is_internal: dto.isInternal ?? false,
-        created_by: dto.createdBy,
+        comment_text: dto.comment_text,
+        comment_type: dto.comment_type || 'GENERAL',
+        commented_by_user_id: dto.commented_by_user_id || dto.created_by,
+        is_internal: dto.is_internal ?? false,
       },
+      include: { warehouse_facilities: { select: { facility_name: true } } },
     });
+    return this.flattenComment(record);
   }
 
   async getComments(tenantId: string, exceptionId: bigint) {
-    return this.prisma.exception_comments.findMany({
+    const records = await this.prisma.exception_comments.findMany({
       where: { tenant_id: tenantId, exception_id: exceptionId },
+      include: { warehouse_facilities: { select: { facility_name: true } } },
       orderBy: { commented_at: 'asc' },
     });
+    return records.map(r => this.flattenComment(r));
+  }
+
+  private flattenComment(record: any) {
+    const { warehouse_facilities, ...rest } = record;
+    return { ...rest, facility_name: warehouse_facilities?.facility_name || null };
   }
 }

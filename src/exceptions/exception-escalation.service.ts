@@ -8,38 +8,39 @@ export class ExceptionEscalationService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(tenantId: string, dto: any) {
-    return this.prisma.exception_escalation_rules.create({
+    const record = await this.prisma.exception_escalation_rules.create({
       data: {
         tenant_id: tenantId,
-        facility_id: dto.facilityId ? BigInt(dto.facilityId) : undefined,
-        rule_code: dto.ruleCode,
-        rule_name: dto.ruleName,
+        facility_id: dto.facility_id ? BigInt(dto.facility_id) : undefined,
+        rule_code: dto.rule_code,
+        rule_name: dto.rule_name,
         description: dto.description,
-        exception_type: dto.exceptionType,
-        exception_severity: dto.exceptionSeverity,
-        exception_category: dto.exceptionCategory,
-        escalation_level: dto.escalationLevel ?? 1,
-        time_threshold_minutes: dto.timeThresholdMinutes,
-        notify_roles: dto.notifyRoles,
-        notify_users: dto.notifyUsers,
-        notification_method: dto.notificationMethod || 'EMAIL',
-        notification_template: dto.notificationTemplate,
-        auto_assign_to_role: dto.autoAssignToRole,
-        auto_assign_to_user: dto.autoAssignToUser,
-        condition_expression: dto.conditionExpression,
-        is_active: dto.isActive ?? true,
+        exception_type: dto.exception_type,
+        exception_severity: dto.exception_severity,
+        exception_category: dto.exception_category,
+        escalation_level: dto.escalation_level ?? 1,
+        time_threshold_minutes: dto.time_threshold_minutes,
+        notify_roles: dto.notify_roles,
+        notify_users: dto.notify_users,
+        notification_method: dto.notification_method || 'EMAIL',
+        notification_template: dto.notification_template,
+        auto_assign_to_role: dto.auto_assign_to_role,
+        auto_assign_to_user: dto.auto_assign_to_user,
+        condition_expression: dto.condition_expression,
+        is_active: dto.is_active ?? true,
         priority: dto.priority ?? 100,
-        created_by: dto.createdBy,
+        created_by: dto.created_by,
       },
     });
+    return this.enrichRule(tenantId, record);
   }
 
   async findAll(tenantId: string, query: any) {
     const where: any = { tenant_id: tenantId };
     if (query.isActive !== undefined) where.is_active = query.isActive;
     if (query.exceptionType) where.exception_type = query.exceptionType;
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const [data, total] = await Promise.all([
       this.prisma.exception_escalation_rules.findMany({
         where,
@@ -49,31 +50,40 @@ export class ExceptionEscalationService {
       }),
       this.prisma.exception_escalation_rules.count({ where }),
     ]);
-    return { data, total, page, limit };
+    const enriched = await this.enrichRules(tenantId, data);
+    return { data: enriched, total, page, limit };
   }
 
   async findById(tenantId: string, ruleId: bigint) {
-    return this.prisma.exception_escalation_rules.findFirst({
+    const record = await this.prisma.exception_escalation_rules.findFirst({
       where: { tenant_id: tenantId, rule_id: ruleId },
     });
+    if (!record) return null;
+    return this.enrichRule(tenantId, record);
   }
 
   async update(tenantId: string, ruleId: bigint, dto: any) {
     const data: any = {};
-    if (dto.ruleName !== undefined) data.rule_name = dto.ruleName;
+    if (dto.rule_name !== undefined) data.rule_name = dto.rule_name;
     if (dto.description !== undefined) data.description = dto.description;
-    if (dto.exceptionSeverity !== undefined) data.exception_severity = dto.exceptionSeverity;
-    if (dto.escalationLevel !== undefined) data.escalation_level = dto.escalationLevel;
-    if (dto.timeThresholdMinutes !== undefined) data.time_threshold_minutes = dto.timeThresholdMinutes;
-    if (dto.notifyRoles !== undefined) data.notify_roles = dto.notifyRoles;
-    if (dto.notifyUsers !== undefined) data.notify_users = dto.notifyUsers;
-    if (dto.isActive !== undefined) data.is_active = dto.isActive;
+    if (dto.exception_severity !== undefined) data.exception_severity = dto.exception_severity;
+    if (dto.exception_category !== undefined) data.exception_category = dto.exception_category;
+    if (dto.escalation_level !== undefined) data.escalation_level = dto.escalation_level;
+    if (dto.time_threshold_minutes !== undefined) data.time_threshold_minutes = dto.time_threshold_minutes;
+    if (dto.notify_roles !== undefined) data.notify_roles = dto.notify_roles;
+    if (dto.notify_users !== undefined) data.notify_users = dto.notify_users;
+    if (dto.notification_method !== undefined) data.notification_method = dto.notification_method;
+    if (dto.notification_template !== undefined) data.notification_template = dto.notification_template;
+    if (dto.auto_assign_to_role !== undefined) data.auto_assign_to_role = dto.auto_assign_to_role;
+    if (dto.auto_assign_to_user !== undefined) data.auto_assign_to_user = dto.auto_assign_to_user;
+    if (dto.condition_expression !== undefined) data.condition_expression = dto.condition_expression;
+    if (dto.is_active !== undefined) data.is_active = dto.is_active;
     if (dto.priority !== undefined) data.priority = dto.priority;
-    if (dto.updatedBy !== undefined) data.updated_by = dto.updatedBy;
-    return this.prisma.exception_escalation_rules.updateMany({
+    await this.prisma.exception_escalation_rules.updateMany({
       where: { tenant_id: tenantId, rule_id: ruleId },
       data,
     });
+    return this.findById(tenantId, ruleId);
   }
 
   async evaluate(tenantId: string) {
@@ -118,5 +128,28 @@ export class ExceptionEscalationService {
     return this.prisma.exception_escalation_rules.deleteMany({
       where: { tenant_id: tenantId, rule_id: ruleId },
     });
+  }
+
+  private async enrichRule(tenantId: string, record: any) {
+    const enriched = await this.enrichRules(tenantId, [record]);
+    return enriched[0];
+  }
+
+  private async enrichRules(tenantId: string, records: any[]) {
+    if (!records.length) return [];
+    const facilityIds = [...new Set(records.filter(r => r.facility_id).map(r => r.facility_id))];
+    const facilities = facilityIds.length
+      ? await this.prisma.warehouse_facilities.findMany({
+          where: { tenant_id: tenantId, facility_id: { in: facilityIds } },
+          select: { facility_id: true, facility_name: true },
+        })
+      : [];
+    const facMap = new Map<string, string | null>(
+      facilities.map(f => [f.facility_id.toString(), f.facility_name] as [string, string | null]),
+    );
+    return records.map(record => ({
+      ...record,
+      facility_name: record.facility_id ? facMap.get(record.facility_id.toString()) ?? null : null,
+    }));
   }
 }

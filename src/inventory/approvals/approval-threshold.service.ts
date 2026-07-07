@@ -7,9 +7,10 @@ export class ApprovalThresholdService {
 
   async findActive(tenantId: string) {
     return this.prisma.$queryRawUnsafe<Record<string, any>[]>(
-      `SELECT * FROM multitenant.approval_threshold_configs
-       WHERE tenant_id = $1::uuid AND active = true
-       ORDER BY applied_at DESC LIMIT 1`,
+      `SELECT c.*, f.facility_name FROM multitenant.approval_threshold_configs c
+       LEFT JOIN multitenant.warehouse_facilities f ON f.tenant_id = c.tenant_id AND f.facility_id = c.facility_id
+       WHERE c.tenant_id = $1::uuid AND c.active = true
+       ORDER BY c.applied_at DESC LIMIT 1`,
       tenantId,
     );
   }
@@ -23,9 +24,9 @@ export class ApprovalThresholdService {
        SET auto_threshold = $3, supervisor_threshold = $4, manager_threshold = $5, applied_at = NOW()`,
       tenantId,
       dto.version || 'v1',
-      dto.autoThreshold ?? 100,
-      dto.supervisorThreshold ?? 1000,
-      dto.managerThreshold ?? 10000,
+      dto.auto_threshold ?? 100,
+      dto.supervisor_threshold ?? 1000,
+      dto.manager_threshold ?? 10000,
     );
   }
 }

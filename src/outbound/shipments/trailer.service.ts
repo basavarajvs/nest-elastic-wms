@@ -7,25 +7,50 @@ export class TrailerService {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  private async enrichTrailerRows(rows: any[]): Promise<any[]> {
+    if (!rows.length) return rows;
+    const tenantId = rows[0].tenant_id;
+    const loadIds = rows.map(r => r.assigned_load_id).filter(Boolean) as bigint[];
+    const loadMap = new Map<bigint, string>();
+    if (loadIds.length) {
+      const loads = await this.prisma.loads.findMany({
+        where: { tenant_id: tenantId, load_id: { in: loadIds } },
+        select: { load_id: true, load_number: true },
+      });
+      loads.forEach(l => loadMap.set(l.load_id, l.load_number));
+    }
+    return rows.map(r => ({ ...r, load_number: r.assigned_load_id ? loadMap.get(r.assigned_load_id) : undefined }));
+  }
+
+  private async enrichTrailerRow(r: any): Promise<any> {
+    if (!r || !r.assigned_load_id) return r;
+    const load = await this.prisma.loads.findFirst({
+      where: { tenant_id: r.tenant_id, load_id: r.assigned_load_id },
+      select: { load_number: true },
+    });
+    return { ...r, load_number: load?.load_number };
+  }
+
   async create(tenantId: string, dto: any) {
-    return this.prisma.trailers.create({
+    const row = await this.prisma.trailers.create({
       data: {
         tenant_id: tenantId,
-        facility_id: BigInt(dto.facilityId),
-        trailer_number: dto.trailerNumber,
-        carrier_id: dto.carrierId ? BigInt(dto.carrierId) : undefined,
-        trailer_type: dto.trailerType || 'DRY_VAN',
+        facility_id: BigInt(dto.facility_id),
+        trailer_number: dto.trailer_number,
+        carrier_id: dto.carrier_id ? BigInt(dto.carrier_id) : undefined,
+        trailer_type: dto.trailer_type || 'DRY_VAN',
         status: dto.status || 'ARRIVED',
-        is_active: dto.isActive ?? true,
-        max_weight_kg: dto.maxWeightKg,
-        max_volume_cbm: dto.maxVolumeCbm,
-        max_pallets: dto.maxPallets,
-        max_cartons: dto.maxCartons,
-        seal_number: dto.sealNumber,
-        arrival_time: dto.arrivalTime ? new Date(dto.arrivalTime) : new Date(),
+        is_active: dto.is_active ?? true,
+        max_weight_kg: dto.max_weight_kg,
+        max_volume_cbm: dto.max_volume_cbm,
+        max_pallets: dto.max_pallets,
+        max_cartons: dto.max_cartons,
+        seal_number: dto.seal_number,
+        arrival_time: dto.arrival_time ? new Date(dto.arrival_time) : new Date(),
         notes: dto.notes,
       },
     });
+    return this.enrichTrailerRow(row);
   }
 
   async findAll(tenantId: string, query: any) {
@@ -40,10 +65,28 @@ export class TrailerService {
     const page = parseInt(query.page) || 1;
     const limit = parseInt(query.limit) || 20;
     const skip = (page - 1) * limit;
-    const [data, total] = await Promise.all([
+    const [rows, total] = await Promise.all([
       this.prisma.trailers.findMany({ where, skip, take: limit, orderBy: { arrival_time: 'desc' } }),
       this.prisma.trailers.count({ where }),
     ]);
+    const facilityIds = [...new Set(rows.map(r => r.facility_id))];
+    const carrierIds = rows.map(r => r.carrier_id).filter(Boolean) as bigint[];
+    const dockIds = rows.map(r => r.assigned_dock_id).filter(Boolean) as bigint[];
+    const [facilities, carriers, docks] = await Promise.all([
+      this.prisma.warehouse_facilities.findMany({ where: { tenant_id: tenantId, facility_id: { in: facilityIds } } }),
+      carrierIds.length ? this.prisma.carriers.findMany({ where: { tenant_id: tenantId, carrier_id: { in: carrierIds } } }) : [],
+      dockIds.length ? this.prisma.loading_docks.findMany({ where: { tenant_id: tenantId, dock_id: { in: dockIds } } }) : [],
+    ]);
+    const facilityMap = new Map<bigint, string>(facilities.map(f => [f.facility_id, f.facility_name] as [bigint, string]));
+    const carrierMap = new Map<bigint, string>(carriers.map(c => [c.carrier_id, c.carrier_name] as [bigint, string]));
+    const dockMap = new Map<bigint, string>(docks.map(d => [d.dock_id, d.dock_name] as [bigint, string]));
+    const enriched = await this.enrichTrailerRows(rows);
+    const data = enriched.map(r => ({
+      ...r,
+      facility_name: facilityMap.get(r.facility_id),
+      carrier_name: r.carrier_id ? carrierMap.get(r.carrier_id) : undefined,
+      dock_name: r.assigned_dock_id ? dockMap.get(r.assigned_dock_id) : undefined,
+    }));
     return { data, total, page, limit };
   }
 
@@ -52,7 +95,20 @@ export class TrailerService {
       where: { tenant_id: tenantId, trailer_id: trailerId },
     });
     if (!trailer) throw new NotFoundException('Trailer not found');
-    return trailer;
+    let carrierName: string | undefined;
+    let dockName: string | undefined;
+    let facilityName: string | undefined;
+    if (trailer.carrier_id) {
+      const carrier = await this.prisma.carriers.findFirst({ where: { tenant_id: tenantId, carrier_id: trailer.carrier_id } });
+      carrierName = carrier?.carrier_name;
+    }
+    if (trailer.assigned_dock_id) {
+      const dock = await this.prisma.loading_docks.findFirst({ where: { tenant_id: tenantId, dock_id: trailer.assigned_dock_id } });
+      dockName = dock?.dock_name;
+    }
+    const facility = await this.prisma.warehouse_facilities.findFirst({ where: { tenant_id: tenantId, facility_id: trailer.facility_id } });
+    facilityName = facility?.facility_name;
+    return this.enrichTrailerRow({ ...trailer, facility_name: facilityName, carrier_name: carrierName, dock_name: dockName });
   }
 
   async findByNumber(tenantId: string, facilityId: bigint, trailerNumber: string) {
@@ -63,20 +119,28 @@ export class TrailerService {
   }
 
   async update(tenantId: string, trailerId: bigint, dto: any) {
-    const trailer = await this.findById(tenantId, trailerId);
-    return this.prisma.trailers.updateMany({
+    await this.findById(tenantId, trailerId);
+    await this.prisma.trailers.updateMany({
       where: { tenant_id: tenantId, trailer_id: trailerId },
       data: {
-        trailer_number: dto.trailerNumber,
-        carrier_id: dto.carrierId ? BigInt(dto.carrierId) : undefined,
+        trailer_number: dto.trailer_number,
+        carrier_id: dto.carrier_id ? BigInt(dto.carrier_id) : undefined,
+        trailer_type: dto.trailer_type,
         status: dto.status,
-        seal_number: dto.sealNumber,
-        departure_time: dto.departureTime ? new Date(dto.departureTime) : undefined,
+        is_active: dto.is_active,
+        seal_number: dto.seal_number,
+        max_weight_kg: dto.max_weight_kg,
+        max_volume_cbm: dto.max_volume_cbm,
+        max_pallets: dto.max_pallets,
+        max_cartons: dto.max_cartons,
+        arrival_time: dto.arrival_time ? new Date(dto.arrival_time) : undefined,
+        departure_time: dto.departure_time ? new Date(dto.departure_time) : undefined,
         notes: dto.notes,
-        assigned_load_id: dto.assignedLoadId ? BigInt(dto.assignedLoadId) : undefined,
-        assigned_dock_id: dto.assignedDockId ? BigInt(dto.assignedDockId) : undefined,
+        assigned_load_id: dto.assigned_load_id ? BigInt(dto.assigned_load_id) : undefined,
+        assigned_dock_id: dto.assigned_dock_id ? BigInt(dto.assigned_dock_id) : undefined,
       },
     });
+    return this.findById(tenantId, trailerId);
   }
 
   async assignToLoad(tenantId: string, trailerId: bigint, loadId: bigint) {
@@ -109,9 +173,11 @@ export class TrailerService {
   }
 
   async delete(tenantId: string, trailerId: bigint) {
-    return this.prisma.trailers.deleteMany({
+    const trailer = await this.findById(tenantId, trailerId);
+    await this.prisma.trailers.deleteMany({
       where: { tenant_id: tenantId, trailer_id: trailerId },
     });
+    return trailer;
   }
 
   async getNextLoadingWork(tenantId: string, facilityId: bigint, userId: string) {

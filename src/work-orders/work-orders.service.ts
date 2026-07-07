@@ -10,39 +10,37 @@ export class WorkOrdersService {
   async create(tenantId: string, dto: any) {
     const data: any = {
       tenant_id: tenantId,
-      facility_id: BigInt(dto.facilityId),
-      work_order_number: dto.workOrderNumber,
-      work_order_name: dto.workOrderName,
+      facility_id: BigInt(dto.facility_id),
+      work_order_number: dto.work_order_number,
+      work_order_name: dto.work_order_name,
       description: dto.description,
-      work_order_type: dto.workOrderType || 'ASSEMBLY',
-      product_id: BigInt(dto.productId),
-      product_name: dto.productName,
-      product_code: dto.productCode,
-      planned_quantity: dto.plannedQuantity,
-      uom_id: BigInt(dto.uomId),
+      work_order_type: dto.work_order_type || 'ASSEMBLY',
+      product_id: BigInt(dto.product_id),
+      product_name: dto.product_name,
+      product_code: dto.product_code,
+      planned_quantity: dto.planned_quantity,
+      uom_id: BigInt(dto.uom_id),
       priority: dto.priority ?? 10,
-      assigned_to_user_id: dto.assignedToUserId,
-      scheduled_start_date: dto.scheduledStartDate ? new Date(dto.scheduledStartDate) : undefined,
-      scheduled_end_date: dto.scheduledEndDate ? new Date(dto.scheduledEndDate) : undefined,
-      source_type: dto.sourceType,
-      source_reference_id: dto.sourceReferenceId ? BigInt(dto.sourceReferenceId) : undefined,
+      assigned_to_user_id: dto.assigned_to_user_id,
+      scheduled_start_date: dto.scheduled_start_date ? new Date(dto.scheduled_start_date) : undefined,
+      scheduled_end_date: dto.scheduled_end_date ? new Date(dto.scheduled_end_date) : undefined,
+      source_type: dto.source_type,
+      source_reference_id: dto.source_reference_id ? BigInt(dto.source_reference_id) : undefined,
       notes: dto.notes,
-      created_by: dto.createdBy,
     };
 
     if (dto.operations?.length > 0) {
       data.work_order_operations = {
         create: dto.operations.map((op: any, idx: number) => ({
           tenant_id: tenantId,
-          facility_id: BigInt(dto.facilityId),
-          operation_number: op.operationNumber ?? idx + 1,
-          operation_name: op.operationName,
+          facility_id: BigInt(dto.facility_id),
+          operation_number: op.operation_number ?? idx + 1,
+          operation_name: op.operation_name,
           description: op.description,
-          required_equipment_type: op.requiredEquipmentType,
-          required_skill_set: op.requiredSkillSet,
-          standard_time_minutes: op.standardTimeMinutes,
+          required_equipment_type: op.required_equipment_type,
+          required_skill_set: op.required_skill_set,
+          standard_time_minutes: op.standard_time_minutes,
           notes: op.notes,
-          created_by: dto.createdBy,
         })),
       };
     }
@@ -51,16 +49,15 @@ export class WorkOrdersService {
       data.work_order_components = {
         create: dto.components.map((comp: any) => ({
           tenant_id: tenantId,
-          facility_id: BigInt(dto.facilityId),
-          component_product_id: BigInt(comp.componentProductId),
-          component_product_name: comp.componentProductName,
-          component_product_code: comp.componentProductCode,
-          required_quantity: comp.requiredQuantity,
-          total_required_quantity: comp.totalRequiredQuantity,
-          remaining_required_quantity: comp.remainingRequiredQuantity ?? comp.requiredQuantity,
-          uom_id: BigInt(comp.uomId),
+          facility_id: BigInt(dto.facility_id),
+          component_product_id: BigInt(comp.component_product_id),
+          component_product_name: comp.component_product_name,
+          component_product_code: comp.component_product_code,
+          required_quantity: comp.required_quantity,
+          total_required_quantity: comp.total_required_quantity,
+          remaining_required_quantity: comp.remaining_required_quantity ?? comp.required_quantity,
+          uom_id: BigInt(comp.uom_id),
           notes: comp.notes,
-          created_by: dto.createdBy,
         })),
       };
     }
@@ -79,46 +76,63 @@ export class WorkOrdersService {
         { work_order_name: { contains: query.search, mode: 'insensitive' } },
       ];
     }
-    const page = query.page || 1;
-    const limit = query.limit || 20;
-    const [data, total] = await Promise.all([
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
+    const [rows, total] = await Promise.all([
       this.prisma.work_orders.findMany({
         where,
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { created_at: 'desc' },
+        include: { warehouse_facilities: true },
       }),
       this.prisma.work_orders.count({ where }),
     ]);
+    const data = rows.map(r => ({
+      ...r,
+      facility_name: r.warehouse_facilities?.facility_name,
+      warehouse_facilities: undefined,
+    }));
     return { data, total, page, limit };
   }
 
   async findById(tenantId: string, workOrderId: bigint) {
-    return this.prisma.work_orders.findFirst({
+    const wo = await this.prisma.work_orders.findFirst({
       where: { tenant_id: tenantId, work_order_id: workOrderId },
+      include: { warehouse_facilities: true },
     });
+    if (!wo) return null;
+    return {
+      ...wo,
+      facility_name: wo.warehouse_facilities?.facility_name,
+      warehouse_facilities: undefined,
+    };
   }
 
   async update(tenantId: string, workOrderId: bigint, dto: any) {
     const data: any = {};
-    if (dto.workOrderName !== undefined) data.work_order_name = dto.workOrderName;
+    if (dto.work_order_name !== undefined) data.work_order_name = dto.work_order_name;
     if (dto.description !== undefined) data.description = dto.description;
+    if (dto.work_order_type !== undefined) data.work_order_type = dto.work_order_type;
     if (dto.priority !== undefined) data.priority = dto.priority;
-    if (dto.assignedToUserId !== undefined) data.assigned_to_user_id = dto.assignedToUserId;
-    if (dto.scheduledStartDate !== undefined) data.scheduled_start_date = new Date(dto.scheduledStartDate);
-    if (dto.scheduledEndDate !== undefined) data.scheduled_end_date = new Date(dto.scheduledEndDate);
+    if (dto.assigned_to_user_id !== undefined) data.assigned_to_user_id = dto.assigned_to_user_id;
+    if (dto.scheduled_start_date !== undefined) data.scheduled_start_date = new Date(dto.scheduled_start_date);
+    if (dto.scheduled_end_date !== undefined) data.scheduled_end_date = new Date(dto.scheduled_end_date);
     if (dto.notes !== undefined) data.notes = dto.notes;
-    if (dto.updatedBy !== undefined) data.updated_by = dto.updatedBy;
-    return this.prisma.work_orders.updateMany({
+    if (dto.updated_by !== undefined) data.updated_by = dto.updated_by;
+    await this.prisma.work_orders.updateMany({
       where: { tenant_id: tenantId, work_order_id: workOrderId },
       data,
     });
+    return this.findById(tenantId, workOrderId);
   }
 
   async delete(tenantId: string, workOrderId: bigint) {
-    return this.prisma.work_orders.deleteMany({
+    const entity = await this.findById(tenantId, workOrderId);
+    await this.prisma.work_orders.deleteMany({
       where: { tenant_id: tenantId, work_order_id: workOrderId },
     });
+    return entity;
   }
 
   async release(tenantId: string, workOrderId: bigint, userId?: string) {

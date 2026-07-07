@@ -1,9 +1,11 @@
 import { Controller, Get, Post, Patch, Delete, Param, Body, Query, Req, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { CaslGuard } from '../../common/guards/casl.guard';
 import { CheckAbility } from '../../common/decorators/check-ability.decorator';
 import { EquipmentService } from '../equipment.service';
+import { DeleteResultDto } from '../../common/dto/paginated-response.dto';
+import { WarehouseEquipmentDto, EquipmentListResponseDto, CreateEquipmentDto, UpdateEquipmentDto, UpdateEquipmentStatusDto } from '../dto/equipment-response.dto';
 
 @ApiTags('Equipment')
 @UseGuards(JwtAuthGuard, CaslGuard)
@@ -14,7 +16,8 @@ export class EquipmentController {
   @Post()
   @CheckAbility({ action: 'create', subject: 'Equipment' })
   @ApiOperation({ summary: 'Create equipment' })
-  async create(@Req() req: any, @Body() dto: any) {
+  @ApiCreatedResponse({ type: WarehouseEquipmentDto })
+  async create(@Req() req: any, @Body() dto: CreateEquipmentDto) {
     const tenantId = req.tenantContext.getTenantId();
     const userId = req.user?.sub;
     return this.equipmentService.create(tenantId, userId, dto);
@@ -23,6 +26,7 @@ export class EquipmentController {
   @Get()
   @CheckAbility({ action: 'read', subject: 'Equipment' })
   @ApiOperation({ summary: 'List equipment' })
+  @ApiOkResponse({ type: EquipmentListResponseDto })
   async findAll(@Req() req: any, @Query() query: any) {
     const tenantId = req.tenantContext.getTenantId();
     return this.equipmentService.findAll(tenantId, query);
@@ -31,6 +35,7 @@ export class EquipmentController {
   @Get(':id')
   @CheckAbility({ action: 'read', subject: 'Equipment' })
   @ApiOperation({ summary: 'Get equipment by ID' })
+  @ApiOkResponse({ type: WarehouseEquipmentDto })
   async findById(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.equipmentService.findById(tenantId, BigInt(id));
@@ -39,7 +44,8 @@ export class EquipmentController {
   @Patch(':id')
   @CheckAbility({ action: 'update', subject: 'Equipment' })
   @ApiOperation({ summary: 'Update equipment' })
-  async update(@Req() req: any, @Param('id') id: string, @Body() dto: any) {
+  @ApiOkResponse({ type: WarehouseEquipmentDto })
+  async update(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateEquipmentDto) {
     const tenantId = req.tenantContext.getTenantId();
     const userId = req.user?.sub;
     return this.equipmentService.update(tenantId, userId, BigInt(id), dto);
@@ -48,10 +54,11 @@ export class EquipmentController {
   @Patch(':id/status')
   @CheckAbility({ action: 'update', subject: 'Equipment' })
   @ApiOperation({ summary: 'Update equipment status' })
+  @ApiOkResponse({ type: WarehouseEquipmentDto })
   async updateStatus(
     @Req() req: any,
     @Param('id') id: string,
-    @Body() dto: { status: string },
+    @Body() dto: UpdateEquipmentStatusDto,
   ) {
     const tenantId = req.tenantContext.getTenantId();
     const userId = req.user?.sub;
@@ -61,6 +68,7 @@ export class EquipmentController {
   @Delete(':id')
   @CheckAbility({ action: 'delete', subject: 'Equipment' })
   @ApiOperation({ summary: 'Delete equipment' })
+  @ApiOkResponse({ type: DeleteResultDto })
   async delete(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.equipmentService.delete(tenantId, BigInt(id));

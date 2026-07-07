@@ -76,9 +76,14 @@ export class CycleCountService {
   }
 
   async delete(tenantId: string, id: bigint) {
-    return this.prisma.inventory_counts.deleteMany({
+    const entity = await this.prisma.inventory_counts.findFirst({
+      where: { tenant_id: tenantId, count_id: id },
+      include: { warehouse_facilities: true },
+    });
+    await this.prisma.inventory_counts.deleteMany({
       where: { tenant_id: tenantId, count_id: id },
     });
+    return this.mapCount(entity);
   }
 
   // APP-CC-K: Ad-hoc count creation
@@ -87,9 +92,9 @@ export class CycleCountService {
     if (!data.status) data.status = 'PENDING';
     if (data.is_blind_count === undefined) data.is_blind_count = true;
     if (!data.count_type) data.count_type = 'ORIGINAL';
-    const created = await this.prisma.inventory_counts.create({ data });
+    const created = await this.prisma.inventory_counts.create({ data, include: { warehouse_facilities: true } });
     await this.logEvent(tenantId, created.facility_id, created.count_id, 'COUNT_CREATED', data.created_by || null, { countNumber: created.count_number });
-    return created;
+    return this.mapCount(created);
   }
 
   // APP-CC-K: Ad-hoc count creation helper
@@ -102,7 +107,9 @@ export class CycleCountService {
   }
 
   async findAll(tenantId: string, query: any) {
-    const { status, facilityId, page = 1, limit = 50 } = query;
+    const { status, facilityId } = query;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 50;
     const skip = (page - 1) * limit;
     const where: any = { tenant_id: tenantId };
     if (status) where.status = status;
@@ -110,25 +117,30 @@ export class CycleCountService {
     const [data, total] = await Promise.all([
       this.prisma.inventory_counts.findMany({
         where, skip, take: limit, orderBy: { created_at: 'desc' },
+        include: { warehouse_facilities: true },
       }),
       this.prisma.inventory_counts.count({ where }),
     ]);
-    return { data, total, page, limit };
+    return { data: this.mapCounts(data), total, page, limit };
   }
 
   async findById(tenantId: string, id: string) {
-    return this.prisma.inventory_counts.findFirst({
+    const record = await this.prisma.inventory_counts.findFirst({
       where: { tenant_id: tenantId, count_id: BigInt(id) },
+      include: { warehouse_facilities: true },
     });
+    return this.mapCount(record);
   }
 
   async update(tenantId: string, id: string, dto: any) {
     await this.findById(tenantId, id);
     const data = this.mapCamelToSnake(dto);
-    return this.prisma.inventory_counts.update({
+    const updated = await this.prisma.inventory_counts.update({
       where: { count_id: BigInt(id) },
       data,
+      include: { warehouse_facilities: true },
     });
+    return this.mapCount(updated);
   }
 
   // APP-CC-F: getNextCountWork with collision prevention via optimistic locking
@@ -277,7 +289,7 @@ export class CycleCountService {
       return { productId: o.product_id.toString(), productCode: p?.product_code || null, productName: p?.product_name || null };
     });
     await this.logEvent(tenantId, facilityId, count.count_id, 'LPN_COUNT_STARTED', userId, { lpnBarcode });
-    return { count, items, lpn };
+    return { count: this.mapCount(count), items, lpn };
   }
 
   // APP-CC-G: Save draft line
@@ -285,22 +297,26 @@ export class CycleCountService {
     const count = await this.findById(tenantId, countId);
     if (!count) throw new NotFoundException('Count not found');
     const existing = await this.prisma.inventory_count_lines.findFirst({
-      where: { tenant_id: tenantId, count_id: BigInt(countId), product_id: BigInt(dto.productId), is_final: false },
+      where: { tenant_id: tenantId, count_id: BigInt(countId), product_id: BigInt(dto.product_id), is_final: false },
     });
     if (existing) {
-      return this.prisma.inventory_count_lines.update({
+      const updated = await this.prisma.inventory_count_lines.update({
         where: { count_line_id: existing.count_line_id },
-        data: { draft_quantity: dto.countedQuantity || dto.quantity, notes: dto.notes || existing.notes },
+        data: { draft_quantity: dto.counted_quantity || dto.quantity, notes: dto.notes || existing.notes },
       });
+      const mapped = await this.mapCountLines(tenantId, [updated]);
+      return mapped[0];
     }
-    return this.prisma.inventory_count_lines.create({
+    const created = await this.prisma.inventory_count_lines.create({
       data: {
         tenant_id: tenantId, facility_id: count.facility_id, count_id: BigInt(countId),
-        product_id: BigInt(dto.productId), location_id: BigInt(dto.locationId || count.count_scope_identifier || 0),
-        counted_quantity: 0, system_quantity: 0, draft_quantity: dto.countedQuantity || dto.quantity,
-        is_final: false, counted_by_user_id: dto.userId || null, notes: dto.notes || null,
+        product_id: BigInt(dto.product_id), location_id: BigInt(dto.location_id || count.count_scope_identifier || 0),
+        counted_quantity: 0, system_quantity: 0, draft_quantity: dto.counted_quantity || dto.quantity,
+        is_final: false, counted_by_user_id: null, notes: dto.notes || null,
       },
     });
+    const mapped = await this.mapCountLines(tenantId, [created]);
+    return mapped[0];
   }
 
   // APP-CC-G: Get count progress
@@ -315,10 +331,10 @@ export class CycleCountService {
   async submitLine(tenantId: string, countId: string, dto: any) {
     const count = await this.findById(tenantId, countId);
     if (!count) throw new NotFoundException('Count not found');
-    const facilityId = dto.facilityId ? BigInt(dto.facilityId) : count.facility_id;
+    const facilityId = dto.facility_id ? BigInt(dto.facility_id) : count.facility_id;
 
-    const systemQty = dto.systemQuantity || await this.getSystemQuantity(tenantId, BigInt(dto.productId), BigInt(dto.locationId), dto.lotId ? BigInt(dto.lotId) : null);
-    const countedQty = Number(dto.countedQuantity || dto.quantity || 0);
+    const systemQty = dto.system_quantity || await this.getSystemQuantity(tenantId, BigInt(dto.product_id), BigInt(dto.location_id), dto.lot_id ? BigInt(dto.lot_id) : null);
+    const countedQty = Number(dto.counted_quantity || dto.quantity || 0);
     const variance = Math.abs(countedQty - systemQty);
     const variancePct = systemQty > 0 ? (variance / systemQty) * 100 : 100;
 
@@ -326,7 +342,7 @@ export class CycleCountService {
     const thresholdEval = await this.thresholdService.evaluateVariance(tenantId, facilityId, systemQty, countedQty);
 
     // APP-CC-D: Sensitive inventory — always require supervisor review
-    const product = await this.prisma.products.findFirst({ where: { tenant_id: tenantId, product_id: BigInt(dto.productId) } });
+    const product = await this.prisma.products.findFirst({ where: { tenant_id: tenantId, product_id: BigInt(dto.product_id) } });
     const isSensitive = product?.is_sensitive || false;
     if (isSensitive && variance > 0) {
       thresholdEval.action = 'SUPERVISOR_REVIEW';
@@ -338,27 +354,29 @@ export class CycleCountService {
 
     // APP-CC-C: Repeated variance detection
     const repeatCount = await this.prisma.variance_investigations.count({
-      where: { tenant_id: tenantId, product_id: BigInt(dto.productId), location_id: BigInt(dto.locationId), status: { in: [investigation_status.OPEN, investigation_status.RESOLVED] } },
+      where: { tenant_id: tenantId, product_id: BigInt(dto.product_id), location_id: BigInt(dto.location_id), status: { in: [investigation_status.OPEN, investigation_status.RESOLVED] } },
     });
     const isRepeatVariance = repeatCount >= 3;
 
     const line = await this.prisma.inventory_count_lines.create({
       data: {
         tenant_id: tenantId, facility_id: facilityId, count_id: BigInt(countId),
-        product_id: BigInt(dto.productId), location_id: BigInt(dto.locationId),
-        ...(dto.lotId ? { lot_id: BigInt(dto.lotId) } : {}),
+        product_id: BigInt(dto.product_id), location_id: BigInt(dto.location_id),
+        ...(dto.lot_id ? { lot_id: BigInt(dto.lot_id) } : {}),
         counted_quantity: countedQty, system_quantity: systemQty,
-        counted_by_user_id: dto.userId || null, notes: dto.notes || null,
+        counted_by_user_id: null, notes: dto.notes || null,
         is_final: true, is_repeat_variance: isRepeatVariance,
         count_round: count.count_type === 'RECOUNT' ? 2 : (count.count_type === 'TRIPLE_COUNT' ? 3 : 1),
       },
     });
 
-    await this.logEvent(tenantId, facilityId, BigInt(countId), 'QUANTITY_SUBMITTED', dto.userId || null, { countedQty, systemQty, variance });
+    await this.logEvent(tenantId, facilityId, BigInt(countId), 'QUANTITY_SUBMITTED', null, { countedQty, systemQty, variance });
+
+    const lineMapped = await this.mapCountLines(tenantId, [line]);
 
     const matchStatus = variance === 0 ? 'MATCH' : (thresholdEval.action === 'AUTO_APPROVE' ? 'MATCH' : 'MISMATCH');
     return {
-      line,
+      line: lineMapped[0],
       matchStatus,
       systemQty, countedQty, variance, variancePct,
       thresholdAction: thresholdEval.action,
@@ -465,6 +483,7 @@ export class CycleCountService {
         total_items_counted: lines.length,
         completed_at: new Date(),
       },
+      include: { warehouse_facilities: true },
     });
 
     // GAP-6.3: Update product last_counted_at and next_count_due_at
@@ -482,7 +501,7 @@ export class CycleCountService {
     }
 
     await this.logEvent(tenantId, count.facility_id, BigInt(id), newStatus === 'CLOSED' ? 'COUNT_CLOSED' : 'COUNT_COMPLETED', userId, { varianceLines, autoApprovedLines });
-    return updated;
+    return this.mapCount(updated);
   }
 
   // GAP-2.1: Apply inventory adjustment — update on_hand, create transaction, create inventory_adjustments record
@@ -532,9 +551,10 @@ export class CycleCountService {
 
   // GAP-4: Supervisor review methods
   async getPendingReviews(tenantId: string, facilityId: bigint) {
-    return this.prisma.variance_investigations.findMany({
+    const data = await this.prisma.variance_investigations.findMany({
       where: { tenant_id: tenantId, facility_id: facilityId, status: investigation_status.OPEN },
     });
+    return this.mapInvestigations(tenantId, data);
   }
 
   async approveVariance(tenantId: string, investigationId: bigint, supervisorId: string) {
@@ -554,20 +574,24 @@ export class CycleCountService {
       });
     }
     await this.logEvent(tenantId, inv.facility_id, inv.count_id, 'SUPERVISOR_APPROVED', supervisorId, { investigationId });
-    return this.prisma.variance_investigations.update({
+    const updated = await this.prisma.variance_investigations.update({
       where: { investigation_id: investigationId },
       data: { status: investigation_status.RESOLVED, resolved_at: new Date(), investigated_by_name: supervisorId },
     });
+    const mapped = await this.mapInvestigations(tenantId, [updated]);
+    return mapped[0];
   }
 
   async rejectVariance(tenantId: string, investigationId: bigint, supervisorId: string, reason: string) {
     const inv = await this.prisma.variance_investigations.findFirst({ where: { tenant_id: tenantId, investigation_id: investigationId } });
     if (!inv) throw new NotFoundException('Investigation not found');
     await this.logEvent(tenantId, inv.facility_id, inv.count_id, 'SUPERVISOR_REJECTED', supervisorId, { investigationId, reason });
-    return this.prisma.variance_investigations.update({
+    const updated = await this.prisma.variance_investigations.update({
       where: { investigation_id: investigationId },
       data: { status: investigation_status.CLOSED, resolved_at: new Date(), investigation_notes: reason, investigated_by_name: supervisorId },
     });
+    const mapped = await this.mapInvestigations(tenantId, [updated]);
+    return mapped[0];
   }
 
   // GAP-3.1: Recount generation
@@ -590,10 +614,12 @@ export class CycleCountService {
       },
     });
     await this.logEvent(tenantId, inv.facility_id, inv.count_id, 'RECOUNT_CREATED', supervisorId, { investigationId, recountId: recount.count_id });
-    return this.prisma.variance_investigations.update({
+    const updated = await this.prisma.variance_investigations.update({
       where: { investigation_id: investigationId },
       data: { status: investigation_status.OPEN, investigation_notes: 'Recount requested' },
     });
+    const mapped = await this.mapInvestigations(tenantId, [updated]);
+    return mapped[0];
   }
 
   // GAP-3.3: Recount comparison logic
@@ -633,6 +659,65 @@ export class CycleCountService {
       where: { tenant_id: tenantId, count_id: BigInt(countId) },
       orderBy: { performed_at: 'asc' },
     });
+  }
+
+  private mapCount(record: any) {
+    if (!record) return null;
+    return {
+      ...record,
+      facility_name: record.warehouse_facilities?.facility_name,
+      warehouse_facilities: undefined,
+    };
+  }
+
+  private mapCounts(records: any[]) {
+    return records.map(r => this.mapCount(r));
+  }
+
+  private async mapCountLines(tenantId: string, data: any[]) {
+    const productIds = [...new Set(data.map(d => d.product_id).filter(Boolean))];
+    const locationIds = [...new Set(data.map(d => d.location_id).filter(Boolean))];
+    const lotIds = [...new Set(data.map(d => d.lot_id).filter(Boolean))];
+
+    const [products, locations, lots] = await Promise.all([
+      productIds.length ? this.prisma.products.findMany({ where: { tenant_id: tenantId, product_id: { in: productIds } }, select: { product_id: true, product_name: true } }) : Promise.resolve([]),
+      locationIds.length ? this.prisma.storage_locations.findMany({ where: { tenant_id: tenantId, location_id: { in: locationIds } }, select: { location_id: true, location_name: true } }) : Promise.resolve([]),
+      lotIds.length ? this.prisma.inventory_lots.findMany({ where: { tenant_id: tenantId, lot_id: { in: lotIds } }, select: { lot_id: true, lot_number: true } }) : Promise.resolve([]),
+    ]);
+
+    const productMap = new Map<bigint, string>(); (products as any[]).forEach((p: any) => productMap.set(p.product_id, p.product_name));
+    const locationMap = new Map<bigint, string>(); (locations as any[]).forEach((l: any) => locationMap.set(l.location_id, l.location_name));
+    const lotMap = new Map<bigint, string>(); (lots as any[]).forEach((l: any) => lotMap.set(l.lot_id, l.lot_number));
+
+    return data.map(d => ({
+      ...d,
+      product_name: productMap.get(d.product_id),
+      location_name: locationMap.get(d.location_id),
+      lot_number: lotMap.get(d.lot_id),
+    }));
+  }
+
+  private async mapInvestigations(tenantId: string, data: any[]) {
+    const facilityIds = [...new Set(data.map(d => d.facility_id).filter(Boolean))];
+    const productIds = [...new Set(data.map(d => d.product_id).filter(Boolean))];
+    const locationIds = [...new Set(data.map(d => d.location_id).filter(Boolean))];
+
+    const [facilities, products, locations] = await Promise.all([
+      facilityIds.length ? this.prisma.warehouse_facilities.findMany({ where: { tenant_id: tenantId, facility_id: { in: facilityIds } }, select: { facility_id: true, facility_name: true } }) : Promise.resolve([]),
+      productIds.length ? this.prisma.products.findMany({ where: { tenant_id: tenantId, product_id: { in: productIds } }, select: { product_id: true, product_name: true } }) : Promise.resolve([]),
+      locationIds.length ? this.prisma.storage_locations.findMany({ where: { tenant_id: tenantId, location_id: { in: locationIds } }, select: { location_id: true, location_name: true } }) : Promise.resolve([]),
+    ]);
+
+    const facilityMap = new Map<bigint, string>(); (facilities as any[]).forEach((f: any) => facilityMap.set(f.facility_id, f.facility_name));
+    const productMap = new Map<bigint, string>(); (products as any[]).forEach((p: any) => productMap.set(p.product_id, p.product_name));
+    const locationMap = new Map<bigint, string>(); (locations as any[]).forEach((l: any) => locationMap.set(l.location_id, l.location_name));
+
+    return data.map(d => ({
+      ...d,
+      facility_name: facilityMap.get(d.facility_id),
+      product_name: productMap.get(d.product_id),
+      location_name: locationMap.get(d.location_id),
+    }));
   }
 
   private async getSystemQuantity(tenantId: string, productId: bigint, locationId: bigint, lotId?: bigint | null): Promise<number> {

@@ -70,6 +70,19 @@ export class InspectionService {
         created_by: dto.createdBy,
       },
     });
+    const facility = await this.prisma.warehouse_facilities.findFirst({
+      where: { tenant_id: tenantId, facility_id: inspection.facility_id },
+    });
+    let product_name: string | undefined;
+    if (inspection.product_id) {
+      const product = await this.prisma.products.findFirst({ where: { tenant_id: tenantId, product_id: inspection.product_id } });
+      product_name = product?.product_name;
+    }
+    let lot_number: string | undefined;
+    if (inspection.lot_id) {
+      const lot = await this.prisma.inventory_lots.findFirst({ where: { tenant_id: tenantId, lot_id: inspection.lot_id } });
+      lot_number = lot?.lot_number;
+    }
     let checklist: any = null;
     if (dto.productId) {
       const mapping = await this.prisma.product_inspection_profiles.findFirst({
@@ -88,11 +101,19 @@ export class InspectionService {
         }
       }
     }
-    return { ...inspection, checklist };
+    return {
+      ...inspection,
+      facility_name: facility?.facility_name,
+      product_name,
+      lot_number,
+      checklist,
+    };
   }
 
   async findAll(tenantId: string, query: any) {
-    const { facilityId, status, referenceType, productId, assignedToUserId, page = 1, limit = 50 } = query;
+    const { facilityId, status, referenceType, productId, assignedToUserId, page: queryPage, limit: queryLimit } = query;
+    const page = Number(queryPage) || 1;
+    const limit = Number(queryLimit) || 50;
     const skip = (page - 1) * limit;
     const where: any = { tenant_id: tenantId };
     if (facilityId) where.facility_id = BigInt(facilityId);
@@ -101,15 +122,39 @@ export class InspectionService {
     if (productId) where.product_id = BigInt(productId);
     if (assignedToUserId) where.assigned_to_user_id = assignedToUserId;
     const [data, total] = await Promise.all([
-      this.prisma.quality_inspections.findMany({ where, skip, take: limit, orderBy: { created_at: 'desc' } }),
+      this.prisma.quality_inspections.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { created_at: 'desc' },
+        include: { warehouse_facilities: true },
+      }),
       this.prisma.quality_inspections.count({ where }),
     ]);
-    return { data, total, page, limit };
+    const productIds = [...new Set(data.filter(d => d.product_id).map(d => d.product_id))] as bigint[];
+    const products = productIds.length
+      ? await this.prisma.products.findMany({ where: { tenant_id: tenantId, product_id: { in: productIds } } })
+      : [];
+    const productMap = new Map(products.map(p => [p.product_id, p.product_name]));
+    const lotIds = [...new Set(data.filter(d => d.lot_id).map(d => d.lot_id))] as bigint[];
+    const lots = lotIds.length
+      ? await this.prisma.inventory_lots.findMany({ where: { tenant_id: tenantId, lot_id: { in: lotIds } } })
+      : [];
+    const lotMap = new Map(lots.map(l => [l.lot_id, l.lot_number]));
+    const mapped = data.map(d => ({
+      ...d,
+      facility_name: d.warehouse_facilities?.facility_name,
+      product_name: d.product_id ? productMap.get(d.product_id) : undefined,
+      lot_number: d.lot_id ? lotMap.get(d.lot_id) : undefined,
+      warehouse_facilities: undefined,
+    }));
+    return { data: mapped, total, page, limit };
   }
 
   async findById(tenantId: string, id: string) {
     const inspection = await this.prisma.quality_inspections.findUnique({
       where: { inspection_id: BigInt(id) },
+      include: { warehouse_facilities: true },
     });
     if (!inspection) throw new NotFoundException('Inspection not found');
     const results = await this.prisma.quality_inspection_results.findMany({
@@ -119,7 +164,25 @@ export class InspectionService {
     const defects = await this.prisma.inspection_defects.findMany({
       where: { inspection_id: BigInt(id) },
     });
-    return { ...inspection, results, defects };
+    let product_name: string | undefined;
+    if (inspection.product_id) {
+      const product = await this.prisma.products.findFirst({ where: { tenant_id: tenantId, product_id: inspection.product_id } });
+      product_name = product?.product_name;
+    }
+    let lot_number: string | undefined;
+    if (inspection.lot_id) {
+      const lot = await this.prisma.inventory_lots.findFirst({ where: { tenant_id: tenantId, lot_id: inspection.lot_id } });
+      lot_number = lot?.lot_number;
+    }
+    return {
+      ...inspection,
+      facility_name: inspection.warehouse_facilities?.facility_name,
+      product_name,
+      lot_number,
+      warehouse_facilities: undefined,
+      results,
+      defects,
+    };
   }
 
   async recordResult(tenantId: string, id: string, dto: any) {
@@ -365,6 +428,7 @@ export class InspectionService {
     const inspection = await this.prisma.quality_inspections.findFirst({
       where: { tenant_id: tenantId, facility_id: facilityId, status: 'PENDING', assigned_to_user_id: null },
       orderBy: { created_at: 'asc' },
+      include: { warehouse_facilities: true },
     });
     if (!inspection) return null;
     await this.prisma.quality_inspections.update({
@@ -389,15 +453,51 @@ export class InspectionService {
         checklist = items;
       }
     }
-    return { ...inspection, lpn, checklist };
+    let product_name: string | undefined;
+    if (inspection.product_id) {
+      const product = await this.prisma.products.findFirst({ where: { tenant_id: tenantId, product_id: inspection.product_id } });
+      product_name = product?.product_name;
+    }
+    let lot_number: string | undefined;
+    if (inspection.lot_id) {
+      const lot = await this.prisma.inventory_lots.findFirst({ where: { tenant_id: tenantId, lot_id: inspection.lot_id } });
+      lot_number = lot?.lot_number;
+    }
+    return {
+      ...inspection,
+      facility_name: inspection.warehouse_facilities?.facility_name,
+      product_name,
+      lot_number,
+      warehouse_facilities: undefined,
+      lpn,
+      checklist,
+    };
   }
 
   // GAP-7: Supervisor review
   async getPendingReviews(tenantId: string, facilityId: bigint) {
-    return this.prisma.quality_inspections.findMany({
+    const data = await this.prisma.quality_inspections.findMany({
       where: { tenant_id: tenantId, facility_id: facilityId, status: 'AWAITING_SUPERVISOR_REVIEW' },
       orderBy: { completed_at: 'asc' },
+      include: { warehouse_facilities: true },
     });
+    const productIds = [...new Set(data.filter(d => d.product_id).map(d => d.product_id))] as bigint[];
+    const products = productIds.length
+      ? await this.prisma.products.findMany({ where: { tenant_id: tenantId, product_id: { in: productIds } } })
+      : [];
+    const productMap = new Map(products.map(p => [p.product_id, p.product_name]));
+    const lotIds = [...new Set(data.filter(d => d.lot_id).map(d => d.lot_id))] as bigint[];
+    const lots = lotIds.length
+      ? await this.prisma.inventory_lots.findMany({ where: { tenant_id: tenantId, lot_id: { in: lotIds } } })
+      : [];
+    const lotMap = new Map(lots.map(l => [l.lot_id, l.lot_number]));
+    return data.map(d => ({
+      ...d,
+      facility_name: d.warehouse_facilities?.facility_name,
+      product_name: d.product_id ? productMap.get(d.product_id) : undefined,
+      lot_number: d.lot_id ? lotMap.get(d.lot_id) : undefined,
+      warehouse_facilities: undefined,
+    }));
   }
 
   async supervisorApprove(tenantId: string, inspectionId: bigint, supervisorId: string, overrideDisposition?: string) {
@@ -466,10 +566,11 @@ export class InspectionService {
   }
 
   async delete(tenantId: string, id: string) {
+    const entity = await this.findById(tenantId, id);
     await this.prisma.quality_inspections.deleteMany({
       where: { tenant_id: tenantId, inspection_id: BigInt(id) },
     });
-    return { message: 'Inspection deleted successfully' };
+    return entity;
   }
 
   async getTimeline(tenantId: string, id: string) {

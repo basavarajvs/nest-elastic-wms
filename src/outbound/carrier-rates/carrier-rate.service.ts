@@ -20,15 +20,15 @@ export class CarrierRateService {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
       tenantId,
-      dto.carrierCode,
-      dto.carrierName,
-      dto.serviceLevel,
+      dto.carrier_code,
+      dto.carrier_name,
+      dto.service_level,
       dto.zone,
-      dto.weightMin ?? 0,
-      dto.weightMax ?? 999999,
-      dto.baseRate ?? 0,
-      dto.ratePerUnit ?? 0,
-      dto.transitDays ?? 1,
+      dto.weight_min ?? 0,
+      dto.weight_max ?? 999999,
+      dto.base_rate ?? 0,
+      dto.rate_per_unit ?? 0,
+      dto.transit_days ?? 1,
       dto.currency ?? 'USD',
     );
     return row;
@@ -53,8 +53,8 @@ export class CarrierRateService {
     }
 
     const whereClause = conditions.join(' AND ');
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const offset = (page - 1) * limit;
 
     const [data, countResult] = await Promise.all([
@@ -88,15 +88,15 @@ export class CarrierRateService {
     let paramIndex = 1;
 
     const fields: Record<string, string> = {
-      carrierCode: 'carrier_code',
-      carrierName: 'carrier_name',
-      serviceLevel: 'service_level',
+      carrier_code: 'carrier_code',
+      carrier_name: 'carrier_name',
+      service_level: 'service_level',
       zone: 'zone',
-      weightMin: 'weight_min',
-      weightMax: 'weight_max',
-      baseRate: 'base_rate',
-      ratePerUnit: 'rate_per_unit',
-      transitDays: 'transit_days',
+      weight_min: 'weight_min',
+      weight_max: 'weight_max',
+      base_rate: 'base_rate',
+      rate_per_unit: 'rate_per_unit',
+      transit_days: 'transit_days',
       currency: 'currency',
     };
 

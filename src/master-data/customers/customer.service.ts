@@ -6,14 +6,21 @@ export class CustomerService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(tenantId: string, dto: any) {
-    return this.prisma.customers.create({
-      data: {
-        tenant_id: tenantId,
-        customer_code: dto.customerCode,
-        customer_name: dto.customerName,
-        is_active: dto.isActive ?? true,
-      },
-    });
+    const data: any = {
+      tenant_id: tenantId,
+      customer_code: dto.customer_code,
+      customer_name: dto.customer_name,
+    };
+    if (dto.email !== undefined) data.email = dto.email;
+    if (dto.phone !== undefined) data.phone = dto.phone;
+    if (dto.address_line1 !== undefined) data.address_line1 = dto.address_line1;
+    if (dto.address_line2 !== undefined) data.address_line2 = dto.address_line2;
+    if (dto.city !== undefined) data.city = dto.city;
+    if (dto.state_province !== undefined) data.state_province = dto.state_province;
+    if (dto.postal_code !== undefined) data.postal_code = dto.postal_code;
+    if (dto.country !== undefined) data.country = dto.country;
+    if (dto.is_active !== undefined) data.is_active = dto.is_active;
+    return this.prisma.customers.create({ data });
   }
 
   async findAll(tenantId: string, query: any) {
@@ -25,8 +32,8 @@ export class CustomerService {
         { customer_name: { contains: query.search, mode: 'insensitive' } },
       ];
     }
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const [data, total] = await Promise.all([
       this.prisma.customers.findMany({ where, skip: (page - 1) * limit, take: limit, orderBy: { customer_code: 'asc' } }),
       this.prisma.customers.count({ where }),
@@ -39,15 +46,30 @@ export class CustomerService {
   }
 
   async delete(tenantId: string, customerId: bigint) {
-    return this.prisma.customers.deleteMany({
+    const record = await this.findById(tenantId, customerId);
+    await this.prisma.customers.deleteMany({
       where: { tenant_id: tenantId, customer_id: customerId },
     });
+    return record;
   }
 
   async update(tenantId: string, customerId: bigint, dto: any) {
-    return this.prisma.customers.updateMany({
+    const data: any = {};
+    if (dto.customer_code !== undefined) data.customer_code = dto.customer_code;
+    if (dto.customer_name !== undefined) data.customer_name = dto.customer_name;
+    if (dto.email !== undefined) data.email = dto.email;
+    if (dto.phone !== undefined) data.phone = dto.phone;
+    if (dto.address_line1 !== undefined) data.address_line1 = dto.address_line1;
+    if (dto.address_line2 !== undefined) data.address_line2 = dto.address_line2;
+    if (dto.city !== undefined) data.city = dto.city;
+    if (dto.state_province !== undefined) data.state_province = dto.state_province;
+    if (dto.postal_code !== undefined) data.postal_code = dto.postal_code;
+    if (dto.country !== undefined) data.country = dto.country;
+    if (dto.is_active !== undefined) data.is_active = dto.is_active;
+    await this.prisma.customers.updateMany({
       where: { tenant_id: tenantId, customer_id: customerId },
-      data: { customer_code: dto.customerCode, customer_name: dto.customerName, is_active: dto.isActive },
+      data,
     });
+    return this.findById(tenantId, customerId);
   }
 }

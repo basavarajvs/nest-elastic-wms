@@ -34,7 +34,7 @@ export class CycleCountThresholdService {
       where: { tenant_id: tenantId, facility_id: BigInt(dto.facilityId), is_active: true },
     });
     if (existing) {
-      return this.prisma.approval_threshold_configs.updateMany({
+      await this.prisma.approval_threshold_configs.updateMany({
         where: { tenant_id: tenantId, config_id: existing.config_id },
         data: {
           threshold_type: dto.thresholdType || 'PERCENTAGE',
@@ -42,6 +42,9 @@ export class CycleCountThresholdService {
           supervisor_review_pct: dto.supervisorReviewPct,
           recount_pct: dto.recountPct,
         },
+      });
+      return this.prisma.approval_threshold_configs.findFirst({
+        where: { tenant_id: tenantId, config_id: existing.config_id },
       });
     }
     return this.prisma.approval_threshold_configs.create({

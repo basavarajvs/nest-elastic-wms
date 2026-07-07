@@ -71,7 +71,9 @@ export class ChargeService {
   }
 
   async findAll(tenantId: string, query: any) {
-    const { clientId, billingCycleId, page = 1, limit = 50 } = query;
+    const { clientId, billingCycleId } = query;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 50;
     const skip = (page - 1) * limit;
     const where: any = { tenant_id: tenantId };
     if (clientId) where.owner_client_id = BigInt(clientId);
@@ -82,10 +84,20 @@ export class ChargeService {
         skip,
         take: limit,
         orderBy: { storage_start_date: 'desc' },
-        include: { clients: true, products: true },
+        include: { clients: true, products: true, inventory_lots: true },
       }),
       this.prisma.storage_charges.count({ where }),
     ]);
-    return { data, total, page, limit };
+    return {
+      data: data.map((d: any) => ({
+        ...d,
+        client_name: d.clients?.client_name ?? null,
+        product_name: d.products?.product_name ?? null,
+        lot_number: d.inventory_lots?.lot_number ?? null,
+      })),
+      total,
+      page,
+      limit,
+    };
   }
 }

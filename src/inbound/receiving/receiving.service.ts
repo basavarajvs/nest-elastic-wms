@@ -21,16 +21,16 @@ export class ReceivingService {
     return this.prisma.goods_receipts.create({
       data: {
         tenant_id: tenantId,
-        facility_id: BigInt(dto.facilityId),
-        receipt_number: dto.receiptNumber,
-        receipt_name: dto.receiptName,
+        facility_id: BigInt(dto.facility_id),
+        receipt_number: dto.receipt_number,
+        receipt_name: dto.receipt_name,
         description: dto.description,
-        po_number: dto.poNumber,
-        asn_number: dto.asnNumber,
-        vendor_id: dto.vendorId ? BigInt(dto.vendorId) : undefined,
-        expected_date: dto.expectedDate ? new Date(dto.expectedDate) : undefined,
+        po_number: dto.po_number,
+        asn_number: dto.asn_number,
+        vendor_id: dto.vendor_id ? BigInt(dto.vendor_id) : undefined,
+        expected_date: dto.expected_date ? new Date(dto.expected_date) : undefined,
         notes: dto.notes,
-        inbound_for_client_id: dto.inboundForClientId ? BigInt(dto.inboundForClientId) : undefined,
+        inbound_for_client_id: dto.inbound_for_client_id ? BigInt(dto.inbound_for_client_id) : undefined,
       },
     });
   }
@@ -44,8 +44,8 @@ export class ReceivingService {
         { po_number: { contains: query.search, mode: 'insensitive' } },
       ];
     }
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const [data, total] = await Promise.all([
       this.prisma.goods_receipts.findMany({
         where,
@@ -59,9 +59,15 @@ export class ReceivingService {
   }
 
   async delete(tenantId: string, receiptId: bigint) {
-    return this.prisma.goods_receipts.deleteMany({
+    const entity = await this.prisma.goods_receipts.findFirst({
       where: { tenant_id: tenantId, receipt_id: receiptId },
     });
+    if (entity) {
+      await this.prisma.goods_receipts.deleteMany({
+        where: { tenant_id: tenantId, receipt_id: receiptId },
+      });
+    }
+    return entity;
   }
 
   async findReceiptById(tenantId: string, receiptId: bigint) {
@@ -132,9 +138,9 @@ export class ReceivingService {
     });
     if (!receipt) throw new BadRequestException('Receipt not found');
 
-    const expectedQty = Number(dto.expectedQuantity || 0);
-    const receivedQty = Number(dto.receivedQuantity || 0);
-    const damagedQty = Number(dto.damagedQuantity || 0);
+    const expectedQty = Number(dto.expected_quantity || 0);
+    const receivedQty = Number(dto.received_quantity || 0);
+    const damagedQty = Number(dto.damaged_quantity || 0);
     const goodQty = Math.max(0, receivedQty - damagedQty);
 
     let varianceType = VARIANCE_NONE;
@@ -147,7 +153,7 @@ export class ReceivingService {
     }
 
     const qcRequired = damagedQty > 0 || varianceType !== VARIANCE_NONE;
-    const dispositionAction = damagedQty > 0 ? (dto.dispositionAction || DISPOSITION_HOLD) : null;
+    const dispositionAction = damagedQty > 0 ? (dto.disposition_action || DISPOSITION_HOLD) : null;
 
     // Check if an open line already exists for same product — Manhattan allows
     // multiple receive actions but updates existing line qty instead of creating new
@@ -156,14 +162,14 @@ export class ReceivingService {
       where: {
         tenant_id: tenantId,
         receipt_id: receiptId,
-        product_id: BigInt(dto.productId),
+        product_id: BigInt(dto.product_id),
         line_status: { in: ['OPEN', 'QC_PENDING'] },
       },
       orderBy: { receipt_line_id: 'desc' },
     });
 
     if (existingLine) {
-      line = await this.prisma.goods_receipt_lines.updateMany({
+      await this.prisma.goods_receipt_lines.updateMany({
         where: { tenant_id: tenantId, receipt_line_id: existingLine.receipt_line_id },
         data: {
           expected_quantity: { increment: expectedQty },
@@ -173,8 +179,12 @@ export class ReceivingService {
           variance_type: varianceType,
           qc_status: qcRequired ? 'PENDING' : 'NOT_REQUIRED',
           disposition_action: dispositionAction,
-          lot_number: dto.lotNumber || existingLine.lot_number,
+          lot_number: dto.lot_number || existingLine.lot_number,
+          serial_numbers_json: dto.serial_numbers_json || existingLine.serial_numbers_json,
         },
+      });
+      line = await this.prisma.goods_receipt_lines.findFirst({
+        where: { tenant_id: tenantId, receipt_line_id: existingLine.receipt_line_id },
       });
     } else {
       line = await this.prisma.goods_receipt_lines.create({
@@ -182,14 +192,15 @@ export class ReceivingService {
           tenant_id: tenantId,
           facility_id: receipt.facility_id,
           receipt_id: receiptId,
-          product_id: BigInt(dto.productId),
+          product_id: BigInt(dto.product_id),
           expected_quantity: expectedQty,
           received_quantity: receivedQty,
           damaged_quantity: damagedQty,
-          uom_id: BigInt(dto.uomId),
-          lot_number: dto.lotNumber,
-          expiry_date: dto.expiryDate ? new Date(dto.expiryDate) : undefined,
-          asn_line_id: dto.asnLineId ? BigInt(dto.asnLineId) : undefined,
+          uom_id: BigInt(dto.uom_id),
+          lot_number: dto.lot_number,
+          serial_numbers_json: dto.serial_numbers_json,
+          expiry_date: dto.expiry_date ? new Date(dto.expiry_date) : undefined,
+          asn_line_id: dto.asn_line_id ? BigInt(dto.asn_line_id) : undefined,
           notes: dto.notes,
           line_status: qcRequired ? 'QC_PENDING' : 'OPEN',
           variance_type: varianceType,
@@ -200,22 +211,22 @@ export class ReceivingService {
     }
 
     // Update PO line received qty
-    if (dto.poLineId) {
+    if (dto.po_line_id) {
       await this.prisma.purchase_order_lines.updateMany({
-        where: { tenant_id: tenantId, line_id: BigInt(dto.poLineId) },
+        where: { tenant_id: tenantId, line_id: BigInt(dto.po_line_id) },
         data: { received_quantity: { increment: receivedQty } },
       });
     }
 
     // Update ASN line received qty
-    if (dto.asnLineId) {
+    if (dto.asn_line_id) {
       await this.prisma.asn_lines.updateMany({
-        where: { tenant_id: tenantId, asn_line_id: BigInt(dto.asnLineId) },
+        where: { tenant_id: tenantId, asn_line_id: BigInt(dto.asn_line_id) },
         data: { received_quantity: { increment: receivedQty } },
       });
     }
 
-    const stagingLocationId = dto.stagingLocationId ? BigInt(dto.stagingLocationId) : undefined;
+    const stagingLocationId = dto.staging_location_id ? BigInt(dto.staging_location_id) : undefined;
 
     // Create inventory transaction
     if (goodQty > 0) {
@@ -225,14 +236,14 @@ export class ReceivingService {
           facility_id: receipt.facility_id,
           reference_type: 'GOODS_RECEIPT',
           reference_id: receipt.receipt_id,
-          product_id: BigInt(dto.productId),
+          product_id: BigInt(dto.product_id),
           to_location_id: stagingLocationId,
           transaction_type: 'RECEIPT',
           transaction_status: 'COMPLETED',
           quantity: goodQty,
-          uom_id: BigInt(dto.uomId),
+          uom_id: BigInt(dto.uom_id),
           reason_code: varianceType === VARIANCE_NONE ? 'STANDARD' : varianceType,
-          lot_number: dto.lotNumber,
+          lot_number: dto.lot_number,
           reference_document_type: 'GRN',
           reference_document_number: receipt.receipt_number,
         },
@@ -249,10 +260,10 @@ export class ReceivingService {
           receipt_line_id: typeof line === 'object' && 'receipt_line_id' in line
             ? (line as any).receipt_line_id
             : existingLine?.receipt_line_id,
-          product_id: BigInt(dto.productId),
+          product_id: BigInt(dto.product_id),
           quantity: goodQty,
-          uom_id: BigInt(dto.uomId),
-          lot_number: dto.lotNumber,
+          uom_id: BigInt(dto.uom_id),
+          lot_number: dto.lot_number,
           condition_status: 'GOOD',
           temporary_location_id: stagingLocationId,
         },
@@ -270,11 +281,11 @@ export class ReceivingService {
           lpn_number: lpnNumber,
           location_id: stagingLocationId,
           staging_location_id: stagingLocationId,
-          product_id: BigInt(dto.productId),
+          product_id: BigInt(dto.product_id),
           lpn_type: 'CASE',
           status: 'RECEIVED',
           grn_line_id: goodItemId,
-          created_by: dto.createdBy || null,
+          created_by: dto.created_by || null,
         },
       });
     }
@@ -288,10 +299,10 @@ export class ReceivingService {
           receipt_line_id: typeof line === 'object' && 'receipt_line_id' in line
             ? (line as any).receipt_line_id
             : existingLine?.receipt_line_id,
-          product_id: BigInt(dto.productId),
+          product_id: BigInt(dto.product_id),
           quantity: damagedQty,
-          uom_id: BigInt(dto.uomId),
-          lot_number: dto.lotNumber,
+          uom_id: BigInt(dto.uom_id),
+          lot_number: dto.lot_number,
           condition_status: 'DAMAGED',
           temporary_location_id: stagingLocationId,
           notes: `Disposition: ${dispositionAction}`,
@@ -307,11 +318,11 @@ export class ReceivingService {
           lpn_number: lpnNumber,
           location_id: stagingLocationId || 0,
           staging_location_id: stagingLocationId || null,
-          product_id: BigInt(dto.productId),
+          product_id: BigInt(dto.product_id),
           lpn_type: 'CASE',
           status: 'QUARANTINED',
           grn_line_id: damagedItem.receipt_item_id,
-          created_by: dto.createdBy || null,
+          created_by: dto.created_by || null,
         },
       });
     }
@@ -467,12 +478,12 @@ export class ReceivingService {
 
   /** Start an RF receiving session -- lookup or create GRN and set ARRIVED */
   async startReceivingSession(tenantId: string, dto: any) {
-    const facilityId = BigInt(dto.facilityId);
+    const facilityId = BigInt(dto.facility_id);
 
     // Manhattan: validate ASN is routed to the assigned dock door
-    if (dto.asnNumber && dto.dockCode) {
+    if (dto.asn_number && dto.dock_code) {
       const dock = await this.prisma.loading_docks.findFirst({
-        where: { tenant_id: tenantId, facility_id: facilityId, dock_code: dto.dockCode },
+        where: { tenant_id: tenantId, facility_id: facilityId, dock_code: dto.dock_code },
       });
       if (dock) {
         const appointment = await this.prisma.dock_appointments.findFirst({
@@ -482,9 +493,9 @@ export class ReceivingService {
           const linkedAsn = await this.prisma.advance_ship_notices.findFirst({
             where: { tenant_id: tenantId, asn_id: appointment.reference_id },
           });
-          if (linkedAsn && linkedAsn.asn_number !== dto.asnNumber) {
+          if (linkedAsn && linkedAsn.asn_number !== dto.asn_number) {
             throw new BadRequestException(
-              `ASN ${dto.asnNumber} is not routed to door ${dto.dockCode} (expected ASN ${linkedAsn.asn_number})`,
+              `ASN ${dto.asn_number} is not routed to door ${dto.dock_code} (expected ASN ${linkedAsn.asn_number})`,
             );
           }
         }
@@ -492,12 +503,12 @@ export class ReceivingService {
     }
 
     // Try to find existing receipt by ASN or PO
-    const existingReceipt = dto.receiptId
-      ? await this.prisma.goods_receipts.findFirst({ where: { tenant_id: tenantId, receipt_id: BigInt(dto.receiptId) } })
-      : dto.asnNumber
-        ? await this.prisma.goods_receipts.findFirst({ where: { tenant_id: tenantId, facility_id: facilityId, asn_number: dto.asnNumber } })
-        : dto.poNumber
-          ? await this.prisma.goods_receipts.findFirst({ where: { tenant_id: tenantId, facility_id: facilityId, po_number: dto.poNumber } })
+    const existingReceipt = dto.receipt_id
+      ? await this.prisma.goods_receipts.findFirst({ where: { tenant_id: tenantId, receipt_id: BigInt(dto.receipt_id) } })
+      : dto.asn_number
+        ? await this.prisma.goods_receipts.findFirst({ where: { tenant_id: tenantId, facility_id: facilityId, asn_number: dto.asn_number } })
+        : dto.po_number
+          ? await this.prisma.goods_receipts.findFirst({ where: { tenant_id: tenantId, facility_id: facilityId, po_number: dto.po_number } })
           : null;
 
     // Auto-create receipt if it doesn't exist (Manhattan allows on-the-fly)
@@ -505,11 +516,11 @@ export class ReceivingService {
       data: {
         tenant_id: tenantId,
         facility_id: facilityId,
-        receipt_number: dto.receiptNumber || `GRN-${Date.now()}`,
-        receipt_name: dto.receiptName || dto.asnNumber || dto.poNumber,
-        po_number: dto.poNumber,
-        asn_number: dto.asnNumber,
-        vendor_id: dto.vendorId ? BigInt(dto.vendorId) : undefined,
+        receipt_number: dto.receipt_number || `GRN-${Date.now()}`,
+        receipt_name: dto.receipt_name || dto.asn_number || dto.po_number,
+        po_number: dto.po_number,
+        asn_number: dto.asn_number,
+        vendor_id: dto.vendor_id ? BigInt(dto.vendor_id) : undefined,
       },
     });
 
@@ -530,23 +541,23 @@ export class ReceivingService {
       data: {
         tenant_id: tenantId,
         facility_id: facilityId,
-        receipt_number: dto.receiptNumber || `BLIND-${Date.now()}`,
-        receipt_name: dto.receiptName || 'Blind Receipt',
+        receipt_number: dto.receipt_number || `BLIND-${Date.now()}`,
+        receipt_name: dto.receipt_name || 'Blind Receipt',
         description: dto.description,
-        vendor_id: dto.vendorId ? BigInt(dto.vendorId) : undefined,
+        vendor_id: dto.vendor_id ? BigInt(dto.vendor_id) : undefined,
         status: receipt_status.RECEIVING,
       },
     });
 
     return this.receiveLine(tenantId, receipt.receipt_id, {
-      productId: dto.productId,
-      expectedQuantity: 0,
-      receivedQuantity: dto.receivedQuantity,
-      damagedQuantity: dto.damagedQuantity || 0,
-      uomId: dto.uomId,
-      lotNumber: dto.lotNumber,
-      stagingLocationId: dto.stagingLocationId,
-      dispositionAction: dto.dispositionAction,
+      product_id: dto.product_id,
+      expected_quantity: 0,
+      received_quantity: dto.received_quantity,
+      damaged_quantity: dto.damaged_quantity || 0,
+      uom_id: dto.uom_id,
+      lot_number: dto.lot_number,
+      staging_location_id: dto.staging_location_id,
+      disposition_action: dto.disposition_action,
     });
   }
 
@@ -682,16 +693,16 @@ export class ReceivingService {
   /** RF: confirm received qty */
   async confirmQuantity(tenantId: string, receiptId: bigint, dto: any) {
     return this.receiveLine(tenantId, receiptId, {
-      productId: dto.productId,
-      expectedQuantity: dto.expectedQuantity || 0,
-      receivedQuantity: dto.receivedQuantity,
-      damagedQuantity: dto.damagedQuantity || 0,
-      uomId: dto.uomId,
-      lotNumber: dto.lotNumber,
-      poLineId: dto.poLineId,
-      asnLineId: dto.asnLineId,
-      stagingLocationId: dto.stagingLocationId || dto.fromLocationId,
-      dispositionAction: dto.dispositionAction,
+      product_id: dto.product_id,
+      expected_quantity: dto.expected_quantity || 0,
+      received_quantity: dto.received_quantity,
+      damaged_quantity: dto.damaged_quantity || 0,
+      uom_id: dto.uom_id,
+      lot_number: dto.lot_number,
+      po_line_id: dto.po_line_id,
+      asn_line_id: dto.asn_line_id,
+      staging_location_id: dto.staging_location_id || dto.from_location_id,
+      disposition_action: dto.disposition_action,
     });
   }
 }

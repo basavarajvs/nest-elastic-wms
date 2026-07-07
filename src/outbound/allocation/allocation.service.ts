@@ -222,13 +222,41 @@ export class AllocationService {
 
     const lineIds = orderLines.map((l) => l.line_id);
 
-    return this.prisma.inventory_allocations.findMany({
+    const rows = await this.prisma.inventory_allocations.findMany({
       where: {
         tenant_id: tenantId,
         allocated_for_reference_type: 'SALES_ORDER_LINE',
         allocated_for_reference_id: { in: lineIds },
       },
       orderBy: { created_at: 'desc' },
+      include: {
+        warehouse_facilities: { select: { facility_name: true } },
+      },
+    });
+    const facilityIds = [...new Set(rows.map(r => r.facility_id))];
+    const productIds = [...new Set(rows.map(r => r.product_id))];
+    const locationIds = [...new Set(rows.map(r => r.location_id))];
+    const lotIds = [...new Set(rows.map(r => r.lot_id).filter(Boolean))] as bigint[];
+    const [products, locations, lots] = await Promise.all([
+      productIds.length ? this.prisma.products.findMany({ where: { tenant_id: tenantId, product_id: { in: productIds } } }) : Promise.resolve([]),
+      locationIds.length ? this.prisma.storage_locations.findMany({ where: { tenant_id: tenantId, location_id: { in: locationIds } } }) : Promise.resolve([]),
+      lotIds.length ? this.prisma.inventory_lots.findMany({ where: { tenant_id: tenantId, lot_id: { in: lotIds } } }) : Promise.resolve([]),
+    ]) as [any[], any[], any[]];
+    const prodMap = new Map<bigint, string>();
+    products.forEach(p => prodMap.set(p.product_id, p.product_name));
+    const locMap = new Map<bigint, string>();
+    locations.forEach(l => locMap.set(l.location_id, l.location_name));
+    const lotMap = new Map<bigint, string>();
+    lots.forEach(l => lotMap.set(l.lot_id, l.lot_number));
+    return rows.map((r: any) => {
+      const { warehouse_facilities, ...rest } = r;
+      return {
+        ...rest,
+        facility_name: warehouse_facilities?.facility_name,
+        product_name: prodMap.get(r.product_id),
+        location_name: locMap.get(r.location_id),
+        lot_number: r.lot_id ? lotMap.get(r.lot_id) : undefined,
+      };
     });
   }
 }

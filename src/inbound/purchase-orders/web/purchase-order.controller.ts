@@ -1,6 +1,14 @@
 import { Controller, Get, Post, Patch, Delete, Param, Body, Query, Req } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse } from '@nestjs/swagger';
 import { PurchaseOrderService } from '../purchase-order.service';
+import {
+  PurchaseOrderDetailDto,
+  PoListResponseDto,
+  PurchaseOrderLineDto,
+  CreatePurchaseOrderDto,
+  UpdatePurchaseOrderDto,
+} from '../dtos/purchase-order-response.dto';
+import { DeleteResultDto } from '../../../common/dto/paginated-response.dto';
 
 @ApiTags('Purchase Orders')
 @Controller('web/purchase-orders')
@@ -9,13 +17,15 @@ export class PurchaseOrderController {
 
   @Post()
   @ApiOperation({ summary: 'Create purchase order with lines' })
-  async create(@Req() req: any, @Body() dto: any) {
+  @ApiCreatedResponse({ type: PurchaseOrderDetailDto })
+  async create(@Req() req: any, @Body() dto: CreatePurchaseOrderDto) {
     const tenantId = req.tenantContext.getTenantId();
     return this.poService.create(tenantId, dto);
   }
 
   @Get()
   @ApiOperation({ summary: 'List purchase orders' })
+  @ApiOkResponse({ type: PoListResponseDto })
   async findAll(@Req() req: any, @Query() query: any) {
     const tenantId = req.tenantContext.getTenantId();
     return this.poService.findAll(tenantId, query);
@@ -23,6 +33,7 @@ export class PurchaseOrderController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get purchase order' })
+  @ApiOkResponse({ type: PurchaseOrderDetailDto })
   async findById(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.poService.findById(tenantId, BigInt(id));
@@ -30,13 +41,15 @@ export class PurchaseOrderController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update purchase order' })
-  async update(@Req() req: any, @Param('id') id: string, @Body() dto: any) {
+  @ApiOkResponse({ type: PurchaseOrderDetailDto })
+  async update(@Req() req: any, @Param('id') id: string, @Body() dto: UpdatePurchaseOrderDto) {
     const tenantId = req.tenantContext.getTenantId();
     return this.poService.update(tenantId, BigInt(id), dto);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete purchase order' })
+  @ApiOkResponse({ type: DeleteResultDto })
   async delete(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.poService.delete(tenantId, BigInt(id));
@@ -44,6 +57,7 @@ export class PurchaseOrderController {
 
   @Post(':id/approve')
   @ApiOperation({ summary: 'Approve purchase order' })
+  @ApiOkResponse({ type: PurchaseOrderDetailDto })
   async approve(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     const userId = req.user?.sub || req.user?.userId;
@@ -52,6 +66,7 @@ export class PurchaseOrderController {
 
   @Get(':id/lines')
   @ApiOperation({ summary: 'Get purchase order lines' })
+  @ApiOkResponse({ type: PurchaseOrderLineDto, isArray: true })
   async findLines(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.poService.findLines(tenantId, BigInt(id));
@@ -59,6 +74,7 @@ export class PurchaseOrderController {
 
   @Patch(':id/lines/:lineId/status')
   @ApiOperation({ summary: 'Update line status' })
+  @ApiOkResponse({ type: PurchaseOrderLineDto })
   async updateLineStatus(
     @Req() req: any,
     @Param('id') _id: string,

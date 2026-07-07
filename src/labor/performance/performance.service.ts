@@ -8,9 +8,13 @@ export class PerformanceService {
   constructor(private readonly prisma: PrismaService) {}
 
   async delete(tenantId: string, metricId: bigint) {
-    return this.prisma.labor_performance_metrics.deleteMany({
+    const record = await this.prisma.labor_performance_metrics.findFirst({
       where: { tenant_id: tenantId, metric_id: metricId },
     });
+    await this.prisma.labor_performance_metrics.deleteMany({
+      where: { tenant_id: tenantId, metric_id: metricId },
+    });
+    return record;
   }
 
   async findAll(tenantId: string, query: any) {
@@ -21,17 +25,22 @@ export class PerformanceService {
     if (query.dateFrom) where.date_calculated = { ...where.date_calculated, gte: new Date(query.dateFrom) };
     if (query.dateTo) where.date_calculated = { ...where.date_calculated, lte: new Date(query.dateTo) };
 
-    const page = query.page || 1;
-    const limit = query.limit || 20;
-    const [data, total] = await Promise.all([
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
+    const [rawData, total] = await Promise.all([
       this.prisma.labor_performance_metrics.findMany({
         where,
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { date_calculated: 'desc' },
+        include: { warehouse_facilities: { select: { facility_name: true } } },
       }),
       this.prisma.labor_performance_metrics.count({ where }),
     ]);
+    const data = rawData.map(({ warehouse_facilities, ...rest }) => ({
+      ...rest,
+      facility_name: warehouse_facilities?.facility_name ?? null,
+    }));
     return { data, total, page, limit };
   }
 }

@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Delete, Param, Query, Body, Req, UseGuards } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiOkResponse, ApiCreatedResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { CaslGuard } from '../../common/guards/casl.guard';
 import { CheckAbility } from '../../common/decorators/check-ability.decorator';
@@ -7,6 +7,7 @@ import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { WmsAction } from '../../casl/casl.types';
 import { AdjustmentApprovalService } from '../approvals/adjustment-approval.service';
 import { ApprovalThresholdService } from '../approvals/approval-threshold.service';
+import { AdjustmentApprovalResponseDto, PaginatedAdjustmentApprovalResponseDto, ApprovalThresholdConfigResponseDto, RejectApprovalDto, UpsertThresholdDto } from '../dtos/inventory-response.dto';
 
 @ApiTags('Inventory')
 @Controller('web/approvals')
@@ -19,6 +20,7 @@ export class ApprovalWebController {
 
   @Get('pending')
   @CheckAbility({ action: WmsAction.List, subject: 'AdjustmentApproval' })
+  @ApiOkResponse({ type: PaginatedAdjustmentApprovalResponseDto })
   async findPending(@Req() req: any, @Query() query: any) {
     const tenantId = req.tenantContext.getTenantId();
     return this.approvalService.findPending(tenantId, query);
@@ -27,6 +29,7 @@ export class ApprovalWebController {
   @Post(':id/approve')
   @CheckAbility({ action: WmsAction.Approve, subject: 'AdjustmentApproval' })
   @AuditLog({ eventType: 'APPROVAL_APPROVE' })
+  @ApiCreatedResponse({ type: AdjustmentApprovalResponseDto })
   async approve(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     const userId = req.user?.sub;
@@ -36,7 +39,8 @@ export class ApprovalWebController {
   @Post(':id/reject')
   @CheckAbility({ action: WmsAction.Approve, subject: 'AdjustmentApproval' })
   @AuditLog({ eventType: 'APPROVAL_REJECT' })
-  async reject(@Req() req: any, @Param('id') id: string, @Body() dto: any) {
+  @ApiCreatedResponse({ type: AdjustmentApprovalResponseDto })
+  async reject(@Req() req: any, @Param('id') id: string, @Body() dto: RejectApprovalDto) {
     const tenantId = req.tenantContext.getTenantId();
     const userId = req.user?.sub;
     return this.approvalService.reject(tenantId, id, userId, dto?.reason);
@@ -44,6 +48,7 @@ export class ApprovalWebController {
 
   @Get('thresholds')
   @CheckAbility({ action: WmsAction.Read, subject: 'ApprovalThresholdConfig' })
+  @ApiOkResponse({ type: ApprovalThresholdConfigResponseDto })
   async getThreshold(@Req() req: any) {
     const tenantId = req.tenantContext.getTenantId();
     return this.thresholdService.findActive(tenantId);
@@ -52,7 +57,8 @@ export class ApprovalWebController {
   @Post('thresholds')
   @CheckAbility({ action: WmsAction.Create, subject: 'ApprovalThresholdConfig' })
   @AuditLog({ eventType: 'THRESHOLD_UPSERT' })
-  async upsertThreshold(@Req() req: any, @Body() dto: any) {
+  @ApiCreatedResponse({ type: ApprovalThresholdConfigResponseDto })
+  async upsertThreshold(@Req() req: any, @Body() dto: UpsertThresholdDto) {
     const tenantId = req.tenantContext.getTenantId();
     return this.thresholdService.upsert(tenantId, dto);
   }
@@ -60,6 +66,7 @@ export class ApprovalWebController {
   @Delete(':id')
   @CheckAbility({ action: WmsAction.Delete, subject: 'AdjustmentApproval' })
   @AuditLog({ eventType: 'APPROVAL_DELETE' })
+  @ApiOkResponse({ type: AdjustmentApprovalResponseDto })
   async delete(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.approvalService.delete(tenantId, BigInt(id));

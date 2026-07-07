@@ -6,7 +6,9 @@ export class AdjustmentApprovalService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findPending(tenantId: string, query: any) {
-    const { facilityId, page = 1, limit = 50 } = query;
+    const { facilityId } = query;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 50;
     const skip = (page - 1) * limit;
     const where: any = { tenant_id: tenantId, status: 'PENDING' as any };
     if (facilityId) where.facility_id = BigInt(facilityId);
@@ -19,13 +21,23 @@ export class AdjustmentApprovalService {
       }),
       this.prisma.adjustment_approval_requests.count({ where }),
     ]);
-    return { data, total, page, limit };
+    const facilityIds = [...new Set(data.map(r => r.facility_id))];
+    const facilities = facilityIds.length
+      ? await this.prisma.warehouse_facilities.findMany({ where: { tenant_id: tenantId, facility_id: { in: facilityIds } }, select: { facility_id: true, facility_name: true } })
+      : [];
+    const facilityMap = new Map(facilities.map(f => [f.facility_id.toString(), f.facility_name]));
+    const mappedData = data.map(r => ({ ...r, facility_name: facilityMap.get(r.facility_id.toString()) ?? null }));
+    return { data: mappedData, total, page, limit };
   }
 
   async delete(tenantId: string, id: bigint) {
-    return this.prisma.adjustment_approval_requests.deleteMany({
+    const entity = await this.prisma.adjustment_approval_requests.findFirst({
       where: { tenant_id: tenantId, request_id: id },
     });
+    await this.prisma.adjustment_approval_requests.deleteMany({
+      where: { tenant_id: tenantId, request_id: id },
+    });
+    return entity;
   }
 
   async approve(tenantId: string, id: string, userId: string) {

@@ -11,11 +11,11 @@ export class DamageCodeService {
     return this.prisma.damage_codes.create({
       data: {
         tenant_id: tenantId,
-        code: dto.code,
-        description: dto.description,
-        category: dto.category || 'TRANSPORT',
-        requires_qc: dto.requiresQc ?? false,
-        is_active: dto.isActive ?? true,
+        code: dto.damage_code,
+        description: dto.damage_name || dto.description,
+        category: dto.severity || 'TRANSPORT',
+        requires_qc: dto.requires_qc ?? false,
+        is_active: dto.is_active ?? true,
       },
     });
   }
@@ -36,22 +36,25 @@ export class DamageCodeService {
   }
 
   async update(tenantId: string, damageCodeId: bigint, dto: any) {
-    return this.prisma.damage_codes.updateMany({
+    await this.prisma.damage_codes.updateMany({
       where: { tenant_id: tenantId, damage_code_id: damageCodeId },
       data: {
-        code: dto.code,
-        description: dto.description,
-        category: dto.category,
-        requires_qc: dto.requiresQc,
-        is_active: dto.isActive,
+        code: dto.damage_code,
+        description: dto.damage_name || dto.description,
+        category: dto.severity,
+        requires_qc: dto.requires_qc,
+        is_active: dto.is_active,
       },
     });
+    return this.findById(tenantId, damageCodeId);
   }
 
   async delete(tenantId: string, damageCodeId: bigint) {
-    return this.prisma.damage_codes.deleteMany({
+    const entity = await this.findById(tenantId, damageCodeId);
+    await this.prisma.damage_codes.deleteMany({
       where: { tenant_id: tenantId, damage_code_id: damageCodeId },
     });
+    return entity;
   }
 
   async seedDefaults(tenantId: string) {

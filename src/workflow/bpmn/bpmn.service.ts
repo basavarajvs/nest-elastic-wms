@@ -73,13 +73,13 @@ export class BpmnService {
     userId: string,
     dto: any,
   ): Promise<BpmnProcessDefinition> {
-    this.validateBpmnXml(dto.bpmnXml);
-    this.validateDepth(dto.bpmnXml);
+    this.validateBpmnXml(dto.bpmn_xml);
+    this.validateDepth(dto.bpmn_xml);
 
     const existing = await this.prisma.$queryRawUnsafe<BpmnProcessDefinition[]>(
       `SELECT * FROM wms_bpmn_processes WHERE tenant_id = $1 AND process_key = $2 AND is_active = true LIMIT 1`,
       tenantId,
-      dto.processKey,
+      dto.process_key,
     );
 
     const version = existing.length > 0 ? Number(existing[0].version) + 1 : 1;
@@ -89,10 +89,10 @@ export class BpmnService {
        VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING *`,
       tenantId,
-      dto.processKey,
+      dto.process_key,
       dto.name,
       version,
-      dto.bpmnXml,
+      dto.bpmn_xml,
       userId,
       userId,
     );
@@ -101,8 +101,8 @@ export class BpmnService {
   }
 
   async findAll(tenantId: string, query: any) {
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const offset = (page - 1) * limit;
 
     const where: string[] = [`tenant_id = $1`];
@@ -156,9 +156,9 @@ export class BpmnService {
   ): Promise<BpmnProcessDefinition> {
     await this.findById(tenantId, id);
 
-    if (dto.bpmnXml) {
-      this.validateBpmnXml(dto.bpmnXml);
-      this.validateDepth(dto.bpmnXml);
+    if (dto.bpmn_xml) {
+      this.validateBpmnXml(dto.bpmn_xml);
+      this.validateDepth(dto.bpmn_xml);
     }
 
     const clause: string[] = [];
@@ -169,13 +169,13 @@ export class BpmnService {
       clause.push(`name = $${idx++}`);
       params.push(dto.name);
     }
-    if (dto.bpmnXml !== undefined) {
+    if (dto.bpmn_xml !== undefined) {
       clause.push(`bpmn_xml = $${idx++}`);
-      params.push(dto.bpmnXml);
+      params.push(dto.bpmn_xml);
     }
-    if (dto.isActive !== undefined) {
+    if (dto.is_active !== undefined) {
       clause.push(`is_active = $${idx++}`);
-      params.push(dto.isActive);
+      params.push(dto.is_active);
     }
     clause.push(`updated_by = $${idx++}`);
     params.push(userId);
@@ -194,13 +194,13 @@ export class BpmnService {
   }
 
   async delete(tenantId: string, id: string) {
-    await this.findById(tenantId, id);
+    const entity = await this.findById(tenantId, id);
     await this.prisma.$executeRawUnsafe(
       `DELETE FROM wms_bpmn_processes WHERE tenant_id = $1 AND id = $2`,
       tenantId,
       id,
     );
-    return { success: true, message: 'BPMN process definition deleted' };
+    return entity;
   }
 
   async start(

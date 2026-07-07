@@ -6,28 +6,36 @@ export class ClientService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(tenantId: string, dto: any) {
-    const client = await this.prisma.clients.create({
-      data: {
-        tenant_id: tenantId,
-        client_code: dto.clientCode,
-        client_name: dto.clientName,
-        is_active: dto.isActive ?? true,
-      },
-    });
+    const data: any = {
+      tenant_id: tenantId,
+      client_code: dto.client_code,
+      client_name: dto.client_name,
+    };
+    if (dto.description !== undefined) data.description = dto.description;
+    if (dto.primary_contact_name !== undefined) data.primary_contact_name = dto.primary_contact_name;
+    if (dto.primary_contact_email !== undefined) data.primary_contact_email = dto.primary_contact_email;
+    if (dto.primary_contact_phone !== undefined) data.primary_contact_phone = dto.primary_contact_phone;
+    if (dto.credit_limit !== undefined) data.credit_limit = dto.credit_limit;
+    if (dto.payment_terms !== undefined) data.payment_terms = dto.payment_terms;
+    if (dto.preferred_carrier_id !== undefined) data.preferred_carrier_id = BigInt(dto.preferred_carrier_id);
+    if (dto.delivery_instructions !== undefined) data.delivery_instructions = dto.delivery_instructions;
+    if (dto.is_active !== undefined) data.is_active = dto.is_active;
+    if (dto.client_type !== undefined) data.client_type = dto.client_type;
+    const client = await this.prisma.clients.create({ data });
 
     if (dto.addresses?.length) {
       await this.prisma.client_addresses.createMany({
         data: dto.addresses.map((a: any) => ({
           tenant_id: tenantId,
           client_id: client.client_id,
-          address_type: a.addressType || 'SHIPPING',
-          address_line1: a.addressLine1,
-          address_line2: a.addressLine2,
+          address_type: a.address_type || 'SHIPPING',
+          address_line1: a.address_line1,
+          address_line2: a.address_line2,
           city: a.city,
-          state_province: a.stateProvince,
-          postal_code: a.postalCode,
-          country_code: a.countryCode || 'US',
-          is_default: a.isDefault ?? false,
+          state_province: a.state_province,
+          postal_code: a.postal_code,
+          country_code: a.country_code || 'US',
+          is_default: a.is_default ?? false,
           is_active: true,
         })),
       });
@@ -38,11 +46,11 @@ export class ClientService {
         data: dto.contacts.map((c: any) => ({
           tenant_id: tenantId,
           client_id: client.client_id,
-          first_name: c.firstName,
-          last_name: c.lastName,
+          first_name: c.first_name,
+          last_name: c.last_name,
           email: c.email,
           phone: c.phone,
-          is_primary: c.isPrimary ?? false,
+          is_primary: c.is_primary ?? false,
           is_active: true,
         })),
       });
@@ -60,8 +68,8 @@ export class ClientService {
         { client_name: { contains: query.search, mode: 'insensitive' } },
       ];
     }
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const [data, total] = await Promise.all([
       this.prisma.clients.findMany({
         where,
@@ -83,9 +91,18 @@ export class ClientService {
 
   async update(tenantId: string, clientId: bigint, dto: any) {
     const data: any = {};
-    if (dto.clientCode !== undefined) data.client_code = dto.clientCode;
-    if (dto.clientName !== undefined) data.client_name = dto.clientName;
-    if (dto.isActive !== undefined) data.is_active = dto.isActive;
+    if (dto.client_code !== undefined) data.client_code = dto.client_code;
+    if (dto.client_name !== undefined) data.client_name = dto.client_name;
+    if (dto.description !== undefined) data.description = dto.description;
+    if (dto.primary_contact_name !== undefined) data.primary_contact_name = dto.primary_contact_name;
+    if (dto.primary_contact_email !== undefined) data.primary_contact_email = dto.primary_contact_email;
+    if (dto.primary_contact_phone !== undefined) data.primary_contact_phone = dto.primary_contact_phone;
+    if (dto.credit_limit !== undefined) data.credit_limit = dto.credit_limit;
+    if (dto.payment_terms !== undefined) data.payment_terms = dto.payment_terms;
+    if (dto.preferred_carrier_id !== undefined) data.preferred_carrier_id = BigInt(dto.preferred_carrier_id);
+    if (dto.delivery_instructions !== undefined) data.delivery_instructions = dto.delivery_instructions;
+    if (dto.is_active !== undefined) data.is_active = dto.is_active;
+    if (dto.client_type !== undefined) data.client_type = dto.client_type;
     await this.prisma.clients.updateMany({
       where: { tenant_id: tenantId, client_id: clientId },
       data,
@@ -110,21 +127,35 @@ export class ClientService {
         where: { tenant_id: tenantId, client_id: clientId, is_active: true },
         include: {
           warehouse_facilities: { select: { facility_code: true, facility_name: true } },
+          clients: { select: { client_code: true, client_name: true } },
         },
       }),
     ]);
 
-    return { ...client, addresses, contacts, facilityAssignments: assignments };
+    return {
+      ...client,
+      addresses,
+      contacts,
+      facilityAssignments: assignments.map((a) => ({
+        ...a,
+        client_name: a.clients?.client_name,
+        facility_name: a.warehouse_facilities?.facility_name,
+        clients: undefined,
+        warehouse_facilities: undefined,
+      })),
+    };
   }
 
   async delete(tenantId: string, clientId: bigint) {
-    return this.prisma.clients.deleteMany({
+    const record = await this.getClientSummary(tenantId, clientId);
+    await this.prisma.clients.deleteMany({
       where: { tenant_id: tenantId, client_id: clientId },
     });
+    return record;
   }
 
   async assignToFacility(tenantId: string, clientId: bigint, facilityId: bigint) {
-    return this.prisma.client_facility_assignments.upsert({
+    await this.prisma.client_facility_assignments.upsert({
       where: {
         client_id_facility_id_tenant_id: {
           client_id: clientId,
@@ -135,6 +166,21 @@ export class ClientService {
       create: { tenant_id: tenantId, client_id: clientId, facility_id: facilityId, is_active: true },
       update: { is_active: true },
     });
+    const assignment = await this.prisma.client_facility_assignments.findFirst({
+      where: { tenant_id: tenantId, client_id: clientId, facility_id: facilityId },
+      include: {
+        warehouse_facilities: { select: { facility_name: true } },
+        clients: { select: { client_name: true } },
+      },
+    });
+    if (!assignment) return null;
+    return {
+      ...assignment,
+      client_name: assignment.clients?.client_name,
+      facility_name: assignment.warehouse_facilities?.facility_name,
+      clients: undefined,
+      warehouse_facilities: undefined,
+    };
   }
 
   async removeFacilityAssignment(tenantId: string, clientId: bigint, facilityId: bigint) {
@@ -149,14 +195,14 @@ export class ClientService {
       data: {
         tenant_id: tenantId,
         client_id: clientId,
-        address_type: dto.addressType || 'SHIPPING',
-        address_line1: dto.addressLine1,
-        address_line2: dto.addressLine2,
+        address_type: dto.address_type || 'SHIPPING',
+        address_line1: dto.address_line1,
+        address_line2: dto.address_line2,
         city: dto.city,
-        state_province: dto.stateProvince,
-        postal_code: dto.postalCode,
-        country_code: dto.countryCode || 'US',
-        is_default: dto.isDefault ?? false,
+        state_province: dto.state_province,
+        postal_code: dto.postal_code,
+        country_code: dto.country_code || 'US',
+        is_default: dto.is_default ?? false,
         is_active: true,
       },
     });
@@ -167,11 +213,11 @@ export class ClientService {
       data: {
         tenant_id: tenantId,
         client_id: clientId,
-        first_name: dto.firstName,
-        last_name: dto.lastName,
+        first_name: dto.first_name,
+        last_name: dto.last_name,
         email: dto.email,
         phone: dto.phone,
-        is_primary: dto.isPrimary ?? false,
+        is_primary: dto.is_primary ?? false,
         is_active: true,
       },
     });

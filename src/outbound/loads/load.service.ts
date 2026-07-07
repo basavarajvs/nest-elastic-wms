@@ -8,34 +8,44 @@ export class LoadService {
   constructor(private readonly prisma: PrismaService) {}
 
   async delete(tenantId: string, loadId: bigint) {
-    return this.prisma.loads.deleteMany({
+    const load = await this.findById(tenantId, loadId);
+    await this.prisma.loads.deleteMany({
       where: { tenant_id: tenantId, load_id: loadId },
     });
+    return load;
   }
 
   async create(tenantId: string, dto: any) {
     return this.prisma.loads.create({
       data: {
         tenant_id: tenantId,
-        facility_id: BigInt(dto.facilityId),
-        load_number: dto.loadNumber || `LOAD-${Date.now()}`,
-        load_name: dto.loadName,
-        vehicle_number: dto.vehicleNumber,
-        driver_name: dto.driverName,
-        driver_phone: dto.driverPhone,
+        facility_id: BigInt(dto.facility_id),
+        load_number: dto.load_number || `LOAD-${Date.now()}`,
+        load_name: dto.load_name,
+        description: dto.description,
+        vehicle_number: dto.vehicle_number,
+        driver_name: dto.driver_name,
+        driver_phone: dto.driver_phone,
         carrier_id: dto.carrierId ? BigInt(dto.carrierId) : undefined,
-        carrier_code: dto.carrierCode,
-        carrier_name: dto.carrierName,
-        service_type: dto.serviceType,
-        trailer_number: dto.trailerNumber,
-        dock_door_number: dto.dockDoorNumber,
-        planned_departure_date: dto.plannedDepartureDate ? new Date(dto.plannedDepartureDate) : undefined,
-        planned_departure_time: dto.plannedDepartureTime ? new Date(dto.plannedDepartureTime) : undefined,
-        planned_arrival_date: dto.plannedArrivalDate ? new Date(dto.plannedArrivalDate) : undefined,
-        planned_arrival_time: dto.plannedArrivalTime ? new Date(dto.plannedArrivalTime) : undefined,
-        bol_number: dto.bolNumber,
-        pro_number: dto.proNumber,
-        seal_number: dto.sealNumber,
+        carrier_code: dto.carrier_code,
+        carrier_name: dto.carrier_name,
+        service_type: dto.service_type,
+        trailer_number: dto.trailer_number,
+        dock_door_number: dto.dock_door_number,
+        planned_departure_date: dto.planned_departure_date ? new Date(dto.planned_departure_date) : undefined,
+        planned_departure_time: dto.planned_departure_time ? new Date(dto.planned_departure_time) : undefined,
+        planned_arrival_date: dto.planned_arrival_date ? new Date(dto.planned_arrival_date) : undefined,
+        planned_arrival_time: dto.planned_arrival_time ? new Date(dto.planned_arrival_time) : undefined,
+        weight_uom: dto.weight_uom,
+        volume_uom: dto.volume_uom,
+        total_cartons: dto.total_cartons,
+        total_weight: dto.total_weight,
+        total_volume: dto.total_volume,
+        number_of_packages: dto.number_of_packages,
+        multi_stop: dto.multi_stop,
+        bol_number: dto.bol_number,
+        pro_number: dto.pro_number,
+        seal_number: dto.seal_number,
         notes: dto.notes,
       },
     });
@@ -51,29 +61,41 @@ export class LoadService {
         { vehicle_number: { contains: query.search, mode: 'insensitive' } },
       ];
     }
-    const page = query.page || 1;
-    const limit = query.limit || 20;
-    const [data, total] = await Promise.all([
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
+    const [rows, total] = await Promise.all([
       this.prisma.loads.findMany({
         where,
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { planned_departure_date: 'asc' },
+        include: { warehouse_facilities: true },
       }),
       this.prisma.loads.count({ where }),
     ]);
+    const data = rows.map(r => ({
+      ...r,
+      facility_name: r.warehouse_facilities?.facility_name,
+      warehouse_facilities: undefined,
+    }));
     return { data, total, page, limit };
   }
 
   async findById(tenantId: string, loadId: bigint) {
     const load = await this.prisma.loads.findFirst({
       where: { tenant_id: tenantId, load_id: loadId },
+      include: { warehouse_facilities: true },
     });
     if (!load) return null;
     const shipments = await this.prisma.outbound_shipments.findMany({
       where: { tenant_id: tenantId, load_id: loadId },
     });
-    return { ...load, shipments };
+    return {
+      ...load,
+      facility_name: load.warehouse_facilities?.facility_name,
+      warehouse_facilities: undefined,
+      shipments,
+    };
   }
 
   /** Assign shipment to this load */
@@ -151,7 +173,7 @@ export class LoadService {
     });
     if (!load) throw new BadRequestException('Load not found');
 
-    const loadedCartons = dto.loadedCartons || load.loaded_cartons || 0;
+    const loadedCartons = dto.loaded_cartons || load.loaded_cartons || 0;
 
     await this.prisma.loads.updateMany({
       where: { tenant_id: tenantId, load_id: loadId },
@@ -159,11 +181,11 @@ export class LoadService {
         status: 'LOADED',
         load_completed_time: new Date(),
         loaded_cartons: loadedCartons,
-        seal_number: dto.sealNumber || load.seal_number,
-        bol_number: dto.bolNumber || load.bol_number,
-        pro_number: dto.proNumber || load.pro_number,
-        actual_departure_time: dto.actualDepartureTime ? new Date(dto.actualDepartureTime) : new Date(),
-        loaded_by: dto.loadedBy,
+        seal_number: dto.seal_number || load.seal_number,
+        bol_number: dto.bol_number || load.bol_number,
+        pro_number: dto.pro_number || load.pro_number,
+        actual_departure_time: dto.actual_departure_time ? new Date(dto.actual_departure_time) : new Date(),
+        loaded_by: dto.loaded_by,
       },
     });
 
@@ -426,11 +448,11 @@ export class LoadService {
       data: {
         tenant_id: tenantId,
         load_id: loadId,
-        stop_sequence: dto.stopSequence || 1,
-        location_name: dto.locationName,
-        shipment_id: dto.shipmentId ? BigInt(dto.shipmentId) : null,
-        planned_arrival: dto.plannedArrival ? new Date(dto.plannedArrival) : null,
-        planned_departure: dto.plannedDeparture ? new Date(dto.plannedDeparture) : null,
+        stop_sequence: dto.stop_sequence || 1,
+        location_name: dto.location_name,
+        shipment_id: dto.shipment_id ? BigInt(dto.shipment_id) : null,
+        planned_arrival: dto.planned_arrival ? new Date(dto.planned_arrival) : null,
+        planned_departure: dto.planned_departure ? new Date(dto.planned_departure) : null,
         status: 'PENDING',
       },
     });

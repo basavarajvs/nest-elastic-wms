@@ -34,7 +34,7 @@ describe('DamageCodeService', () => {
   });
 
   it('create should create a damage code', async () => {
-    const result = await service.create(tenantId, { code: 'TEST', description: 'Test code' });
+    const result = await service.create(tenantId, { damage_code: 'TEST', description: 'Test code' });
     expect(result.code).toBe('CRUSHED_PALLET');
   });
 
@@ -55,12 +55,12 @@ describe('DamageCodeService', () => {
 
   it('update should update code', async () => {
     const result = await service.update(tenantId, BigInt(1), { description: 'Updated' });
-    expect(result.count).toBe(1);
+    expect(result.code).toBe('CRUSHED_PALLET');
   });
 
   it('delete should delete code', async () => {
     const result = await service.delete(tenantId, BigInt(1));
-    expect(result.count).toBe(1);
+    expect(result.code).toBe('CRUSHED_PALLET');
   });
 
   it('seedDefaults should seed when empty', async () => {

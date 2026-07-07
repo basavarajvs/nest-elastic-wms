@@ -6,16 +6,17 @@ export class SyncLogService {
   constructor(private readonly prisma: PrismaService) {}
 
   async delete(tenantId: string, id: string) {
-    await this.prisma.$queryRawUnsafe(
+    const result = await this.prisma.$executeRawUnsafe(
       `DELETE FROM sync_logs WHERE tenant_id = $1::uuid AND log_id = $2::uuid`,
       tenantId,
       id,
     );
+    return { count: result };
   }
 
   async findAll(tenantId: string, query: any) {
-    const page = query.page || 1;
-    const limit = query.limit || 50;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 50;
     const offset = (page - 1) * limit;
     const platform = query.platform;
     let where = `WHERE tenant_id = $1::uuid`;

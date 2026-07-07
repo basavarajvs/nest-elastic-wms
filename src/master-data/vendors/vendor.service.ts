@@ -6,24 +6,31 @@ export class VendorService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(tenantId: string, dto: any) {
-    const vendor = await this.prisma.vendors.create({
-      data: {
-        tenant_id: tenantId,
-        vendor_code: dto.vendorCode,
-        vendor_name: dto.vendorName,
-        is_active: dto.isActive ?? true,
-      },
-    });
+    const data: any = {
+      tenant_id: tenantId,
+      vendor_code: dto.vendor_code,
+      vendor_name: dto.vendor_name,
+    };
+    if (dto.description !== undefined) data.description = dto.description;
+    if (dto.primary_contact_name !== undefined) data.primary_contact_name = dto.primary_contact_name;
+    if (dto.primary_contact_email !== undefined) data.primary_contact_email = dto.primary_contact_email;
+    if (dto.primary_contact_phone !== undefined) data.primary_contact_phone = dto.primary_contact_phone;
+    if (dto.payment_terms !== undefined) data.payment_terms = dto.payment_terms;
+    if (dto.tax_id_number !== undefined) data.tax_id_number = dto.tax_id_number;
+    if (dto.performance_score !== undefined) data.performance_score = dto.performance_score;
+    if (dto.preferred_status !== undefined) data.preferred_status = dto.preferred_status;
+    if (dto.is_active !== undefined) data.is_active = dto.is_active;
+    const vendor = await this.prisma.vendors.create({ data });
     if (dto.contacts?.length) {
       await this.prisma.vendor_contacts.createMany({
         data: dto.contacts.map((c: any) => ({
           tenant_id: tenantId,
           vendor_id: vendor.vendor_id,
-          first_name: c.firstName,
-          last_name: c.lastName,
+          first_name: c.first_name,
+          last_name: c.last_name,
           email: c.email,
           phone: c.phone,
-          is_primary: c.isPrimary ?? false,
+          is_primary: c.is_primary ?? false,
           is_active: true,
         })),
       });
@@ -33,14 +40,14 @@ export class VendorService {
         data: dto.addresses.map((a: any) => ({
           tenant_id: tenantId,
           vendor_id: vendor.vendor_id,
-          address_type: a.addressType || 'SHIPPING',
-          address_line1: a.addressLine1,
-          address_line2: a.addressLine2,
+          address_type: a.address_type || 'SHIPPING',
+          address_line1: a.address_line1,
+          address_line2: a.address_line2,
           city: a.city,
-          state_province: a.stateProvince,
-          postal_code: a.postalCode,
-          country_code: a.countryCode || 'US',
-          is_default: a.isDefault ?? false,
+          state_province: a.state_province,
+          postal_code: a.postal_code,
+          country_code: a.country_code || 'US',
+          is_default: a.is_default ?? false,
           is_active: true,
         })),
       });
@@ -57,8 +64,8 @@ export class VendorService {
         { vendor_name: { contains: query.search, mode: 'insensitive' } },
       ];
     }
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const [data, total] = await Promise.all([
       this.prisma.vendors.findMany({
         where,
@@ -88,15 +95,30 @@ export class VendorService {
   }
 
   async delete(tenantId: string, vendorId: bigint) {
-    return this.prisma.vendors.deleteMany({
+    const record = await this.findById(tenantId, vendorId);
+    await this.prisma.vendors.deleteMany({
       where: { tenant_id: tenantId, vendor_id: vendorId },
     });
+    return record;
   }
 
   async update(tenantId: string, vendorId: bigint, dto: any) {
-    return this.prisma.vendors.updateMany({
+    const data: any = {};
+    if (dto.vendor_code !== undefined) data.vendor_code = dto.vendor_code;
+    if (dto.vendor_name !== undefined) data.vendor_name = dto.vendor_name;
+    if (dto.description !== undefined) data.description = dto.description;
+    if (dto.primary_contact_name !== undefined) data.primary_contact_name = dto.primary_contact_name;
+    if (dto.primary_contact_email !== undefined) data.primary_contact_email = dto.primary_contact_email;
+    if (dto.primary_contact_phone !== undefined) data.primary_contact_phone = dto.primary_contact_phone;
+    if (dto.payment_terms !== undefined) data.payment_terms = dto.payment_terms;
+    if (dto.tax_id_number !== undefined) data.tax_id_number = dto.tax_id_number;
+    if (dto.performance_score !== undefined) data.performance_score = dto.performance_score;
+    if (dto.preferred_status !== undefined) data.preferred_status = dto.preferred_status;
+    if (dto.is_active !== undefined) data.is_active = dto.is_active;
+    await this.prisma.vendors.updateMany({
       where: { tenant_id: tenantId, vendor_id: vendorId },
-      data: { vendor_code: dto.vendorCode, vendor_name: dto.vendorName, is_active: dto.isActive },
+      data,
     });
+    return this.findById(tenantId, vendorId);
   }
 }

@@ -6,38 +6,45 @@ export class AdjustmentService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(tenantId: string, dto: any) {
-    const { lines, facilityId, ...header } = dto;
+    const { lines, facility_id, ...header } = dto;
     return this.prisma.$transaction(async (tx: any) => {
+      const headerData: any = { tenant_id: tenantId, facility_id: facility_id ? BigInt(facility_id) : undefined };
+      if (header.reference_id) headerData.reference_id = BigInt(header.reference_id);
+      if (header.requested_by_user_id) headerData.requested_by_user_id = header.requested_by_user_id;
+      if (header.approved_by_user_id) headerData.approved_by_user_id = header.approved_by_user_id;
+      if (header.executed_by_user_id) headerData.executed_by_user_id = header.executed_by_user_id;
       const adjustment = await tx.inventory_adjustments.create({
-        data: {
-          tenant_id: tenantId,
-          facility_id: facilityId ? BigInt(facilityId) : undefined,
-          ...header,
-        },
+        data: { ...headerData, ...header },
       });
       if (lines?.length) {
         await tx.inventory_adjustment_lines.createMany({
           data: lines.map((l: any) => {
-            const { productId, locationId, lotId, ...rest } = l;
+            const { product_id, location_id, lot_id, uom_id, ...rest } = l;
             return {
               tenant_id: tenantId,
               adjustment_id: adjustment.adjustment_id,
-              ...(productId !== undefined ? { product_id: BigInt(productId) } : {}),
-              ...(locationId !== undefined ? { location_id: BigInt(locationId) } : {}),
-              ...(lotId !== undefined ? { lot_id: BigInt(lotId) } : {}),
+              ...(product_id !== undefined ? { product_id: BigInt(product_id) } : {}),
+              ...(location_id !== undefined ? { location_id: BigInt(location_id) } : {}),
+              ...(lot_id !== undefined ? { lot_id: BigInt(lot_id) } : {}),
+              ...(uom_id !== undefined ? { uom_id: BigInt(uom_id) } : {}),
               ...rest,
             };
           }),
         });
       }
-      return tx.inventory_adjustments.findFirst({
+      const result = await tx.inventory_adjustments.findFirst({
         where: { tenant_id: tenantId, adjustment_id: adjustment.adjustment_id },
+        include: { warehouse_facilities: true },
       });
+      const { warehouse_facilities, ...rest } = result as any;
+      return { ...rest, facility_name: warehouse_facilities?.facility_name ?? null };
     });
   }
 
   async findAll(tenantId: string, query: any) {
-    const { status, facilityId, page = 1, limit = 50 } = query;
+    const { status, facilityId } = query;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 50;
     const skip = (page - 1) * limit;
     const where: any = { tenant_id: tenantId };
     if (status) where.status = status;
@@ -48,30 +55,46 @@ export class AdjustmentService {
         skip,
         take: limit,
         orderBy: { created_at: 'desc' },
+        include: { warehouse_facilities: true },
       }),
       this.prisma.inventory_adjustments.count({ where }),
     ]);
-    return { data, total, page, limit };
+    const mappedData = data.map(a => {
+      const { warehouse_facilities, ...rest } = a as any;
+      return { ...rest, facility_name: warehouse_facilities?.facility_name ?? null };
+    });
+    return { data: mappedData, total, page, limit };
   }
 
   async findById(tenantId: string, id: string) {
-    return this.prisma.inventory_adjustments.findFirst({
+    const adj = await this.prisma.inventory_adjustments.findFirst({
       where: { tenant_id: tenantId, adjustment_id: BigInt(id) },
+      include: { warehouse_facilities: true },
     });
+    if (!adj) return null;
+    const { warehouse_facilities, ...rest } = adj as any;
+    return { ...rest, facility_name: warehouse_facilities?.facility_name ?? null };
   }
 
   async delete(tenantId: string, id: bigint) {
-    return this.prisma.inventory_adjustments.deleteMany({
+    const entity = await this.prisma.inventory_adjustments.findFirst({
       where: { tenant_id: tenantId, adjustment_id: id },
     });
+    await this.prisma.inventory_adjustments.deleteMany({
+      where: { tenant_id: tenantId, adjustment_id: id },
+    });
+    return entity;
   }
 
   async approve(tenantId: string, id: string, userId: string) {
     const adj = await this.findById(tenantId, id);
     if (!adj) throw new Error('Adjustment not found');
-    return this.prisma.inventory_adjustments.update({
+    const result = await this.prisma.inventory_adjustments.update({
       where: { adjustment_id: BigInt(id) },
       data: { status: 'APPROVED' as any, approved_by_user_id: userId, approved_date: new Date() },
+      include: { warehouse_facilities: true },
     });
+    const { warehouse_facilities, ...rest } = result as any;
+    return { ...rest, facility_name: warehouse_facilities?.facility_name ?? null };
   }
 }

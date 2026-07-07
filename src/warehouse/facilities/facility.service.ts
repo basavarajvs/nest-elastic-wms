@@ -11,11 +11,22 @@ export class FacilityService {
     return this.prisma.warehouse_facilities.create({
       data: {
         tenant_id: tenantId,
-        facility_code: dto.facilityCode,
-        facility_name: dto.facilityName,
-        facility_type: dto.facilityType || 'WAREHOUSE',
+        facility_code: dto.facility_code,
+        facility_name: dto.facility_name,
+        facility_type: dto.facility_type ?? 'WAREHOUSE',
         description: dto.description,
-        is_active: dto.isActive ?? true,
+        address_line1: dto.address_line1,
+        address_line2: dto.address_line2,
+        city: dto.city,
+        state_province: dto.state_province,
+        postal_code: dto.postal_code,
+        country_code: dto.country_code,
+        contact_person: dto.contact_person,
+        contact_phone: dto.contact_phone,
+        contact_email: dto.contact_email,
+        timezone_name: dto.timezone_name,
+        default_uom_id: dto.default_uom_id ? BigInt(dto.default_uom_id) : undefined,
+        is_active: dto.is_active ?? true,
       },
     });
   }
@@ -29,8 +40,8 @@ export class FacilityService {
         { facility_name: { contains: query.search, mode: 'insensitive' } },
       ];
     }
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const [data, total] = await Promise.all([
       this.prisma.warehouse_facilities.findMany({
         where,
@@ -50,16 +61,17 @@ export class FacilityService {
   }
 
   async update(tenantId: string, facilityId: bigint, dto: any) {
-    return this.prisma.warehouse_facilities.updateMany({
+    await this.prisma.warehouse_facilities.updateMany({
       where: { tenant_id: tenantId, facility_id: facilityId },
       data: {
-        facility_name: dto.facilityName,
-        facility_code: dto.facilityCode,
-        facility_type: dto.facilityType,
-        description: dto.description,
-        is_active: dto.isActive,
+        facility_name: dto.facility_name ?? dto.facilityName,
+        facility_code: dto.facility_code ?? dto.facilityCode,
+        facility_type: dto.facility_type ?? dto.facilityType,
+        description: dto.description ?? dto.description,
+        is_active: dto.is_active ?? dto.isActive,
       },
     });
+    return this.findById(tenantId, facilityId);
   }
 
   async getHierarchy(tenantId: string, facilityId: bigint) {
@@ -135,10 +147,11 @@ export class FacilityService {
   }
 
   async delete(tenantId: string, facilityId: bigint) {
-    return this.prisma.warehouse_facilities.updateMany({
+    await this.prisma.warehouse_facilities.updateMany({
       where: { tenant_id: tenantId, facility_id: facilityId },
       data: { is_active: false },
     });
+    return this.findById(tenantId, facilityId);
   }
 
   async getSummary(tenantId: string) {

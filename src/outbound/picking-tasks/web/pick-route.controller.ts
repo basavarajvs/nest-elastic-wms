@@ -1,11 +1,12 @@
 import { Controller, Get, Post, Param, Req, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../common/auth/jwt-auth.guard';
 import { CaslGuard } from '../../../common/guards/casl.guard';
 import { CheckAbility } from '../../../common/decorators/check-ability.decorator';
 import { WmsAction } from '../../../casl/casl.types';
 import { PickRouteService } from '../pick-route.service';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { PickRouteViewResponseDto, PickRouteOptimizeResponseDto } from '../dtos/response.dto';
 
 @ApiTags('Outbound - Pick Routes')
 @Controller('web/pick-routes')
@@ -19,6 +20,7 @@ export class PickRouteWebController {
   @Get(':waveId')
   @CheckAbility({ action: WmsAction.Read, subject: 'PickRoute' })
   @ApiOperation({ summary: 'View optimized pick route for a wave' })
+  @ApiOkResponse({ type: PickRouteViewResponseDto })
   async getRoute(@Req() req: any, @Param('waveId') waveId: string) {
     const tenantId = req.tenantContext.getTenantId();
     const routes = await this.prisma.pick_routes.findMany({
@@ -34,6 +36,7 @@ export class PickRouteWebController {
   @Post(':waveId/optimize')
   @CheckAbility({ action: WmsAction.Update, subject: 'PickRoute' })
   @ApiOperation({ summary: 'Re-optimize pick route for a wave' })
+  @ApiCreatedResponse({ type: PickRouteOptimizeResponseDto })
   async reoptimize(@Req() req: any, @Param('waveId') waveId: string) {
     const tenantId = req.tenantContext.getTenantId();
     const tasks = await this.prisma.picking_tasks.findMany({

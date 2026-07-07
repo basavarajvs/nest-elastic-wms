@@ -71,14 +71,14 @@ export class StateMachineService {
     userId: string,
     dto: any,
   ): Promise<StateMachineDefinition> {
-    this.sanitizeDefinitionJson(dto.definitionJson);
+    this.sanitizeDefinitionJson(dto.definition_json);
 
     const existing = await this.prisma.$queryRawUnsafe<
       StateMachineDefinition[]
     >(
       `SELECT * FROM wms_state_machines WHERE tenant_id = $1 AND machine_key = $2 AND is_active = true LIMIT 1`,
       tenantId,
-      dto.machineKey,
+      dto.machine_key,
     );
 
     const version = existing.length > 0 ? Number(existing[0].version) + 1 : 1;
@@ -88,10 +88,10 @@ export class StateMachineService {
        VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7)
        RETURNING *`,
       tenantId,
-      dto.machineKey,
+      dto.machine_key,
       dto.name,
       version,
-      JSON.stringify(dto.definitionJson),
+      JSON.stringify(dto.definition_json),
       userId,
       userId,
     );
@@ -100,8 +100,8 @@ export class StateMachineService {
   }
 
   async findAll(tenantId: string, query: any) {
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const offset = (page - 1) * limit;
 
     const where: string[] = [`tenant_id = $1`];
@@ -158,8 +158,8 @@ export class StateMachineService {
   ): Promise<StateMachineDefinition> {
     await this.findById(tenantId, id);
 
-    if (dto.definitionJson) {
-      this.sanitizeDefinitionJson(dto.definitionJson);
+    if (dto.definition_json) {
+      this.sanitizeDefinitionJson(dto.definition_json);
     }
 
     const clause: string[] = [];
@@ -170,13 +170,13 @@ export class StateMachineService {
       clause.push(`name = $${idx++}`);
       params.push(dto.name);
     }
-    if (dto.definitionJson !== undefined) {
+    if (dto.definition_json !== undefined) {
       clause.push(`definition_json = $${idx++}::jsonb`);
-      params.push(JSON.stringify(dto.definitionJson));
+      params.push(JSON.stringify(dto.definition_json));
     }
-    if (dto.isActive !== undefined) {
+    if (dto.is_active !== undefined) {
       clause.push(`is_active = $${idx++}`);
-      params.push(dto.isActive);
+      params.push(dto.is_active);
     }
     clause.push(`updated_by = $${idx++}`);
     params.push(userId);
@@ -195,13 +195,13 @@ export class StateMachineService {
   }
 
   async delete(tenantId: string, id: string) {
-    await this.findById(tenantId, id);
+    const entity = await this.findById(tenantId, id);
     await this.prisma.$executeRawUnsafe(
       `DELETE FROM wms_state_machines WHERE tenant_id = $1 AND id = $2`,
       tenantId,
       id,
     );
-    return { success: true, message: 'State machine definition deleted' };
+    return entity;
   }
 
   async execute(

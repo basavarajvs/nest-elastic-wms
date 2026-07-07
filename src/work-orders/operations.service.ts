@@ -15,9 +15,13 @@ export class OperationsService {
   }
 
   async delete(tenantId: string, workOrderId: bigint, operationId: bigint) {
-    return this.prisma.work_order_operations.deleteMany({
+    const entity = await this.prisma.work_order_operations.findFirst({
       where: { tenant_id: tenantId, work_order_id: workOrderId, operation_id: operationId },
     });
+    await this.prisma.work_order_operations.deleteMany({
+      where: { tenant_id: tenantId, work_order_id: workOrderId, operation_id: operationId },
+    });
+    return entity;
   }
 
   async startOperation(tenantId: string, operationId: bigint, userId?: string) {
@@ -27,7 +31,7 @@ export class OperationsService {
     if (!op) throw new NotFoundException('Operation not found');
     if (op.status !== 'PENDING') throw new BadRequestException('Only PENDING operations can be started');
 
-    return this.prisma.work_order_operations.updateMany({
+    await this.prisma.work_order_operations.updateMany({
       where: { tenant_id: tenantId, operation_id: operationId },
       data: {
         status: 'IN_PROGRESS',
@@ -35,6 +39,9 @@ export class OperationsService {
         assigned_to_user_id: userId,
         updated_by: userId,
       },
+    });
+    return this.prisma.work_order_operations.findFirst({
+      where: { tenant_id: tenantId, operation_id: operationId },
     });
   }
 
@@ -45,13 +52,16 @@ export class OperationsService {
     if (!op) throw new NotFoundException('Operation not found');
     if (op.status !== 'IN_PROGRESS') throw new BadRequestException('Only IN_PROGRESS operations can be completed');
 
-    return this.prisma.work_order_operations.updateMany({
+    await this.prisma.work_order_operations.updateMany({
       where: { tenant_id: tenantId, operation_id: operationId },
       data: {
         status: 'COMPLETED',
         completed_at: new Date(),
         updated_by: userId,
       },
+    });
+    return this.prisma.work_order_operations.findFirst({
+      where: { tenant_id: tenantId, operation_id: operationId },
     });
   }
 }

@@ -42,8 +42,8 @@ export class WebhookService {
   }
 
   async findAll(tenantId: string, query: any) {
-    const page = query.page || 1;
-    const limit = query.limit || 50;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 50;
     const offset = (page - 1) * limit;
     const platform = query.platform;
     let where = `WHERE tenant_id = $1::uuid`;

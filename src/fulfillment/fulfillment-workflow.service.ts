@@ -13,16 +13,16 @@ export class FulfillmentWorkflowService {
     return this.prisma.fulfillment_workflow_definitions.create({
       data: {
         tenant_id: tenantId,
-        workflow_code: dto.workflowCode,
-        workflow_name: dto.workflowName,
-        workflow_description: dto.workflowDescription,
-        entity_type: dto.entityType,
-        initial_status: dto.initialStatus,
-        auto_progression_enabled: dto.autoProgressionEnabled ?? true,
-        require_manual_approval: dto.requireManualApproval ?? false,
-        max_retry_attempts: dto.maxRetryAttempts ?? 3,
-        retry_delay_seconds: dto.retryDelaySeconds ?? 300,
-        is_active: dto.isActive ?? true,
+        workflow_code: dto.workflow_code,
+        workflow_name: dto.workflow_name,
+        workflow_description: dto.workflow_description,
+        entity_type: dto.entity_type,
+        initial_status: dto.initial_status,
+        auto_progression_enabled: dto.auto_progression_enabled ?? true,
+        require_manual_approval: dto.require_manual_approval ?? false,
+        max_retry_attempts: dto.max_retry_attempts ?? 3,
+        retry_delay_seconds: dto.retry_delay_seconds ?? 300,
+        is_active: dto.is_active ?? true,
       },
     });
   }
@@ -32,8 +32,8 @@ export class FulfillmentWorkflowService {
     if (query.entityType) where.entity_type = query.entityType;
     if (query.isActive !== undefined) where.is_active = query.isActive;
 
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const [data, total] = await Promise.all([
       this.prisma.fulfillment_workflow_definitions.findMany({
         where,
@@ -59,13 +59,13 @@ export class FulfillmentWorkflowService {
     return this.prisma.fulfillment_workflow_definitions.update({
       where: { workflow_id: id },
       data: {
-        workflow_name: dto.workflowName,
-        workflow_description: dto.workflowDescription,
-        auto_progression_enabled: dto.autoProgressionEnabled,
-        require_manual_approval: dto.requireManualApproval,
-        max_retry_attempts: dto.maxRetryAttempts,
-        retry_delay_seconds: dto.retryDelaySeconds,
-        is_active: dto.isActive,
+        workflow_name: dto.workflow_name,
+        workflow_description: dto.workflow_description,
+        auto_progression_enabled: dto.auto_progression_enabled,
+        require_manual_approval: dto.require_manual_approval,
+        max_retry_attempts: dto.max_retry_attempts,
+        retry_delay_seconds: dto.retry_delay_seconds,
+        is_active: dto.is_active,
       },
     });
   }
@@ -84,8 +84,8 @@ export class FulfillmentWorkflowService {
     if (query.executionStatus) where.execution_status = query.executionStatus;
     if (query.handlerName) where.handler_name = query.handlerName;
 
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const [data, total] = await Promise.all([
       this.prisma.fulfillment_workflow_executions.findMany({
         where,

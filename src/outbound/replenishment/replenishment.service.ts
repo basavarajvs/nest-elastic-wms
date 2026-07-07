@@ -8,33 +8,37 @@ export class ReplenishmentService {
   constructor(private readonly prisma: PrismaService) {}
 
   async deleteRule(tenantId: string, ruleId: bigint) {
-    return this.prisma.replenishment_rules.deleteMany({
+    const rule = await this.findRuleById(tenantId, ruleId);
+    await this.prisma.replenishment_rules.deleteMany({
       where: { tenant_id: tenantId, rule_id: ruleId },
     });
+    return rule;
   }
 
   async deleteTask(tenantId: string, taskId: bigint) {
-    return this.prisma.replenishment_tasks.deleteMany({
+    const task = await this.findTaskById(tenantId, taskId);
+    await this.prisma.replenishment_tasks.deleteMany({
       where: { tenant_id: tenantId, task_id: taskId },
     });
+    return task;
   }
 
   async createRule(tenantId: string, userId: string | undefined, dto: any) {
     return this.prisma.replenishment_rules.create({
       data: {
         tenant_id: tenantId,
-        facility_id: BigInt(dto.facilityId),
-        product_id: BigInt(dto.productId),
-        from_location_id: dto.fromLocationId ? BigInt(dto.fromLocationId) : undefined,
-        to_location_id: dto.toLocationId ? BigInt(dto.toLocationId) : undefined,
-        zone_id: dto.zoneId ? BigInt(dto.zoneId) : undefined,
-        min_quantity: dto.minQuantity,
-        max_quantity: dto.maxQuantity,
-        reorder_point: dto.reorderPoint,
-        reorder_quantity: dto.reorderQuantity,
+        facility_id: BigInt(dto.facility_id),
+        product_id: BigInt(dto.product_id),
+        from_location_id: dto.from_location_id ? BigInt(dto.from_location_id) : undefined,
+        to_location_id: dto.to_location_id ? BigInt(dto.to_location_id) : undefined,
+        zone_id: dto.zone_id ? BigInt(dto.zone_id) : undefined,
+        min_quantity: dto.min_quantity,
+        max_quantity: dto.max_quantity,
+        reorder_point: dto.reorder_point,
+        reorder_quantity: dto.reorder_quantity,
         priority: dto.priority ?? 5,
-        is_active: dto.isActive ?? true,
-        auto_generate_tasks: dto.autoGenerateTasks ?? true,
+        is_active: dto.is_active ?? true,
+        auto_generate_tasks: dto.auto_generate_tasks ?? true,
         notes: dto.notes,
         created_by: userId,
         updated_by: userId,
@@ -47,39 +51,72 @@ export class ReplenishmentService {
     if (query.facilityId) where.facility_id = BigInt(query.facilityId);
     if (query.productId) where.product_id = BigInt(query.productId);
     if (query.isActive !== undefined) where.is_active = query.isActive === 'true' || query.isActive === true;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
 
-    const page = query.page || 1;
-    const limit = query.limit || 20;
-    const [data, total] = await Promise.all([
+    const [rows, total] = await Promise.all([
       this.prisma.replenishment_rules.findMany({
         where,
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { priority: 'asc' },
+        include: {
+          warehouse_facilities: true,
+          products: true,
+          storage_locations_replenishment_rules_from_location_idTostorage_locations: true,
+          storage_locations_replenishment_rules_to_location_idTostorage_locations: true,
+        },
       }),
       this.prisma.replenishment_rules.count({ where }),
     ]);
+    const data = rows.map(r => ({
+      ...r,
+      facility_name: r.warehouse_facilities?.facility_name,
+      product_name: r.products?.product_name,
+      from_location_name: r.storage_locations_replenishment_rules_from_location_idTostorage_locations?.location_name,
+      to_location_name: r.storage_locations_replenishment_rules_to_location_idTostorage_locations?.location_name,
+      warehouse_facilities: undefined,
+      products: undefined,
+      storage_locations_replenishment_rules_from_location_idTostorage_locations: undefined,
+      storage_locations_replenishment_rules_to_location_idTostorage_locations: undefined,
+    }));
     return { data, total, page, limit };
   }
 
   async findRuleById(tenantId: string, ruleId: bigint) {
     const rule = await this.prisma.replenishment_rules.findFirst({
       where: { tenant_id: tenantId, rule_id: ruleId },
+      include: {
+        warehouse_facilities: true,
+        products: true,
+        storage_locations_replenishment_rules_from_location_idTostorage_locations: true,
+        storage_locations_replenishment_rules_to_location_idTostorage_locations: true,
+      },
     });
     if (!rule) throw new NotFoundException('Replenishment rule not found');
-    return rule;
+    return {
+      ...rule,
+      facility_name: rule.warehouse_facilities?.facility_name,
+      product_name: rule.products?.product_name,
+      from_location_name: rule.storage_locations_replenishment_rules_from_location_idTostorage_locations?.location_name,
+      to_location_name: rule.storage_locations_replenishment_rules_to_location_idTostorage_locations?.location_name,
+      warehouse_facilities: undefined,
+      products: undefined,
+      storage_locations_replenishment_rules_from_location_idTostorage_locations: undefined,
+      storage_locations_replenishment_rules_to_location_idTostorage_locations: undefined,
+    };
   }
 
   async updateRule(tenantId: string, ruleId: bigint, userId: string | undefined, dto: any) {
     await this.findRuleById(tenantId, ruleId);
     const data: Record<string, any> = { updated_by: userId };
-    if (dto.minQuantity !== undefined) data.min_quantity = dto.minQuantity;
-    if (dto.maxQuantity !== undefined) data.max_quantity = dto.maxQuantity;
-    if (dto.reorderPoint !== undefined) data.reorder_point = dto.reorderPoint;
-    if (dto.reorderQuantity !== undefined) data.reorder_quantity = dto.reorderQuantity;
+    if (dto.min_quantity !== undefined) data.min_quantity = dto.min_quantity;
+    if (dto.max_quantity !== undefined) data.max_quantity = dto.max_quantity;
+    if (dto.reorder_point !== undefined) data.reorder_point = dto.reorder_point;
+    if (dto.reorder_quantity !== undefined) data.reorder_quantity = dto.reorder_quantity;
     if (dto.priority !== undefined) data.priority = dto.priority;
-    if (dto.isActive !== undefined) data.is_active = dto.isActive;
-    if (dto.autoGenerateTasks !== undefined) data.auto_generate_tasks = dto.autoGenerateTasks;
+    if (dto.is_active !== undefined) data.is_active = dto.is_active;
+    if (dto.auto_generate_tasks !== undefined) data.auto_generate_tasks = dto.auto_generate_tasks;
     if (dto.notes !== undefined) data.notes = dto.notes;
 
     await this.prisma.replenishment_rules.updateMany({
@@ -94,42 +131,75 @@ export class ReplenishmentService {
     if (query.facilityId) where.facility_id = BigInt(query.facilityId);
     if (query.status) where.status = query.status;
     if (query.ruleId) where.rule_id = BigInt(query.ruleId);
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
 
-    const page = query.page || 1;
-    const limit = query.limit || 20;
-    const [data, total] = await Promise.all([
+    const [rows, total] = await Promise.all([
       this.prisma.replenishment_tasks.findMany({
         where,
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { created_date: 'desc' },
+        include: {
+          warehouse_facilities: true,
+          products: true,
+          storage_locations_replenishment_tasks_from_location_idTostorage_locations: true,
+          storage_locations_replenishment_tasks_to_location_idTostorage_locations: true,
+        },
       }),
       this.prisma.replenishment_tasks.count({ where }),
     ]);
+    const data = rows.map(r => ({
+      ...r,
+      facility_name: r.warehouse_facilities?.facility_name,
+      product_name: r.products?.product_name,
+      from_location_name: r.storage_locations_replenishment_tasks_from_location_idTostorage_locations?.location_name,
+      to_location_name: r.storage_locations_replenishment_tasks_to_location_idTostorage_locations?.location_name,
+      warehouse_facilities: undefined,
+      products: undefined,
+      storage_locations_replenishment_tasks_from_location_idTostorage_locations: undefined,
+      storage_locations_replenishment_tasks_to_location_idTostorage_locations: undefined,
+    }));
     return { data, total, page, limit };
   }
 
   async findTaskById(tenantId: string, taskId: bigint) {
     const task = await this.prisma.replenishment_tasks.findFirst({
       where: { tenant_id: tenantId, task_id: taskId },
+      include: {
+        warehouse_facilities: true,
+        products: true,
+        storage_locations_replenishment_tasks_from_location_idTostorage_locations: true,
+        storage_locations_replenishment_tasks_to_location_idTostorage_locations: true,
+      },
     });
     if (!task) throw new NotFoundException('Replenishment task not found');
-    return task;
+    return {
+      ...task,
+      facility_name: task.warehouse_facilities?.facility_name,
+      product_name: task.products?.product_name,
+      from_location_name: task.storage_locations_replenishment_tasks_from_location_idTostorage_locations?.location_name,
+      to_location_name: task.storage_locations_replenishment_tasks_to_location_idTostorage_locations?.location_name,
+      warehouse_facilities: undefined,
+      products: undefined,
+      storage_locations_replenishment_tasks_from_location_idTostorage_locations: undefined,
+      storage_locations_replenishment_tasks_to_location_idTostorage_locations: undefined,
+    };
   }
 
   async updateTask(tenantId: string, taskId: bigint, userId: string | undefined, dto: any) {
     await this.findTaskById(tenantId, taskId);
     const data: Record<string, any> = { updated_by: userId };
     if (dto.status !== undefined) data.status = dto.status;
-    if (dto.quantityMoved !== undefined) data.quantity_moved = dto.quantityMoved;
-    if (dto.assignedToUserId !== undefined) data.assigned_to_user_id = dto.assignedToUserId;
+    if (dto.quantity_moved !== undefined) data.quantity_moved = dto.quantity_moved;
+    if (dto.assigned_to_user_id !== undefined) data.assigned_to_user_id = dto.assigned_to_user_id;
 
     if (dto.status === 'IN_PROGRESS' || dto.status === 'IN_PROGRESS') {
       data.started_at = new Date();
     }
     if (dto.status === 'COMPLETED') {
       data.completed_at = new Date();
-      if (dto.quantityMoved === undefined) {
+      if (dto.quantity_moved === undefined) {
         const task = await this.findTaskById(tenantId, taskId);
         data.quantity_moved = task.quantity_requested;
       }

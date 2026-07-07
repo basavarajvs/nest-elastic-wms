@@ -23,18 +23,20 @@ export class SalesOrderService {
   constructor(private readonly prisma: PrismaService) {}
 
   async delete(tenantId: string, orderId: bigint) {
-    return this.prisma.sales_orders.deleteMany({
+    const order = await this.findById(tenantId, orderId);
+    await this.prisma.sales_orders.deleteMany({
       where: { tenant_id: tenantId, order_id: orderId },
     });
+    return order;
   }
 
   async create(tenantId: string, dto: any) {
     // Auto-populate client name/code from clients table
     let clientName: string | undefined;
     let clientCode: string | undefined;
-    if (dto.clientId) {
+    if (dto.client_id) {
       const client = await this.prisma.clients.findFirst({
-        where: { tenant_id: tenantId, client_id: BigInt(dto.clientId) },
+        where: { tenant_id: tenantId, client_id: BigInt(dto.client_id) },
       });
       if (client) {
         clientName = client.client_name;
@@ -45,27 +47,31 @@ export class SalesOrderService {
     const order = await this.prisma.sales_orders.create({
       data: {
         tenant_id: tenantId,
-        facility_id: BigInt(dto.facilityId),
-        order_number: dto.orderNumber,
-        order_date: dto.orderDate ? new Date(dto.orderDate) : undefined,
-        client_id: dto.clientId ? BigInt(dto.clientId) : BigInt(0),
-        client_name: dto.clientName || clientName,
-        client_code: dto.clientCode || clientCode,
-        customer_id: dto.customerId,
-        order_type: dto.orderType || 'STANDARD',
+        facility_id: BigInt(dto.facility_id),
+        order_number: dto.order_number,
+        order_name: dto.order_name,
+        description: dto.description,
+        order_date: dto.order_date ? new Date(dto.order_date) : undefined,
+        client_id: dto.client_id ? BigInt(dto.client_id) : BigInt(0),
+        client_name: dto.client_name || clientName,
+        client_code: dto.client_code || clientCode,
+        customer_id: dto.customer_id,
+        order_type: dto.order_type || 'STANDARD',
         priority: dto.priority || 5,
-        requested_delivery_date: dto.requestedDeliveryDate ? new Date(dto.requestedDeliveryDate) : undefined,
-        promised_delivery_date: dto.promisedDeliveryDate ? new Date(dto.promisedDeliveryDate) : undefined,
-        delivery_address_line1: dto.deliveryAddressLine1,
-        delivery_address_line2: dto.deliveryAddressLine2,
-        delivery_city: dto.deliveryCity,
-        delivery_state_province: dto.deliveryStateProvince,
-        delivery_postal_code: dto.deliveryPostalCode,
-        delivery_country_code: dto.deliveryCountryCode,
-        delivery_contact_name: dto.deliveryContactName,
-        delivery_contact_phone: dto.deliveryContactPhone,
-        delivery_instructions: dto.deliveryInstructions,
-        currency_code: dto.currencyCode,
+        requested_delivery_date: dto.requested_delivery_date ? new Date(dto.requested_delivery_date) : undefined,
+        promised_delivery_date: dto.promised_delivery_date ? new Date(dto.promised_delivery_date) : undefined,
+        delivery_address_line1: dto.delivery_address_line1,
+        delivery_address_line2: dto.delivery_address_line2,
+        delivery_city: dto.delivery_city,
+        delivery_state_province: dto.delivery_state_province,
+        delivery_postal_code: dto.delivery_postal_code,
+        delivery_country_code: dto.delivery_country_code,
+        delivery_contact_name: dto.delivery_contact_name,
+        delivery_contact_phone: dto.delivery_contact_phone,
+        delivery_instructions: dto.delivery_instructions,
+        currency_code: dto.currency_code,
+        assigned_sales_rep_id: dto.assigned_sales_rep_id,
+        assigned_warehouse_user_id: dto.assigned_warehouse_user_id,
         notes: dto.notes,
       },
     });
@@ -76,13 +82,13 @@ export class SalesOrderService {
         data: dto.lines.map((line: any, idx: number) => ({
           tenant_id: tenantId,
           order_id: order.order_id,
-          facility_id: BigInt(dto.facilityId),
+          facility_id: BigInt(dto.facility_id),
           line_number: idx + 1,
-          product_id: BigInt(line.productId),
-          requested_quantity: line.requestedQuantity,
-          unit_price: line.unitPrice || 0,
-          uom_id: line.uomId ? BigInt(line.uomId) : BigInt(1),
-          promised_delivery_date: line.promisedDeliveryDate ? new Date(line.promisedDeliveryDate) : undefined,
+          product_id: BigInt(line.product_id),
+          requested_quantity: line.requested_quantity,
+          unit_price: line.unit_price || 0,
+          uom_id: line.uom_id ? BigInt(line.uom_id) : BigInt(1),
+          promised_delivery_date: line.promised_delivery_date ? new Date(line.promised_delivery_date) : undefined,
           notes: line.notes,
         })),
       });
@@ -101,18 +107,29 @@ export class SalesOrderService {
         { client_name: { contains: query.search, mode: 'insensitive' } },
       ];
     }
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const [data, total] = await Promise.all([
       this.prisma.sales_orders.findMany({
         where,
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { priority: 'asc' },
+        include: {
+          warehouse_facilities: { select: { facility_name: true } },
+          customers: { select: { customer_name: true } },
+        },
       }),
       this.prisma.sales_orders.count({ where }),
     ]);
-    return { data, total, page, limit };
+    const mapped = data.map(d => ({
+      ...d,
+      facility_name: (d as any).warehouse_facilities?.facility_name,
+      customer_name: (d as any).customers?.customer_name,
+      warehouse_facilities: undefined,
+      customers: undefined,
+    }));
+    return { data: mapped, total, page, limit };
   }
 
   async findById(tenantId: string, orderId: bigint) {
@@ -129,18 +146,25 @@ export class SalesOrderService {
     await this.prisma.sales_orders.updateMany({
       where: { tenant_id: tenantId, order_id: orderId },
       data: {
+        order_name: dto.order_name,
+        description: dto.description,
+        client_name: dto.client_name,
+        client_code: dto.client_code,
         priority: dto.priority,
-        requested_delivery_date: dto.requestedDeliveryDate ? new Date(dto.requestedDeliveryDate) : undefined,
-        promised_delivery_date: dto.promisedDeliveryDate ? new Date(dto.promisedDeliveryDate) : undefined,
-        delivery_address_line1: dto.deliveryAddressLine1,
-        delivery_address_line2: dto.deliveryAddressLine2,
-        delivery_city: dto.deliveryCity,
-        delivery_state_province: dto.deliveryStateProvince,
-        delivery_postal_code: dto.deliveryPostalCode,
-        delivery_country_code: dto.deliveryCountryCode,
-        delivery_contact_name: dto.deliveryContactName,
-        delivery_contact_phone: dto.deliveryContactPhone,
-        delivery_instructions: dto.deliveryInstructions,
+        requested_delivery_date: dto.requested_delivery_date ? new Date(dto.requested_delivery_date) : undefined,
+        promised_delivery_date: dto.promised_delivery_date ? new Date(dto.promised_delivery_date) : undefined,
+        delivery_address_line1: dto.delivery_address_line1,
+        delivery_address_line2: dto.delivery_address_line2,
+        delivery_city: dto.delivery_city,
+        delivery_state_province: dto.delivery_state_province,
+        delivery_postal_code: dto.delivery_postal_code,
+        delivery_country_code: dto.delivery_country_code,
+        delivery_contact_name: dto.delivery_contact_name,
+        delivery_contact_phone: dto.delivery_contact_phone,
+        delivery_instructions: dto.delivery_instructions,
+        currency_code: dto.currency_code,
+        assigned_sales_rep_id: dto.assigned_sales_rep_id,
+        assigned_warehouse_user_id: dto.assigned_warehouse_user_id,
         notes: dto.notes,
       },
     });
@@ -196,7 +220,7 @@ export class SalesOrderService {
         requested_quantity: dto.requestedQuantity,
         unit_price: dto.unitPrice || 0,
         uom_id: dto.uomId ? BigInt(dto.uomId) : BigInt(1),
-        promised_delivery_date: dto.promisedDeliveryDate ? new Date(dto.promisedDeliveryDate) : undefined,
+        promised_delivery_date: dto.promised_delivery_date ? new Date(dto.promised_delivery_date) : undefined,
         notes: dto.notes,
       },
     });
@@ -205,10 +229,16 @@ export class SalesOrderService {
   }
 
   async getLines(tenantId: string, orderId: bigint) {
-    return this.prisma.sales_order_lines.findMany({
+    const rows = await this.prisma.sales_order_lines.findMany({
       where: { tenant_id: tenantId, order_id: orderId },
       orderBy: { line_number: 'asc' },
     });
+    if (!rows.length) return [];
+    const order = await this.prisma.sales_orders.findFirst({
+      where: { tenant_id: tenantId, order_id: orderId },
+      select: { order_number: true },
+    });
+    return rows.map(r => ({ ...r, order_number: order?.order_number }));
   }
 
   /**
@@ -268,12 +298,22 @@ export class SalesOrderService {
   private async findFullOrder(tenantId: string, orderId: bigint) {
     const order = await this.prisma.sales_orders.findFirst({
       where: { tenant_id: tenantId, order_id: orderId },
+      include: {
+        warehouse_facilities: { select: { facility_name: true } },
+        customers: { select: { customer_name: true } },
+      },
     });
     if (!order) return null;
     const lines = await this.prisma.sales_order_lines.findMany({
       where: { tenant_id: tenantId, order_id: orderId },
       orderBy: { line_number: 'asc' },
     });
-    return { ...order, lines };
+    const { warehouse_facilities, customers, ...orderData } = order as any;
+    return {
+      ...orderData,
+      facility_name: warehouse_facilities?.facility_name,
+      customer_name: customers?.customer_name,
+      lines,
+    };
   }
 }

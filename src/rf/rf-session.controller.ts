@@ -1,5 +1,5 @@
 import { Controller, Post, Get, Body, Req, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/auth/jwt-auth.guard';
 import { CaslGuard } from '../common/guards/casl.guard';
 import { RfSessionGuard } from './guards/rf-session.guard';
@@ -9,6 +9,7 @@ import { CheckAbility } from '../common/decorators/check-ability.decorator';
 import { AuditLog } from '../common/decorators/audit-log.decorator';
 import { WmsAction } from '../casl/casl.types';
 import { RfSessionService } from '../common/rf-session/rf-session.service';
+import { RfSessionDto, RfSessionLoginDto, HeartbeatResponseDto, LogoutResponseDto } from './dtos/rf-session.dto';
 
 @ApiTags('RF Session Management')
 @Controller('rf/session')
@@ -20,7 +21,8 @@ export class RfSessionController {
   @CheckAbility({ action: WmsAction.Create, subject: 'RfSession' })
   @AuditLog({ eventType: 'RF_SESSION_LOGIN' })
   @ApiOperation({ summary: 'Create RF session (login from handheld)' })
-  async login(@Req() req: any, @Body() dto: { facilityId: string; deviceId?: string; workflowType?: string }) {
+  @ApiCreatedResponse({ type: RfSessionDto })
+  async login(@Req() req: any, @Body() dto: RfSessionLoginDto) {
     const tenantId = req.tenantContext.getTenantId();
     const userId = req.user?.sub;
     return this.rfSessionService.createSession({
@@ -36,6 +38,7 @@ export class RfSessionController {
   @UseGuards(RfSessionGuard, RfActionLightweightGuard)
   @RfAction('read')
   @ApiOperation({ summary: 'Renew RF session TTL (heartbeat)' })
+  @ApiCreatedResponse({ type: HeartbeatResponseDto })
   async heartbeat(@Req() req: any) {
     const tenantId = req.tenantContext.getTenantId();
     const sessionId = req.rfSession.sessionId;
@@ -47,6 +50,7 @@ export class RfSessionController {
   @RfAction('delete')
   @AuditLog({ eventType: 'RF_SESSION_LOGOUT' })
   @ApiOperation({ summary: 'End RF session (logout)' })
+  @ApiCreatedResponse({ type: LogoutResponseDto })
   async logout(@Req() req: any) {
     const tenantId = req.tenantContext.getTenantId();
     const sessionId = req.rfSession.sessionId;
@@ -58,6 +62,7 @@ export class RfSessionController {
   @UseGuards(RfSessionGuard, RfActionLightweightGuard)
   @RfAction('read')
   @ApiOperation({ summary: 'Get current RF session info' })
+  @ApiOkResponse({ type: RfSessionDto })
   async current(@Req() req: any) {
     const tenantId = req.tenantContext.getTenantId();
     const sessionId = req.rfSession.sessionId;

@@ -1,9 +1,11 @@
 import { Controller, Delete, Get, Post, Param, Body, Query, Req, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../common/auth/jwt-auth.guard';
 import { CaslGuard } from '../../../common/guards/casl.guard';
 import { CheckAbility } from '../../../common/decorators/check-ability.decorator';
 import { ProductClientAssignmentService } from '../product-client-assignment.service';
+import { ProductClientAssignmentResponseDto, CreateProductClientAssignmentDto } from '../dtos/product-client-assignment-response.dto';
+import { PaginatedResponseDto } from '../../../common/dto/paginated-response.dto';
 
 @ApiTags('Product Client Assignments')
 @UseGuards(JwtAuthGuard, CaslGuard)
@@ -14,13 +16,15 @@ export class ProductClientAssignmentController {
   @Post()
   @CheckAbility({ action: 'create', subject: 'Product' })
   @ApiOperation({ summary: 'Create product-client assignment' })
-  async create(@Req() req: any, @Body() dto: any) {
+  @ApiCreatedResponse({ type: ProductClientAssignmentResponseDto })
+  async create(@Req() req: any, @Body() dto: CreateProductClientAssignmentDto) {
     return this.assignmentService.create(req.tenantContext.getTenantId(), dto);
   }
 
   @Get()
   @CheckAbility({ action: 'list', subject: 'Product' })
   @ApiOperation({ summary: 'List product-client assignments' })
+  @ApiOkResponse({ type: PaginatedResponseDto })
   async findAll(@Req() req: any, @Query() query: any) {
     return this.assignmentService.findAll(req.tenantContext.getTenantId(), query);
   }
@@ -28,6 +32,7 @@ export class ProductClientAssignmentController {
   @Get(':id')
   @CheckAbility({ action: 'read', subject: 'Product' })
   @ApiOperation({ summary: 'Get product-client assignment' })
+  @ApiOkResponse({ type: ProductClientAssignmentResponseDto })
   async findById(@Req() req: any, @Param('id') id: string) {
     return this.assignmentService.findById(req.tenantContext.getTenantId(), BigInt(id));
   }
@@ -35,6 +40,7 @@ export class ProductClientAssignmentController {
   @Get('by-product/:productId')
   @CheckAbility({ action: 'read', subject: 'Product' })
   @ApiOperation({ summary: 'Find assignments by product' })
+  @ApiOkResponse({ type: ProductClientAssignmentResponseDto, isArray: true })
   async findByProduct(@Req() req: any, @Param('productId') productId: string) {
     return this.assignmentService.findByProduct(req.tenantContext.getTenantId(), BigInt(productId));
   }
@@ -42,6 +48,7 @@ export class ProductClientAssignmentController {
   @Get('by-client/:clientId')
   @CheckAbility({ action: 'read', subject: 'Product' })
   @ApiOperation({ summary: 'Find assignments by client' })
+  @ApiOkResponse({ type: ProductClientAssignmentResponseDto, isArray: true })
   async findByClient(@Req() req: any, @Param('clientId') clientId: string) {
     return this.assignmentService.findByClient(req.tenantContext.getTenantId(), BigInt(clientId));
   }
@@ -49,6 +56,7 @@ export class ProductClientAssignmentController {
   @Delete(':id')
   @CheckAbility({ action: 'delete', subject: 'Product' })
   @ApiOperation({ summary: 'Delete product-client assignment' })
+  @ApiOkResponse({ type: ProductClientAssignmentResponseDto })
   async delete(@Req() req: any, @Param('id') id: string) {
     return this.assignmentService.delete(req.tenantContext.getTenantId(), BigInt(id));
   }

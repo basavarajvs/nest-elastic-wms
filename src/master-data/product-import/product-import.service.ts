@@ -52,8 +52,8 @@ export class ProductImportService {
         { file_name: { contains: query.search, mode: 'insensitive' } },
       ];
     }
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const [data, total] = await Promise.all([
       this.prisma.product_import_jobs.findMany({
         where,
@@ -70,9 +70,11 @@ export class ProductImportService {
   }
 
   async delete(tenantId: string, jobId: bigint) {
-    return this.prisma.product_import_jobs.deleteMany({
+    const record = await this.findJobById(tenantId, jobId);
+    await this.prisma.product_import_jobs.deleteMany({
       where: { tenant_id: tenantId, job_id: jobId },
     });
+    return record;
   }
 
   async findJobById(tenantId: string, jobId: bigint) {

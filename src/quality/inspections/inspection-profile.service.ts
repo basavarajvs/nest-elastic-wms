@@ -11,20 +11,20 @@ export class InspectionProfileService {
     const profile = await this.prisma.inspection_profiles.create({
       data: {
         tenant_id: tenantId,
-        profile_name: dto.profileName,
+        profile_name: dto.profile_name,
         description: dto.description,
-        is_active: dto.isActive ?? true,
+        is_active: dto.is_active ?? true,
       },
     });
-    if (dto.checklistItems?.length) {
+    if (dto.checklist_items?.length) {
       await this.prisma.inspection_checklist_items.createMany({
-        data: dto.checklistItems.map((item: any) => ({
+        data: dto.checklist_items.map((item: any) => ({
           profile_id: profile.profile_id,
-          check_type: item.checkType,
-          check_label: item.checkLabel,
-          is_mandatory: item.isMandatory ?? true,
-          sort_order: item.sortOrder,
-          acceptable_criteria: item.acceptableCriteria,
+          check_type: item.check_type,
+          check_label: item.check_label,
+          is_mandatory: item.is_mandatory ?? true,
+          sort_order: item.sort_order,
+          acceptable_criteria: item.acceptable_criteria,
         })),
       });
     }
@@ -55,23 +55,23 @@ export class InspectionProfileService {
     await this.prisma.inspection_profiles.updateMany({
       where: { tenant_id: tenantId, profile_id: profileId },
       data: {
-        profile_name: dto.profileName,
+        profile_name: dto.profile_name,
         description: dto.description,
-        is_active: dto.isActive,
+        is_active: dto.is_active,
       },
     });
-    if (dto.checklistItems) {
+    if (dto.checklist_items) {
       await this.prisma.inspection_checklist_items.deleteMany({
         where: { profile_id: profileId },
       });
       await this.prisma.inspection_checklist_items.createMany({
-        data: dto.checklistItems.map((item: any) => ({
+        data: dto.checklist_items.map((item: any) => ({
           profile_id: profileId,
-          check_type: item.checkType,
-          check_label: item.checkLabel,
-          is_mandatory: item.isMandatory ?? true,
-          sort_order: item.sortOrder,
-          acceptable_criteria: item.acceptableCriteria,
+          check_type: item.check_type,
+          check_label: item.check_label,
+          is_mandatory: item.is_mandatory ?? true,
+          sort_order: item.sort_order,
+          acceptable_criteria: item.acceptable_criteria,
         })),
       });
     }
@@ -87,44 +87,47 @@ export class InspectionProfileService {
   }
 
   async assignToProduct(tenantId: string, dto: any) {
-    await this.findById(tenantId, BigInt(dto.profileId));
+    await this.findById(tenantId, BigInt(dto.profile_id));
+    const product = await this.prisma.products.findFirst({ where: { tenant_id: tenantId, product_id: BigInt(dto.product_id) } });
+    const product_name = product?.product_name;
     const existing = await this.prisma.product_inspection_profiles.findFirst({
       where: {
         tenant_id: tenantId,
-        product_id: BigInt(dto.productId),
-        profile_id: BigInt(dto.profileId),
-        vendor_id: dto.vendorId ? BigInt(dto.vendorId) : undefined,
+        product_id: BigInt(dto.product_id),
+        profile_id: BigInt(dto.profile_id),
+        vendor_id: dto.vendor_id ? BigInt(dto.vendor_id) : undefined,
       },
     });
     if (existing) {
       await this.prisma.product_inspection_profiles.updateMany({
         where: { mapping_id: existing.mapping_id },
         data: {
-          min_expiry_days: dto.minExpiryDays,
-          temperature_min: dto.temperatureMin,
-          temperature_max: dto.temperatureMax,
-          sampling_percentage: dto.samplingPercentage,
-          sampling_method: dto.samplingMethod || '100_PERCENT',
+          min_expiry_days: dto.min_expiry_days,
+          temperature_min: dto.temperature_min,
+          temperature_max: dto.temperature_max,
+          sampling_percentage: dto.sampling_percentage,
+          sampling_method: dto.sampling_method || '100_PERCENT',
           is_active: true,
         },
       });
-      return existing;
+      return { ...existing, product_name };
     }
-    return this.prisma.product_inspection_profiles.create({
+    const result = await this.prisma.product_inspection_profiles.create({
       data: {
         tenant_id: tenantId,
-        product_id: BigInt(dto.productId),
-        profile_id: BigInt(dto.profileId),
-        vendor_id: dto.vendorId ? BigInt(dto.vendorId) : undefined,
-        client_id: dto.clientId ? BigInt(dto.clientId) : undefined,
-        min_expiry_days: dto.minExpiryDays,
-        temperature_min: dto.temperatureMin,
-        temperature_max: dto.temperatureMax,
-        sampling_percentage: dto.samplingPercentage,
-        sampling_method: dto.samplingMethod || '100_PERCENT',
+        product_id: BigInt(dto.product_id),
+        profile_id: BigInt(dto.profile_id),
+        vendor_id: dto.vendor_id ? BigInt(dto.vendor_id) : undefined,
+        client_id: dto.client_id ? BigInt(dto.client_id) : undefined,
+        min_expiry_days: dto.min_expiry_days,
+        temperature_min: dto.temperature_min,
+        temperature_max: dto.temperature_max,
+        sampling_percentage: dto.sampling_percentage,
+        sampling_method: dto.sampling_method || '100_PERCENT',
         is_active: true,
       },
     });
+    return { ...result, product_name };
   }
 
   async getProfileForProduct(tenantId: string, productId: bigint, vendorId?: bigint) {

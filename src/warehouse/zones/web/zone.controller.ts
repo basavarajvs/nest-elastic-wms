@@ -1,5 +1,7 @@
 import { Controller, Get, Post, Patch, Delete, Param, Body, Query, Req } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse } from '@nestjs/swagger';
+import { ZoneResponseDto, CreateZoneDto, UpdateZoneDto } from '../dtos/zone.dto';
+import { PaginatedResponseDto } from '../../../common/dto/paginated-response.dto';
 import { ZoneService } from '../zone.service';
 
 @ApiTags('Warehouse Zones')
@@ -9,13 +11,15 @@ export class ZoneController {
 
   @Post()
   @ApiOperation({ summary: 'Create zone' })
-  async create(@Req() req: any, @Body() dto: any) {
+  @ApiCreatedResponse({ type: ZoneResponseDto })
+  async create(@Req() req: any, @Body() dto: CreateZoneDto) {
     const tenantId = req.tenantContext.getTenantId();
     return this.zoneService.create(tenantId, dto);
   }
 
   @Get()
   @ApiOperation({ summary: 'List zones by facility' })
+  @ApiOkResponse({ type: PaginatedResponseDto })
   async findAll(@Req() req: any, @Query() query: any) {
     const tenantId = req.tenantContext.getTenantId();
     return this.zoneService.findAll(tenantId, BigInt(query.facilityId), query);
@@ -23,6 +27,7 @@ export class ZoneController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get zone by ID' })
+  @ApiOkResponse({ type: ZoneResponseDto })
   async findById(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.zoneService.findById(tenantId, BigInt(id));
@@ -30,13 +35,15 @@ export class ZoneController {
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update zone' })
-  async update(@Req() req: any, @Param('id') id: string, @Body() dto: any) {
+  @ApiOkResponse({ type: ZoneResponseDto })
+  async update(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateZoneDto) {
     const tenantId = req.tenantContext.getTenantId();
     return this.zoneService.update(tenantId, BigInt(id), dto);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete zone' })
+  @ApiOkResponse({ type: ZoneResponseDto })
   async delete(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.zoneService.delete(tenantId, BigInt(id));

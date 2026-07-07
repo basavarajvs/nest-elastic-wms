@@ -1,6 +1,15 @@
 import { Controller, Get, Post, Delete, Patch, Body, Param, Req, Query, NotFoundException } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiCreatedResponse, ApiOkResponse } from '@nestjs/swagger';
 import { PackingService } from '../packing.service';
+import {
+  PackingSessionDto, PackingSessionFullDto, PackSlipDto,
+  PackingStationDto, PackingExceptionDto, CloseCartonResultDto,
+  CartonizationResultDto, ShipmentPackingStatusDto,
+  StartPackingSessionDto, PackItemDto, CreateCartonizationRuleDto, UpdateCartonizationRuleDto,
+  PackItemsResponseDto, SealContainerResponseDto,
+  PackingSlipViewResponseDto, CartonizationRuleResponseDto,
+  CartonizationRuleUpdateResponseDto, PickingQualityReportResponseDto,
+} from '../dtos/response.dto';
 import { CartonizationService } from '../cartonization.service';
 import { PrismaService } from '../../../prisma/prisma.service';
 
@@ -15,13 +24,15 @@ export class PackingWebController {
 
   @Post('sessions/start')
   @ApiOperation({ summary: 'Start a packing session' })
-  async startSession(@Req() req: any, @Body() dto: any) {
+  @ApiCreatedResponse({ type: PackingSessionDto })
+  async startSession(@Req() req: any, @Body() dto: StartPackingSessionDto) {
     const tenantId = req.tenantContext.getTenantId();
     return this.service.startSession(tenantId, dto);
   }
 
   @Get('sessions/:id')
   @ApiOperation({ summary: 'Get packing session with slips and history' })
+  @ApiOkResponse({ type: PackingSessionFullDto })
   async getSession(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.service.findSessionById(tenantId, BigInt(id));
@@ -29,6 +40,7 @@ export class PackingWebController {
 
   @Post('sessions/:id/assign-order')
   @ApiOperation({ summary: 'Assign order to packing session' })
+  @ApiCreatedResponse({ type: PackingSessionFullDto })
   async assignOrder(@Req() req: any, @Param('id') id: string, @Body('orderId') orderId: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.service.assignOrder(tenantId, BigInt(id), BigInt(orderId));
@@ -36,13 +48,15 @@ export class PackingWebController {
 
   @Post('sessions/:id/pack')
   @ApiOperation({ summary: 'Pack items into a container and create packing slip' })
-  async packItems(@Req() req: any, @Param('id') id: string, @Body() dto: any) {
+  @ApiCreatedResponse({ type: PackItemsResponseDto })
+  async packItems(@Req() req: any, @Param('id') id: string, @Body() dto: PackItemDto) {
     const tenantId = req.tenantContext.getTenantId();
     return this.service.packItems(tenantId, BigInt(id), dto);
   }
 
   @Post('sessions/:id/complete')
   @ApiOperation({ summary: 'Complete packing session' })
+  @ApiCreatedResponse({ type: PackingSessionFullDto })
   async completeSession(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.service.completeSession(tenantId, BigInt(id));
@@ -50,6 +64,7 @@ export class PackingWebController {
 
   @Post('containers/:id/seal')
   @ApiOperation({ summary: 'Seal a packed container' })
+  @ApiCreatedResponse({ type: SealContainerResponseDto })
   async sealContainer(@Req() req: any, @Param('id') id: string, @Body('sealNumber') sealNumber: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.service.sealContainer(tenantId, BigInt(id), sealNumber);
@@ -57,6 +72,7 @@ export class PackingWebController {
 
   @Get('stations')
   @ApiOperation({ summary: 'List packing stations' })
+  @ApiOkResponse({ type: [PackingStationDto] })
   async getStations(@Req() req: any, @Query('facilityId') facilityId: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.service.getStations(tenantId, BigInt(facilityId));
@@ -64,6 +80,7 @@ export class PackingWebController {
 
   @Delete('sessions/:id')
   @ApiOperation({ summary: 'Delete packing session' })
+  @ApiOkResponse({ type: PackingSessionDto })
   async deleteSession(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.service.deleteSession(tenantId, BigInt(id));
@@ -72,6 +89,7 @@ export class PackingWebController {
   // GAP-7.2: Web exception management
   @Get('exceptions')
   @ApiOperation({ summary: 'List packing exceptions (GAP-7.2)' })
+  @ApiOkResponse({ type: [PackingExceptionDto] })
   async getExceptions(@Req() req: any, @Query('facilityId') facilityId: string, @Query('status') status?: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.service.getExceptions(tenantId, BigInt(facilityId), status);
@@ -79,6 +97,7 @@ export class PackingWebController {
 
   @Patch('exceptions/:id/approve')
   @ApiOperation({ summary: 'Approve packing exception (GAP-7.2)' })
+  @ApiOkResponse({ type: PackingExceptionDto })
   async approveException(@Req() req: any, @Param('id') id: string, @Body('supervisorId') supervisorId: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.service.approveException(tenantId, BigInt(id), supervisorId);
@@ -86,6 +105,7 @@ export class PackingWebController {
 
   @Patch('exceptions/:id/reject')
   @ApiOperation({ summary: 'Reject packing exception (GAP-7.2)' })
+  @ApiOkResponse({ type: PackingExceptionDto })
   async rejectException(@Req() req: any, @Param('id') id: string, @Body('supervisorId') supervisorId: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.service.rejectException(tenantId, BigInt(id), supervisorId);
@@ -94,6 +114,7 @@ export class PackingWebController {
   // GAP-8.3: Web packing slip view
   @Get('packing-slips/:orderId')
   @ApiOperation({ summary: 'View packing slips by order (GAP-8.3)' })
+  @ApiOkResponse({ type: PackingSlipViewResponseDto })
   async getPackingSlips(@Req() req: any, @Param('orderId') orderId: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.service.getPackingSlipsByOrder(tenantId, BigInt(orderId));
@@ -102,6 +123,7 @@ export class PackingWebController {
   // GAP-7.2: List sessions (web)
   @Get('sessions')
   @ApiOperation({ summary: 'List packing sessions (GAP-7.2)' })
+  @ApiOkResponse({ type: [PackingSessionDto] })
   async listSessions(@Req() req: any, @Query('facilityId') facilityId: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.service.getSessions(tenantId, BigInt(facilityId));
@@ -110,6 +132,7 @@ export class PackingWebController {
   // GAP-2.5: Cartonize order
   @Post('cartonize/:orderId')
   @ApiOperation({ summary: 'Calculate carton plan for order (GAP-2)' })
+  @ApiCreatedResponse({ type: CartonizationResultDto })
   async cartonizeOrder(@Req() req: any, @Param('orderId') orderId: string, @Query('facilityId') facilityId: string) {
     const tenantId = req.tenantContext.getTenantId();
     const result = await this.cartonizationService.calculateCartons(tenantId, BigInt(facilityId), BigInt(orderId));
@@ -122,6 +145,7 @@ export class PackingWebController {
   // APP-PACK-A: Shipment packing status
   @Get('shipments/:shipmentId/packing-status')
   @ApiOperation({ summary: 'Get shipment packing status — which cartons are packed vs pending (APP-PACK-A)' })
+  @ApiOkResponse({ type: ShipmentPackingStatusDto })
   async getShipmentPackingStatus(@Req() req: any, @Param('shipmentId') shipmentId: string) {
     const tenantId = req.tenantContext.getTenantId();
     const shipment = await this.prisma.outbound_shipments.findFirst({ where: { tenant_id: tenantId, shipment_id: BigInt(shipmentId) } });
@@ -149,23 +173,25 @@ export class PackingWebController {
   // GAP-2.5: Cartonization rule CRUD
   @Post('cartonization-rules')
   @ApiOperation({ summary: 'Create cartonization rule' })
-  async createCartonizationRule(@Req() req: any, @Body() dto: any) {
+  @ApiCreatedResponse({ type: CartonizationRuleResponseDto })
+  async createCartonizationRule(@Req() req: any, @Body() dto: CreateCartonizationRuleDto) {
     const tenantId = req.tenantContext.getTenantId();
     return this.prisma.cartonization_rules.create({
       data: {
         tenant_id: tenantId,
-        facility_id: BigInt(dto.facilityId),
-        rule_name: dto.ruleName,
+        facility_id: BigInt(dto.facility_id),
+        rule_name: dto.rule_name,
         priority: dto.priority || 1,
-        conditions_json: dto.conditionsJson || {},
-        carton_type_id: dto.cartonTypeId ? BigInt(dto.cartonTypeId) : null,
-        is_active: dto.isActive ?? true,
+        conditions_json: dto.conditions_json || {},
+        carton_type_id: dto.carton_type_id ? BigInt(dto.carton_type_id) : null,
+        is_active: dto.is_active ?? true,
       },
     });
   }
 
   @Get('cartonization-rules')
   @ApiOperation({ summary: 'List cartonization rules' })
+  @ApiOkResponse({ type: [CartonizationRuleResponseDto] })
   async listCartonizationRules(@Req() req: any, @Query('facilityId') facilityId: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.prisma.cartonization_rules.findMany({
@@ -176,22 +202,26 @@ export class PackingWebController {
 
   @Patch('cartonization-rules/:id')
   @ApiOperation({ summary: 'Update cartonization rule' })
-  async updateCartonizationRule(@Req() req: any, @Param('id') id: string, @Body() dto: any) {
+  @ApiOkResponse({ type: CartonizationRuleUpdateResponseDto })
+  async updateCartonizationRule(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateCartonizationRuleDto) {
     const tenantId = req.tenantContext.getTenantId();
-    return this.prisma.cartonization_rules.updateMany({
+    await this.prisma.cartonization_rules.updateMany({
       where: { tenant_id: tenantId, rule_id: BigInt(id) },
       data: {
-        rule_name: dto.ruleName,
+        rule_name: dto.rule_name,
         priority: dto.priority,
-        conditions_json: dto.conditionsJson,
-        is_active: dto.isActive,
+        conditions_json: dto.conditions_json,
+        carton_type_id: dto.carton_type_id ? BigInt(dto.carton_type_id) : undefined,
+        is_active: dto.is_active,
       },
     });
+    return this.prisma.cartonization_rules.findFirst({ where: { tenant_id: tenantId, rule_id: BigInt(id) } });
   }
 
   // APP-PACK-G: Picking quality report
   @Get('reports/picking-quality')
   @ApiOperation({ summary: 'Get picking quality report (APP-PACK-G)' })
+  @ApiOkResponse({ type: PickingQualityReportResponseDto })
   async pickingQualityReport(@Req() req: any, @Query('facilityId') facilityId: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.service.getPickingQualityReport(tenantId, BigInt(facilityId));

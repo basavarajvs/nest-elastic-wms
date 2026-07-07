@@ -87,24 +87,33 @@ export class TimeTrackingService {
     if (query.dateFrom) where.clock_in_time = { ...where.clock_in_time, gte: new Date(query.dateFrom) };
     if (query.dateTo) where.clock_in_time = { ...where.clock_in_time, lte: new Date(query.dateTo) };
 
-    const page = query.page || 1;
-    const limit = query.limit || 20;
-    const [data, total] = await Promise.all([
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
+    const [rawData, total] = await Promise.all([
       this.prisma.labor_time_logs.findMany({
         where,
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { clock_in_time: 'desc' },
+        include: { warehouse_facilities: { select: { facility_name: true } } },
       }),
       this.prisma.labor_time_logs.count({ where }),
     ]);
+    const data = rawData.map(({ warehouse_facilities, ...rest }) => ({
+      ...rest,
+      facility_name: warehouse_facilities?.facility_name ?? null,
+    }));
     return { data, total, page, limit };
   }
 
   async delete(tenantId: string, logId: bigint) {
-    return this.prisma.labor_time_logs.deleteMany({
+    const record = await this.prisma.labor_time_logs.findFirst({
       where: { tenant_id: tenantId, time_log_id: logId },
     });
+    await this.prisma.labor_time_logs.deleteMany({
+      where: { tenant_id: tenantId, time_log_id: logId },
+    });
+    return record;
   }
 
   private async getUserDefaultFacility(tenantId: string, userId: string): Promise<bigint> {

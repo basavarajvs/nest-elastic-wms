@@ -8,7 +8,9 @@ export class InvoiceService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAllInvoices(tenantId: string, query: any) {
-    const { clientId, paymentStatus, page = 1, limit = 50 } = query;
+    const { clientId, paymentStatus } = query;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 50;
     const skip = (page - 1) * limit;
     const where: any = { tenant_id: tenantId };
     if (clientId) where.client_id = BigInt(clientId);
@@ -23,7 +25,22 @@ export class InvoiceService {
       }),
       this.prisma.client_invoices.count({ where }),
     ]);
-    return { data, total, page, limit };
+    const cycleIds = [...new Set(data.map(d => d.billing_cycle_id).filter(Boolean))] as bigint[];
+    const cycles = cycleIds.length
+      ? await this.prisma.billing_cycles.findMany({
+          where: { billing_cycle_id: { in: cycleIds } },
+          select: { billing_cycle_id: true, cycle_name: true },
+        })
+      : [];
+    const cycleMap = new Map(cycles.map(c => [c.billing_cycle_id.toString(), c.cycle_name]));
+    return {
+      data: data.map((d: any) => ({
+        ...d,
+        client_name: d.clients?.client_name ?? null,
+        cycle_name: d.billing_cycle_id ? cycleMap.get(d.billing_cycle_id.toString()) ?? null : null,
+      })),
+      total, page, limit,
+    };
   }
 
   async findInvoiceById(tenantId: string, invoiceId: bigint) {
@@ -32,7 +49,19 @@ export class InvoiceService {
       include: { client_invoice_lines: true, clients: true },
     });
     if (!inv) throw new NotFoundException('Invoice not found');
-    return inv;
+    let cycleName: string | null = null;
+    if (inv.billing_cycle_id) {
+      const cycle = await this.prisma.billing_cycles.findFirst({
+        where: { billing_cycle_id: inv.billing_cycle_id },
+        select: { cycle_name: true },
+      });
+      cycleName = cycle?.cycle_name ?? null;
+    }
+    return {
+      ...inv,
+      client_name: (inv as any).clients?.client_name ?? null,
+      cycle_name: cycleName,
+    };
   }
 
   /** Generate invoice: group charges by client, create invoice + lines */

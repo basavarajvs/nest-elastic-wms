@@ -1,11 +1,12 @@
 import { Controller, Get, Delete, Param, Query, Req, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOkResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/auth/jwt-auth.guard';
 import { CaslGuard } from '../../common/guards/casl.guard';
 import { CheckAbility } from '../../common/decorators/check-ability.decorator';
 import { AuditLog } from '../../common/decorators/audit-log.decorator';
 import { WmsAction } from '../../casl/casl.types';
 import { OnHandService } from '../on-hand/on-hand.service';
+import { InventoryOnHandResponseDto, PaginatedInventoryOnHandResponseDto, AgingReportItemDto, AgingSummaryItemDto } from '../dtos/inventory-response.dto';
 
 @ApiTags('Inventory')
 @Controller('web/inventory')
@@ -15,6 +16,7 @@ export class OnHandWebController {
 
   @Get('on-hand')
   @CheckAbility({ action: WmsAction.List, subject: 'InventoryOnHand' })
+  @ApiOkResponse({ type: PaginatedInventoryOnHandResponseDto })
   async findAll(@Req() req: any, @Query() query: any) {
     const tenantId = req.tenantContext.getTenantId();
     return this.service.findAll(tenantId, query);
@@ -22,6 +24,7 @@ export class OnHandWebController {
 
   @Get('on-hand/:id')
   @CheckAbility({ action: WmsAction.Read, subject: 'InventoryOnHand' })
+  @ApiOkResponse({ type: InventoryOnHandResponseDto })
   async findById(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.service.findById(tenantId, id);
@@ -29,6 +32,7 @@ export class OnHandWebController {
 
   @Get('aging')
   @CheckAbility({ action: WmsAction.List, subject: 'InventoryOnHand' })
+  @ApiOkResponse({ type: [AgingReportItemDto] })
   async getAgingReport(@Req() req: any, @Query() query: any) {
     const tenantId = req.tenantContext.getTenantId();
     return this.service.getAgingReport(tenantId, query.facilityId);
@@ -36,6 +40,7 @@ export class OnHandWebController {
 
   @Get('aging/summary')
   @CheckAbility({ action: WmsAction.List, subject: 'InventoryOnHand' })
+  @ApiOkResponse({ type: [AgingSummaryItemDto] })
   async getAgingSummary(@Req() req: any, @Query() query: any) {
     const tenantId = req.tenantContext.getTenantId();
     return this.service.getAgingSummary(tenantId, query.facilityId);
@@ -44,6 +49,7 @@ export class OnHandWebController {
   @Delete('on-hand/:id')
   @CheckAbility({ action: WmsAction.Delete, subject: 'InventoryOnHand' })
   @AuditLog({ eventType: 'ON_HAND_DELETE' })
+  @ApiOkResponse({ type: InventoryOnHandResponseDto })
   async delete(@Req() req: any, @Param('id') id: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.service.delete(tenantId, BigInt(id));

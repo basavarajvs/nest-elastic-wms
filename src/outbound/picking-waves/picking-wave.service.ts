@@ -12,14 +12,16 @@ export class PickingWaveService {
    * Groups orders, validates they are in RELEASED status, and creates wave_orders links.
    */
   async deleteWave(tenantId: string, waveId: bigint) {
-    return this.prisma.picking_waves.deleteMany({
+    const wave = await this.findWaveById(tenantId, waveId);
+    await this.prisma.picking_waves.deleteMany({
       where: { tenant_id: tenantId, wave_id: waveId },
     });
+    return wave;
   }
 
   async createWave(tenantId: string, dto: any) {
-    const facilityId = BigInt(dto.facilityId);
-    const orderIds = (dto.orderIds || []).map((id: string) => BigInt(id));
+    const facilityId = BigInt(dto.facility_id);
+    const orderIds = (dto.order_ids || []).map((id: string) => BigInt(id));
 
     if (!orderIds.length) throw new BadRequestException('At least one order ID required');
 
@@ -40,9 +42,12 @@ export class PickingWaveService {
       data: {
         tenant_id: tenantId,
         facility_id: facilityId,
-        wave_number: dto.waveNumber || `WAVE-${Date.now()}`,
-        selection_criteria_json: dto.selectionCriteriaJson || JSON.stringify({ orderIds: orderIds.map((id) => id.toString()) }),
-        scheduled_start_time: dto.scheduledStartTime ? new Date(dto.scheduledStartTime) : undefined,
+        wave_number: dto.wave_number || `WAVE-${Date.now()}`,
+        wave_name: dto.wave_name,
+        description: dto.description,
+        selection_criteria_json: dto.selection_criteria_json || JSON.stringify({ orderIds: orderIds.map((id) => id.toString()) }),
+        scheduled_start_time: dto.scheduled_start_time ? new Date(dto.scheduled_start_time) : undefined,
+        notes: dto.notes,
       },
     });
 
@@ -198,10 +203,12 @@ export class PickingWaveService {
   async findWaveById(tenantId: string, waveId: bigint) {
     const wave = await this.prisma.picking_waves.findFirst({
       where: { tenant_id: tenantId, wave_id: waveId },
+      include: { warehouse_facilities: { select: { facility_name: true } } },
     });
     if (!wave) return null;
     const orders = await this.prisma.wave_orders.findMany({
       where: { tenant_id: tenantId, wave_id: waveId },
+      include: { sales_orders: { select: { order_number: true } } },
     });
     const tasks = await this.prisma.picking_tasks.findMany({
       where: { tenant_id: tenantId, wave_id: waveId },
@@ -216,9 +223,16 @@ export class PickingWaveService {
     const totalTasks = tasks.length;
     const completedTasks = statusCounts['COMPLETED'] || 0;
 
+    const { warehouse_facilities, ...waveData } = wave as any;
+    const mappedOrders = orders.map((o: any) => {
+      const { sales_orders, ...orderData } = o;
+      return { ...orderData, order_number: sales_orders?.order_number };
+    });
+
     return {
-      ...wave,
-      orders,
+      ...waveData,
+      facility_name: warehouse_facilities?.facility_name,
+      orders: mappedOrders,
       tasks,
       summary: {
         ordersCount: orders.length,
@@ -234,24 +248,33 @@ export class PickingWaveService {
   async findAllWaves(tenantId: string, query: any) {
     const where: any = { tenant_id: tenantId, facility_id: BigInt(query.facilityId) };
     if (query.status) where.status = query.status;
-    const page = query.page || 1;
-    const limit = query.limit || 20;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 20;
     const [data, total] = await Promise.all([
       this.prisma.picking_waves.findMany({
         where,
         skip: (page - 1) * limit,
         take: limit,
         orderBy: { created_date: 'desc' },
+        include: { warehouse_facilities: { select: { facility_name: true } } },
       }),
       this.prisma.picking_waves.count({ where }),
     ]);
-    return { data, total, page, limit };
+    const mapped = data.map((d: any) => {
+      const { warehouse_facilities, ...rest } = d;
+      return { ...rest, facility_name: warehouse_facilities?.facility_name };
+    });
+    return { data: mapped, total, page, limit };
   }
 
   async getWaveOrders(tenantId: string, waveId: bigint) {
-    return this.prisma.wave_orders.findMany({
+    const rows = await this.prisma.wave_orders.findMany({
       where: { tenant_id: tenantId, wave_id: waveId },
-      include: { sales_orders: true },
+      include: { sales_orders: { select: { order_number: true } } },
+    });
+    return rows.map((r: any) => {
+      const { sales_orders, ...rest } = r;
+      return { ...rest, order_number: sales_orders?.order_number };
     });
   }
 }
