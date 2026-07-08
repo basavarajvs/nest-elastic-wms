@@ -94,7 +94,7 @@ export class ShipmentWebController {
   // APP-SHIP-D: Shipping audit timeline for a load
   @Get('audit/shipping/:loadId')
   @ApiOperation({ summary: 'Get shipping audit timeline for a load' })
-  @ApiOkResponse({ type: [ShippingAuditEntryDto], isArray: true })
+  @ApiOkResponse({ type: ShippingAuditEntryDto, isArray: true })
   async auditTimeline(@Req() req: any, @Param('loadId') loadId: string) {
     const tenantId = req.tenantContext.getTenantId();
     return this.service.getShippingAuditTimeline(tenantId, BigInt(loadId));

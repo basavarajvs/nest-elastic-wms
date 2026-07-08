@@ -110,27 +110,7 @@ export class InspectionService {
     };
   }
 
-  async findAll(tenantId: string, query: any) {
-    const { facilityId, status, referenceType, productId, assignedToUserId, page: queryPage, limit: queryLimit } = query;
-    const page = Number(queryPage) || 1;
-    const limit = Number(queryLimit) || 50;
-    const skip = (page - 1) * limit;
-    const where: any = { tenant_id: tenantId };
-    if (facilityId) where.facility_id = BigInt(facilityId);
-    if (status) where.status = status;
-    if (referenceType) where.reference_type = referenceType;
-    if (productId) where.product_id = BigInt(productId);
-    if (assignedToUserId) where.assigned_to_user_id = assignedToUserId;
-    const [data, total] = await Promise.all([
-      this.prisma.quality_inspections.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { created_at: 'desc' },
-        include: { warehouse_facilities: true },
-      }),
-      this.prisma.quality_inspections.count({ where }),
-    ]);
+  private async enrichInspections(tenantId: string, data: any[]) {
     const productIds = [...new Set(data.filter(d => d.product_id).map(d => d.product_id))] as bigint[];
     const products = productIds.length
       ? await this.prisma.products.findMany({ where: { tenant_id: tenantId, product_id: { in: productIds } } })
@@ -141,13 +121,61 @@ export class InspectionService {
       ? await this.prisma.inventory_lots.findMany({ where: { tenant_id: tenantId, lot_id: { in: lotIds } } })
       : [];
     const lotMap = new Map(lots.map(l => [l.lot_id, l.lot_number]));
+    const lpnRefIds = [...new Set(data.filter(d => d.reference_type === 'LPN').map(d => d.reference_id))] as bigint[];
+    const lpns = lpnRefIds.length
+      ? await this.prisma.license_plate_numbers.findMany({ where: { lpn_id: { in: lpnRefIds } } })
+      : [];
+    const lpnMap = new Map(lpns.map(l => [l.lpn_id, l.lpn_number]));
+    const inspectionIds = data.map(d => d.inspection_id) as bigint[];
+    const defectCounts = inspectionIds.length
+      ? await this.prisma.inspection_defects.groupBy({
+          by: ['inspection_id'],
+          where: { inspection_id: { in: inspectionIds } },
+          _count: { defect_id: true },
+        })
+      : [];
+    const defectCountMap = new Map(defectCounts.map(dc => [dc.inspection_id, dc._count.defect_id]));
     const mapped = data.map(d => ({
       ...d,
       facility_name: d.warehouse_facilities?.facility_name,
       product_name: d.product_id ? productMap.get(d.product_id) : undefined,
       lot_number: d.lot_id ? lotMap.get(d.lot_id) : undefined,
+      lpn_code: d.reference_type === 'LPN' ? lpnMap.get(d.reference_id) : undefined,
+      findings_summary: defectCountMap.has(d.inspection_id) ? `${defectCountMap.get(d.inspection_id)} defect(s) found` : undefined,
       warehouse_facilities: undefined,
     }));
+    return mapped;
+  }
+
+  async findAll(tenantId: string, query: any) {
+    const { facilityId, status, referenceType, productId, assignedToUserId, search, page: queryPage, limit: queryLimit } = query;
+    const page = Number(queryPage) || 1;
+    const limit = Number(queryLimit) || 50;
+    const skip = (page - 1) * limit;
+    const where: any = { tenant_id: tenantId };
+    if (facilityId) where.facility_id = BigInt(facilityId);
+    if (status) where.status = status;
+    if (referenceType) where.reference_type = referenceType;
+    if (productId) where.product_id = BigInt(productId);
+    if (assignedToUserId) where.assigned_to_user_id = assignedToUserId;
+    if (search) {
+      where.OR = [
+        { inspection_number: { contains: search, mode: 'insensitive' } },
+        { inspection_name: { contains: search, mode: 'insensitive' } },
+        { notes: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+    const [data, total] = await Promise.all([
+      this.prisma.quality_inspections.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { created_at: 'desc' },
+        include: { warehouse_facilities: true },
+      }),
+      this.prisma.quality_inspections.count({ where }),
+    ]);
+    const mapped = await this.enrichInspections(tenantId, data);
     return { data: mapped, total, page, limit };
   }
 
@@ -164,6 +192,32 @@ export class InspectionService {
     const defects = await this.prisma.inspection_defects.findMany({
       where: { inspection_id: BigInt(id) },
     });
+    const temperatureLogs = await this.prisma.inspection_temperature_logs.findMany({
+      where: { inspection_id: BigInt(id) },
+      orderBy: { logged_at: 'asc' },
+    });
+    const events = await this.prisma.quality_inspection_events.findMany({
+      where: { tenant_id: tenantId, inspection_id: BigInt(id) },
+      orderBy: { event_timestamp: 'asc' },
+    });
+    let checklist: any = null;
+    if (inspection.product_id) {
+      const mapping = await this.prisma.product_inspection_profiles.findFirst({
+        where: { tenant_id: tenantId, product_id: inspection.product_id, is_active: true },
+      });
+      if (mapping) {
+        const profile = await this.prisma.inspection_profiles.findFirst({
+          where: { tenant_id: tenantId, profile_id: mapping.profile_id },
+        });
+        if (profile) {
+          const items = await this.prisma.inspection_checklist_items.findMany({
+            where: { profile_id: profile.profile_id },
+            orderBy: { sort_order: 'asc' },
+          });
+          checklist = { profile, items };
+        }
+      }
+    }
     let product_name: string | undefined;
     if (inspection.product_id) {
       const product = await this.prisma.products.findFirst({ where: { tenant_id: tenantId, product_id: inspection.product_id } });
@@ -174,14 +228,39 @@ export class InspectionService {
       const lot = await this.prisma.inventory_lots.findFirst({ where: { tenant_id: tenantId, lot_id: inspection.lot_id } });
       lot_number = lot?.lot_number;
     }
+    let lpn_code: string | undefined;
+    if (inspection.reference_type === 'LPN') {
+      const lpn = await this.prisma.license_plate_numbers.findFirst({
+        where: { lpn_id: inspection.reference_id },
+      });
+      lpn_code = lpn?.lpn_number;
+    }
+    // Enrich defects with defect code names
+    const defectCodeIds = [...new Set(defects.filter(d => d.defect_code_id).map(d => d.defect_code_id))] as bigint[];
+    const defectCodes = defectCodeIds.length
+      ? await this.prisma.defect_codes.findMany({ where: { defect_code_id: { in: defectCodeIds } } })
+      : [];
+    const defectCodeMap = new Map(defectCodes.map(dc => [dc.defect_code_id, dc]));
+    const enrichedDefects = defects.map(d => ({
+      ...d,
+      defect_code_name: defectCodeMap.get(d.defect_code_id)?.code,
+      defect_code_category: defectCodeMap.get(d.defect_code_id)?.category,
+      defect_code_severity: defectCodeMap.get(d.defect_code_id)?.severity,
+    }));
+    const findings_summary = defects.length > 0 ? `${defects.length} defect(s) found` : undefined;
     return {
       ...inspection,
       facility_name: inspection.warehouse_facilities?.facility_name,
       product_name,
       lot_number,
+      lpn_code,
+      findings_summary,
+      checklist,
       warehouse_facilities: undefined,
       results,
-      defects,
+      defects: enrichedDefects,
+      temperature_logs: temperatureLogs,
+      events,
     };
   }
 
@@ -481,23 +560,7 @@ export class InspectionService {
       orderBy: { completed_at: 'asc' },
       include: { warehouse_facilities: true },
     });
-    const productIds = [...new Set(data.filter(d => d.product_id).map(d => d.product_id))] as bigint[];
-    const products = productIds.length
-      ? await this.prisma.products.findMany({ where: { tenant_id: tenantId, product_id: { in: productIds } } })
-      : [];
-    const productMap = new Map(products.map(p => [p.product_id, p.product_name]));
-    const lotIds = [...new Set(data.filter(d => d.lot_id).map(d => d.lot_id))] as bigint[];
-    const lots = lotIds.length
-      ? await this.prisma.inventory_lots.findMany({ where: { tenant_id: tenantId, lot_id: { in: lotIds } } })
-      : [];
-    const lotMap = new Map(lots.map(l => [l.lot_id, l.lot_number]));
-    return data.map(d => ({
-      ...d,
-      facility_name: d.warehouse_facilities?.facility_name,
-      product_name: d.product_id ? productMap.get(d.product_id) : undefined,
-      lot_number: d.lot_id ? lotMap.get(d.lot_id) : undefined,
-      warehouse_facilities: undefined,
-    }));
+    return this.enrichInspections(tenantId, data);
   }
 
   async supervisorApprove(tenantId: string, inspectionId: bigint, supervisorId: string, overrideDisposition?: string) {
@@ -525,11 +588,12 @@ export class InspectionService {
     return { approved: true, inspectionId };
   }
 
-  async supervisorReject(tenantId: string, inspectionId: bigint, supervisorId: string) {
+  async supervisorReject(tenantId: string, inspectionId: bigint, supervisorId: string, reason?: string) {
     const inspection = await this.prisma.quality_inspections.findUnique({
       where: { inspection_id: inspectionId },
     });
     if (!inspection) throw new NotFoundException('Inspection not found');
+    const rejectReason = reason || 'Supervisor rejected';
     const newInspection = await this.prisma.quality_inspections.create({
       data: {
         tenant_id: tenantId,
@@ -542,7 +606,7 @@ export class InspectionService {
         inspection_type: inspection.inspection_type || '',
         inspection_scope: inspection.inspection_scope || '',
         status: 'PENDING',
-        notes: `Reinspection of ${inspection.inspection_number} requested by ${supervisorId}`,
+        notes: `Reinspection of ${inspection.inspection_number} requested by ${supervisorId}. Reason: ${rejectReason}`,
       },
     });
     // Reset LPN to QC_HOLD
@@ -560,6 +624,7 @@ export class InspectionService {
         previous_result: inspection.result,
         new_result: 'PENDING',
         inspector_user_id: BigInt(0),
+        reason: rejectReason,
       },
     });
     return { rejected: true, originalInspectionId: inspectionId, newInspectionId: newInspection.inspection_id };

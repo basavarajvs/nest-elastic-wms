@@ -102,7 +102,7 @@ export class RfPackingController {
   @ApiCreatedResponse({ type: RfCloseCartonResponseDto })
   async closeCarton(@Req() req: any, @Body() dto: RfCloseCartonDto) {
     const tenantId = req.tenantContext.getTenantId();
-    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id);
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id || 0);
     return this.packingService.closeCarton(tenantId, facilityId, BigInt(dto.session_id), dto);
   }
 
@@ -130,7 +130,7 @@ export class RfPackingController {
   @ApiCreatedResponse({ type: RfGetNextPackWorkResponseDto })
   async getNext(@Req() req: any, @Body() dto: RfGetNextPackWorkDto) {
     const tenantId = req.tenantContext.getTenantId();
-    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id);
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id || 0);
     const userId = req.rfSession?.userId || dto.user_id;
     const sessionId = dto.session_id ? BigInt(dto.session_id) : undefined;
     return this.packingService.getNextPackWork(tenantId, facilityId, BigInt(dto.station_id || 0), userId, sessionId);
@@ -151,7 +151,7 @@ export class RfPackingController {
   @ApiCreatedResponse({ type: RfReportPackingShortageResponseDto })
   async reportShortage(@Req() req: any, @Body() dto: RfReportPackingShortageDto) {
     const tenantId = req.tenantContext.getTenantId();
-    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id);
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id || 0);
     return this.packingService.reportShortage(tenantId, facilityId, BigInt(dto.session_id), dto);
   }
 
@@ -161,7 +161,7 @@ export class RfPackingController {
   @ApiCreatedResponse({ type: RfReportPackingDamageResponseDto })
   async reportDamage(@Req() req: any, @Body() dto: RfReportPackingDamageDto) {
     const tenantId = req.tenantContext.getTenantId();
-    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id);
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id || 0);
     return this.packingService.reportPackingDamage(tenantId, facilityId, BigInt(dto.session_id), dto);
   }
 
@@ -171,7 +171,7 @@ export class RfPackingController {
   @ApiCreatedResponse({ type: RfPendingExceptionsResponseDto })
   async pendingExceptions(@Req() req: any, @Body() dto: RfPendingExceptionsDto) {
     const tenantId = req.tenantContext.getTenantId();
-    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id);
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id || 0);
     return this.packingService.getPendingExceptions(tenantId, facilityId);
   }
 
@@ -219,7 +219,7 @@ export class RfPackingController {
   @ApiCreatedResponse({ type: RfConfirmWeightResponseDto })
   async confirmWeight(@Req() req: any, @Body() dto: RfConfirmWeightDto) {
     const tenantId = req.tenantContext.getTenantId();
-    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id);
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id || 0);
     const result = await this.packingService.validateWeightTolerance(tenantId, BigInt(dto.order_id), Number(dto.weight_kg), Number(dto.tolerance_pct || 10));
     return { success: result.isWithinTolerance, ...result };
   }
@@ -257,7 +257,7 @@ export class RfPackingController {
   @ApiCreatedResponse({ type: RfRequestCartonOverrideResponseDto })
   async requestCartonOverride(@Req() req: any, @Body() dto: RfRequestCartonOverrideDto) {
     const tenantId = req.tenantContext.getTenantId();
-    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id);
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id || 0);
     return this.packingService.requestCartonOverride(tenantId, facilityId, BigInt(dto.session_id), dto);
   }
 
@@ -267,7 +267,7 @@ export class RfPackingController {
   @ApiCreatedResponse({ type: RfReportWrongItemResponseDto })
   async reportWrongItem(@Req() req: any, @Body() dto: RfReportWrongItemDto) {
     const tenantId = req.tenantContext.getTenantId();
-    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id);
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id || 0);
     return this.packingService.reportWrongItem(tenantId, facilityId, BigInt(dto.session_id), BigInt(dto.order_id), BigInt(dto.product_id), BigInt(dto.pick_task_id), dto.reason_code || '');
   }
 

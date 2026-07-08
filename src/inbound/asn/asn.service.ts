@@ -1,12 +1,33 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { asn_status } from '@prisma/client';
+
+const ASN_TRANSITIONS: Record<asn_status, asn_status[]> = {
+  CREATED: [asn_status.CONFIRMED, asn_status.IN_RECEIVING, asn_status.CANCELLED],
+  CONFIRMED: [asn_status.IN_TRANSIT, asn_status.IN_RECEIVING, asn_status.CANCELLED],
+  IN_TRANSIT: [asn_status.ARRIVED, asn_status.CANCELLED],
+  ARRIVED: [asn_status.IN_RECEIVING, asn_status.CANCELLED],
+  IN_RECEIVING: [asn_status.PARTIALLY_RECEIVED, asn_status.RECEIVED, asn_status.CANCELLED],
+  PARTIALLY_RECEIVED: [asn_status.IN_RECEIVING, asn_status.RECEIVED, asn_status.CANCELLED],
+  RECEIVED: [asn_status.CLOSED],
+  CLOSED: [],
+  CANCELLED: [],
+};
 
 @Injectable()
 export class AsnService {
   private readonly logger = new Logger(AsnService.name);
 
   constructor(private readonly prisma: PrismaService) {}
+
+  private assertValidTransition(current: asn_status, next: asn_status) {
+    const allowed = ASN_TRANSITIONS[current];
+    if (!allowed || !allowed.includes(next)) {
+      throw new BadRequestException(
+        `Cannot transition ASN from '${current}' to '${next}'. Allowed transitions from '${current}': ${allowed?.join(', ') || 'none'}`,
+      );
+    }
+  }
 
   async create(tenantId: string, dto: any) {
     const data: any = {
@@ -49,7 +70,8 @@ export class AsnService {
   }
 
   async findAll(tenantId: string, query: any) {
-    const where: any = { tenant_id: tenantId, facility_id: BigInt(query.facilityId) };
+    const where: any = { tenant_id: tenantId };
+    if (query.facilityId) where.facility_id = BigInt(query.facilityId);
     if (query.status) where.status = query.status;
     if (query.search) {
       where.OR = [
@@ -93,6 +115,13 @@ export class AsnService {
   }
 
   async updateStatus(tenantId: string, asnId: bigint, status: asn_status, changedBy?: string) {
+    const asn = await this.prisma.advance_ship_notices.findFirst({
+      where: { tenant_id: tenantId, asn_id: asnId },
+    });
+    if (!asn) throw new BadRequestException('ASN not found');
+
+    this.assertValidTransition(asn.status, status);
+
     await this.prisma.advance_ship_notices.updateMany({
       where: { tenant_id: tenantId, asn_id: asnId },
       data: {

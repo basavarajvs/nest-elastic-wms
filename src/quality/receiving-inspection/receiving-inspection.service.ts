@@ -36,7 +36,7 @@ export class ReceivingInspectionService {
   }
 
   async findAllInspections(tenantId: string, query: any) {
-    const { facilityId, status, receiptId, productId, page: queryPage, limit: queryLimit } = query;
+    const { facilityId, status, receiptId, productId, search, page: queryPage, limit: queryLimit } = query;
     const page = Number(queryPage) || 1;
     const limit = Number(queryLimit) || 50;
     const skip = (page - 1) * limit;
@@ -45,13 +45,19 @@ export class ReceivingInspectionService {
     if (status) where.status = status;
     if (receiptId) where.reference_id = BigInt(receiptId);
     if (productId) where.product_id = BigInt(productId);
-
+    if (search) {
+      where.OR = [
+        { inspection_number: { contains: search, mode: 'insensitive' } },
+        { notes: { contains: search, mode: 'insensitive' } },
+      ];
+    }
     const [data, total] = await Promise.all([
       this.prisma.quality_inspections.findMany({
         where,
         skip,
         take: limit,
         orderBy: { created_at: 'desc' },
+        include: { warehouse_facilities: true },
       }),
       this.prisma.quality_inspections.count({ where }),
     ]);
@@ -60,9 +66,21 @@ export class ReceivingInspectionService {
       ? await this.prisma.products.findMany({ where: { tenant_id: tenantId, product_id: { in: productIds } } })
       : [];
     const productMap = new Map(products.map(p => [p.product_id, p.product_name]));
+    const inspectionIds = data.map(d => d.inspection_id) as bigint[];
+    const defectCounts = inspectionIds.length
+      ? await this.prisma.inspection_defects.groupBy({
+          by: ['inspection_id'],
+          where: { inspection_id: { in: inspectionIds } },
+          _count: { defect_id: true },
+        })
+      : [];
+    const defectCountMap = new Map(defectCounts.map(dc => [dc.inspection_id, dc._count.defect_id]));
     const mapped = data.map(d => ({
       ...d,
+      facility_name: d.warehouse_facilities?.facility_name,
       product_name: d.product_id ? productMap.get(d.product_id) : undefined,
+      findings_summary: defectCountMap.has(d.inspection_id) ? `${defectCountMap.get(d.inspection_id)} defect(s) found` : undefined,
+      warehouse_facilities: undefined,
     }));
     return { data: mapped, total, page, limit };
   }
@@ -70,6 +88,7 @@ export class ReceivingInspectionService {
   async findInspectionById(tenantId: string, id: string) {
     const inspection = await this.prisma.quality_inspections.findFirst({
       where: { tenant_id: tenantId, inspection_id: BigInt(id) },
+      include: { warehouse_facilities: true },
     });
     if (!inspection) throw new NotFoundException('Inspection not found');
     let product_name: string | undefined;
@@ -77,7 +96,29 @@ export class ReceivingInspectionService {
       const product = await this.prisma.products.findFirst({ where: { tenant_id: tenantId, product_id: inspection.product_id } });
       product_name = product?.product_name;
     }
-    return { ...inspection, product_name };
+    const defects = await this.prisma.inspection_defects.findMany({
+      where: { inspection_id: BigInt(id) },
+    });
+    const defectCodeIds = [...new Set(defects.filter(d => d.defect_code_id).map(d => d.defect_code_id))] as bigint[];
+    const defectCodes = defectCodeIds.length
+      ? await this.prisma.defect_codes.findMany({ where: { defect_code_id: { in: defectCodeIds } } })
+      : [];
+    const defectCodeMap = new Map(defectCodes.map(dc => [dc.defect_code_id, dc]));
+    const enrichedDefects = defects.map(d => ({
+      ...d,
+      defect_code_name: defectCodeMap.get(d.defect_code_id)?.code,
+      defect_code_category: defectCodeMap.get(d.defect_code_id)?.category,
+      defect_code_severity: defectCodeMap.get(d.defect_code_id)?.severity,
+    }));
+    const findings_summary = defects.length > 0 ? `${defects.length} defect(s) found` : undefined;
+    return {
+      ...inspection,
+      facility_name: inspection.warehouse_facilities?.facility_name,
+      product_name,
+      findings_summary,
+      warehouse_facilities: undefined,
+      defects: enrichedDefects,
+    };
   }
 
   async deleteInspection(tenantId: string, id: string) {

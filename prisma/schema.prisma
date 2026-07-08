@@ -5454,6 +5454,7 @@ enum approval_status {
 /// This enum is commented in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 enum asn_status {
   CREATED
+  CONFIRMED
   IN_TRANSIT
   ARRIVED
   IN_RECEIVING

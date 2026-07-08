@@ -52,7 +52,7 @@ export class LoadService {
   }
 
   async findAll(tenantId: string, query: any) {
-    const where: any = { tenant_id: tenantId, facility_id: BigInt(query.facilityId) };
+    const where: any = { tenant_id: tenantId, ...(query.facilityId ? { facility_id: BigInt(query.facilityId) } : {})  };
     if (query.status) where.status = query.status;
     if (query.search) {
       where.OR = [

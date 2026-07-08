@@ -61,15 +61,26 @@ export class FacilityService {
   }
 
   async update(tenantId: string, facilityId: bigint, dto: any) {
+    const data: any = {};
+    if (dto.facility_code !== undefined) data.facility_code = dto.facility_code;
+    if (dto.facility_name !== undefined) data.facility_name = dto.facility_name;
+    if (dto.facility_type !== undefined) data.facility_type = dto.facility_type;
+    if (dto.description !== undefined) data.description = dto.description;
+    if (dto.address_line1 !== undefined) data.address_line1 = dto.address_line1;
+    if (dto.address_line2 !== undefined) data.address_line2 = dto.address_line2;
+    if (dto.city !== undefined) data.city = dto.city;
+    if (dto.state_province !== undefined) data.state_province = dto.state_province;
+    if (dto.postal_code !== undefined) data.postal_code = dto.postal_code;
+    if (dto.country_code !== undefined) data.country_code = dto.country_code;
+    if (dto.contact_person !== undefined) data.contact_person = dto.contact_person;
+    if (dto.contact_phone !== undefined) data.contact_phone = dto.contact_phone;
+    if (dto.contact_email !== undefined) data.contact_email = dto.contact_email;
+    if (dto.timezone_name !== undefined) data.timezone_name = dto.timezone_name;
+    if (dto.default_uom_id !== undefined) data.default_uom_id = BigInt(dto.default_uom_id);
+    if (dto.is_active !== undefined) data.is_active = dto.is_active;
     await this.prisma.warehouse_facilities.updateMany({
       where: { tenant_id: tenantId, facility_id: facilityId },
-      data: {
-        facility_name: dto.facility_name ?? dto.facilityName,
-        facility_code: dto.facility_code ?? dto.facilityCode,
-        facility_type: dto.facility_type ?? dto.facilityType,
-        description: dto.description ?? dto.description,
-        is_active: dto.is_active ?? dto.isActive,
-      },
+      data,
     });
     return this.findById(tenantId, facilityId);
   }

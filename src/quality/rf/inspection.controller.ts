@@ -34,7 +34,7 @@ export class RfInspectionController {
   @ApiCreatedResponse({ type: LpnLookupResultDto })
   async lpnLookup(@Req() req: any, @Body() dto: RfLpnLookupQcDto) {
     const tenantId = req.tenantContext.getTenantId();
-    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id);
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id || 0);
     return this.service.lookupLpnForQc(tenantId, facilityId, dto.barcode);
   }
 
@@ -65,7 +65,7 @@ export class RfInspectionController {
   @ApiCreatedResponse({ type: QualityInspectionDto })
   async getNext(@Req() req: any, @Body() dto: RfGetNextQcTaskDto) {
     const tenantId = req.tenantContext.getTenantId();
-    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id);
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id || 0);
     const userId = req.rfSession.userId || dto.user_id;
     return this.service.getNextQcTask(tenantId, facilityId, userId);
   }
@@ -100,7 +100,7 @@ export class RfInspectionController {
   @ApiCreatedResponse({ type: ExpiryValidationDto })
   async validateExpiry(@Req() req: any, @Body() dto: RfValidateExpiryDto) {
     const tenantId = req.tenantContext.getTenantId();
-    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id);
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id || 0);
     return this.service.validateExpiry(tenantId, BigInt(dto.product_id), new Date(dto.expiry_date), facilityId);
   }
 
@@ -121,7 +121,7 @@ export class RfInspectionController {
   @ApiCreatedResponse({ type: [QualityInspectionDto] })
   async pendingReview(@Req() req: any, @Body() dto: RfPendingReviewDto) {
     const tenantId = req.tenantContext.getTenantId();
-    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id);
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id || 0);
     return this.service.getPendingReviews(tenantId, facilityId);
   }
 

@@ -21,7 +21,7 @@ export class StructureController {
   @ApiOkResponse({ type: AisleResponseDto, isArray: true })
   async findAisles(@Req() req: any, @Query() query: any) {
     const tenantId = req.tenantContext.getTenantId();
-    return this.structureService.findAisles(tenantId, BigInt(query.facilityId), query.zoneId ? BigInt(query.zoneId) : undefined);
+    return this.structureService.findAisles(tenantId, query.facilityId ? BigInt(query.facilityId) : (undefined as any), query.zoneId ? BigInt(query.zoneId) : undefined);
   }
 
   @Delete('aisles/:id')
@@ -45,7 +45,7 @@ export class StructureController {
   @ApiOkResponse({ type: BayResponseDto, isArray: true })
   async findBays(@Req() req: any, @Query() query: any) {
     const tenantId = req.tenantContext.getTenantId();
-    return this.structureService.findBays(tenantId, BigInt(query.facilityId), BigInt(query.aisleId));
+    return this.structureService.findBays(tenantId, query.facilityId ? BigInt(query.facilityId) : (undefined as any), query.aisleId ? BigInt(query.aisleId) : (undefined as any));
   }
 
   @Delete('bays/:id')
@@ -69,7 +69,7 @@ export class StructureController {
   @ApiOkResponse({ type: RackRowResponseDto, isArray: true })
   async findRackRows(@Req() req: any, @Query() query: any) {
     const tenantId = req.tenantContext.getTenantId();
-    return this.structureService.findRackRows(tenantId, BigInt(query.facilityId), BigInt(query.aisleId));
+    return this.structureService.findRackRows(tenantId, query.facilityId ? BigInt(query.facilityId) : (undefined as any), query.aisleId ? BigInt(query.aisleId) : (undefined as any));
   }
 
   @Delete('rack-rows/:id')
@@ -93,7 +93,7 @@ export class StructureController {
   @ApiOkResponse({ type: LevelResponseDto, isArray: true })
   async findLevels(@Req() req: any, @Query() query: any) {
     const tenantId = req.tenantContext.getTenantId();
-    return this.structureService.findLevels(tenantId, BigInt(query.facilityId), BigInt(query.bayId));
+    return this.structureService.findLevels(tenantId, query.facilityId ? BigInt(query.facilityId) : (undefined as any), query.bayId ? BigInt(query.bayId) : (undefined as any));
   }
 
   @Delete('levels/:id')
@@ -117,7 +117,7 @@ export class StructureController {
   @ApiOkResponse({ type: LoadingDockResponseDto, isArray: true })
   async findLoadingDocks(@Req() req: any, @Query() query: any) {
     const tenantId = req.tenantContext.getTenantId();
-    return this.structureService.findLoadingDocks(tenantId, BigInt(query.facilityId), query);
+    return this.structureService.findLoadingDocks(tenantId, query.facilityId ? BigInt(query.facilityId) : (undefined as any), query);
   }
 
   @Get('loading-docks/:id')

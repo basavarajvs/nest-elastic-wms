@@ -22,7 +22,7 @@ export class ZoneController {
   @ApiOkResponse({ type: PaginatedResponseDto })
   async findAll(@Req() req: any, @Query() query: any) {
     const tenantId = req.tenantContext.getTenantId();
-    return this.zoneService.findAll(tenantId, BigInt(query.facilityId), query);
+    return this.zoneService.findAll(tenantId, query.facilityId ? BigInt(query.facilityId) : (undefined as any), query);
   }
 
   @Get(':id')

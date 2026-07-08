@@ -94,7 +94,7 @@ export class RfPickingController {
   @ApiCreatedResponse({ type: RfScanToteResponseDto })
   async scanTote(@Req() req: any, @Body() dto: RfScanToteDto) {
     const tenantId = req.tenantContext.getTenantId();
-    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id);
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id || 0);
     return this.pickingTaskService.scanTote(tenantId, BigInt(dto.task_id), dto.tote_barcode, facilityId);
   }
 
@@ -140,7 +140,7 @@ export class RfPickingController {
   @ApiCreatedResponse({ type: RfWaveStatusResponseDto })
   async waveStatus(@Req() req: any, @Body() dto: RfWaveStatusDto) {
     const tenantId = req.tenantContext.getTenantId();
-    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id);
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id || 0);
     return this.pickingTaskService.findAllTasks(tenantId, { facilityId: facilityId.toString(), status: dto.status });
   }
 
@@ -300,7 +300,7 @@ export class RfPickingController {
   @ApiCreatedResponse({ type: RfResumePickResponseDto })
   async resume(@Req() req: any, @Body() dto: RfResumePickDto) {
     const tenantId = req.tenantContext.getTenantId();
-    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id);
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id || 0);
     return this.pickingTaskService.resumePickSession(tenantId, dto.user_id || '', facilityId);
   }
 

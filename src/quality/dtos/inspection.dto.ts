@@ -6,32 +6,44 @@ export class QualityInspectionDto {
   @ApiProperty() tenant_id: string;
   @ApiProperty() facility_id: bigint;
   @ApiProperty() inspection_number: string;
-  @ApiProperty() inspection_name?: string;
-  @ApiProperty() description?: string;
+  @ApiPropertyOptional() inspection_name?: string;
+  @ApiPropertyOptional() description?: string;
   @ApiProperty() reference_type: string;
   @ApiProperty() reference_id: bigint;
-  @ApiProperty() product_id?: bigint;
-  @ApiProperty() lot_id?: bigint;
+  @ApiPropertyOptional() product_id?: bigint;
+  @ApiPropertyOptional() lot_id?: bigint;
   @ApiProperty() inspection_type: string;
   @ApiProperty() inspection_scope: string;
   @ApiProperty() status: string;
-  @ApiProperty() result?: string;
-  @ApiProperty() assigned_to_user_id?: string;
+  @ApiPropertyOptional() result?: string;
+  @ApiPropertyOptional() assigned_to_user_id?: string;
   @ApiPropertyOptional() facility_name?: string;
   @ApiPropertyOptional() product_name?: string;
   @ApiPropertyOptional() lot_number?: string;
-  @ApiProperty() notes?: string;
-  @ApiProperty() created_at?: Date;
-  @ApiProperty() updated_at?: Date;
+  @ApiPropertyOptional() lpn_code?: string;
+  @ApiPropertyOptional() findings_summary?: string;
+  @ApiPropertyOptional() total_items_inspected?: number;
+  @ApiPropertyOptional() total_passed_items?: number;
+  @ApiPropertyOptional() total_failed_items?: number;
+  @ApiPropertyOptional() started_at?: Date;
+  @ApiPropertyOptional() completed_at?: Date;
+  @ApiPropertyOptional() notes?: string;
+  @ApiPropertyOptional() created_by?: string;
+  @ApiPropertyOptional() updated_by?: string;
+  @ApiPropertyOptional() created_at?: Date;
+  @ApiPropertyOptional() updated_at?: Date;
 }
 
 export class InspectionResultDto {
   @ApiProperty() result_id: bigint;
   @ApiProperty() inspection_id: bigint;
+  @ApiPropertyOptional() product_id?: bigint;
   @ApiProperty() result_status: string;
-  @ApiProperty() failure_reason?: string;
-  @ApiProperty() notes?: string;
-  @ApiProperty() created_at?: Date;
+  @ApiPropertyOptional() failure_reason?: string;
+  @ApiPropertyOptional() inspection_criteria_results_json?: string;
+  @ApiPropertyOptional() notes?: string;
+  @ApiPropertyOptional() created_by?: string;
+  @ApiPropertyOptional() created_at?: Date;
 }
 
 export class InspectionPaginatedDto extends PaginatedResponseDto {
@@ -46,6 +58,10 @@ export class SupervisorApproveDto {
 export class SupervisorApproveResultDto {
   @ApiProperty() approved: boolean;
   @ApiProperty() inspectionId: string;
+}
+
+export class SupervisorRejectDto {
+  @ApiPropertyOptional() reason?: string;
 }
 
 export class SupervisorRejectResultDto {
@@ -162,6 +178,9 @@ export class InspectionDefectResponseDto {
   @ApiProperty() defect_id: bigint;
   @ApiProperty() inspection_id: bigint;
   @ApiProperty() defect_code_id: bigint;
+  @ApiPropertyOptional() defect_code_name?: string;
+  @ApiPropertyOptional() defect_code_category?: string;
+  @ApiPropertyOptional() defect_code_severity?: string;
   @ApiPropertyOptional() quantity_affected?: number;
   @ApiPropertyOptional() notes?: string;
   @ApiPropertyOptional() recorded_by?: string;

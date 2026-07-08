@@ -18,7 +18,7 @@ export class DockYardRfController {
   @ApiOkResponse({ type: [DockAppointmentDto] })
   async upcoming(@Req() req: any) {
     const tenantId = req.tenantContext.getTenantId();
-    const facilityId = BigInt(req.rfSession.facilityId);
+    const facilityId = BigInt(req.rfSession.facilityId || 0);
     return this.service.getUpcomingAppointments(tenantId, facilityId);
   }
 }

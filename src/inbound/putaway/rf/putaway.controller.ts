@@ -70,7 +70,7 @@ export class RfPutawayController {
   @RfAction('read')
   async scanLocation(@Req() req: any, @Body() dto: RfScanLocationDto) {
     const tenantId = req.tenantContext.getTenantId();
-    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id);
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id || 0);
     return this.putawayService.validateLocation(tenantId, facilityId, BigInt(dto.task_id), dto.location_barcode);
   }
 

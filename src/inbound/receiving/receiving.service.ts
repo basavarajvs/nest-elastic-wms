@@ -1,6 +1,6 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { receipt_status } from '@prisma/client';
+import { asn_status, receipt_status } from '@prisma/client';
 
 const VARIANCE_NONE = 'NONE';
 const VARIANCE_OVER = 'OVER';
@@ -36,7 +36,7 @@ export class ReceivingService {
   }
 
   async findAllReceipts(tenantId: string, query: any) {
-    const where: any = { tenant_id: tenantId, facility_id: BigInt(query.facilityId) };
+    const where: any = { tenant_id: tenantId, ...(query.facilityId ? { facility_id: BigInt(query.facilityId) } : {})  };
     if (query.status) where.status = query.status;
     if (query.search) {
       where.OR = [
@@ -354,21 +354,23 @@ export class ReceivingService {
     });
     if (!receipt) throw new BadRequestException('Receipt not found');
 
-    await this.prisma.goods_receipts.updateMany({
+    const lines = await this.prisma.goods_receipt_lines.findMany({
       where: { tenant_id: tenantId, receipt_id: receiptId },
-      data: { status: receipt_status.COMPLETED, received_date: new Date() },
     });
 
-    // Update ASN status to RECEIVED if ASN reference exists
+    // Update ASN status to RECEIVED (or PARTIALLY_RECEIVED if lines remain open) if ASN reference exists
     if (receipt.asn_number) {
+      const openLines = lines.filter(l => l.line_status !== 'RECEIVED');
+      const asnStatus = openLines.length === 0 ? 'RECEIVED' : 'PARTIALLY_RECEIVED';
       await this.prisma.advance_ship_notices.updateMany({
         where: { tenant_id: tenantId, facility_id: receipt.facility_id, asn_number: receipt.asn_number },
-        data: { status: 'RECEIVED', status_changed_at: new Date() },
+        data: { status: asnStatus, status_changed_at: new Date() },
       });
     }
 
-    const lines = await this.prisma.goods_receipt_lines.findMany({
+    await this.prisma.goods_receipts.updateMany({
       where: { tenant_id: tenantId, receipt_id: receiptId },
+      data: { status: receipt_status.COMPLETED, received_date: new Date() },
     });
 
     for (const line of lines) {
@@ -479,6 +481,26 @@ export class ReceivingService {
   /** Start an RF receiving session -- lookup or create GRN and set ARRIVED */
   async startReceivingSession(tenantId: string, dto: any) {
     const facilityId = BigInt(dto.facility_id);
+
+    // Validate ASN receivable status and auto-advance to IN_RECEIVING
+    if (dto.asn_number) {
+      const asn = await this.prisma.advance_ship_notices.findFirst({
+        where: { tenant_id: tenantId, facility_id: facilityId, asn_number: dto.asn_number },
+      });
+      if (asn) {
+        if (!['CREATED', 'CONFIRMED', 'IN_TRANSIT', 'ARRIVED', 'IN_RECEIVING', 'PARTIALLY_RECEIVED'].includes(asn.status)) {
+          throw new BadRequestException(
+            `ASN status '${asn.status}' is not receivable. Expected: CREATED, CONFIRMED, IN_TRANSIT, ARRIVED, IN_RECEIVING, PARTIALLY_RECEIVED`,
+          );
+        }
+        if (asn.status === 'CREATED' || asn.status === 'CONFIRMED') {
+          await this.prisma.advance_ship_notices.updateMany({
+            where: { tenant_id: tenantId, asn_id: asn.asn_id },
+            data: { status: asn_status.IN_RECEIVING, status_changed_at: new Date() },
+          });
+        }
+      }
+    }
 
     // Manhattan: validate ASN is routed to the assigned dock door
     if (dto.asn_number && dto.dock_code) {

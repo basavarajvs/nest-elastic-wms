@@ -44,7 +44,7 @@ export class RfShippingController {
   @ApiOperation({ summary: 'Start loading session — scan dock door, find or create load (RF)' })
   async startLoad(@Req() req: any, @Body() dto: RfStartLoadDto) {
     const tenantId = req.tenantContext.getTenantId();
-    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id);
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id || 0);
     const userId = req.rfSession.userId;
     let dockCode = dto.dock_door_code;
     if (dockCode) {
@@ -82,7 +82,7 @@ export class RfShippingController {
   @ApiOperation({ summary: 'Validate trailer barcode, return status (RF)' })
   async scanTrailer(@Req() req: any, @Body() dto: RfScanTrailerDto) {
     const tenantId = req.tenantContext.getTenantId();
-    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id);
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id || 0);
     const trailer = await this.prisma.trailers.findFirst({
       where: { tenant_id: tenantId, facility_id: facilityId, trailer_number: dto.trailer_number, is_active: true },
     });
@@ -96,7 +96,7 @@ export class RfShippingController {
   @ApiOperation({ summary: 'Scan shipping LPN to load onto trailer (RF)' })
   async scanLpn(@Req() req: any, @Body() dto: RfScanShippingLpnDto) {
     const tenantId = req.tenantContext.getTenantId();
-    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id);
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id || 0);
     const loadId = BigInt(dto.load_id);
     const lpn = await this.prisma.license_plate_numbers.findFirst({
       where: { tenant_id: tenantId, facility_id: facilityId, lpn_number: dto.lpn_barcode },
@@ -218,7 +218,7 @@ export class RfShippingController {
   @ApiOperation({ summary: 'Get next loading work (directed assignment)' })
   async getNext(@Req() req: any, @Body() dto: RfGetNextLoadingDto) {
     const tenantId = req.tenantContext.getTenantId();
-    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id);
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id || 0);
     return this.loadService.getNextLoadingWork(tenantId, facilityId, req.rfSession?.userId || dto.user_id);
   }
 
@@ -301,7 +301,7 @@ export class RfShippingController {
   @ApiOperation({ summary: 'Find carton by barcode — return status and location (RF)' })
   async findCarton(@Req() req: any, @Body() dto: RfFindCartonDto) {
     const tenantId = req.tenantContext.getTenantId();
-    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id);
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id || 0);
     const lpn = await this.prisma.license_plate_numbers.findFirst({
       where: { tenant_id: tenantId, facility_id: facilityId, lpn_number: dto.lpn_barcode },
     });
@@ -332,7 +332,7 @@ export class RfShippingController {
   @ApiOperation({ summary: 'Get load summary with shipments and carton counts (RF)' })
   async loadSummary(@Req() req: any, @Body() dto: RfLoadSummaryDto) {
     const tenantId = req.tenantContext.getTenantId();
-    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id);
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id || 0);
     const load = await this.prisma.loads.findFirst({
       where: { tenant_id: tenantId, facility_id: facilityId, load_id: BigInt(dto.load_id) },
     });
@@ -358,7 +358,7 @@ export class RfShippingController {
   @ApiOperation({ summary: 'List all cartons for a shipment with statuses (RF)' })
   async shipmentCartons(@Req() req: any, @Body() dto: RfShipmentCartonsDto) {
     const tenantId = req.tenantContext.getTenantId();
-    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id);
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id || 0);
     const cartons = await this.prisma.license_plate_numbers.findMany({
       where: { tenant_id: tenantId, facility_id: facilityId, assigned_shipment_id: BigInt(dto.shipment_id) },
       orderBy: { lpn_id: 'asc' },
@@ -379,7 +379,7 @@ export class RfShippingController {
   @ApiOperation({ summary: 'Scan pallet barcode to bulk-load all child cartons (RF)' })
   async scanPallet(@Req() req: any, @Body() dto: RfScanPalletShippingDto) {
     const tenantId = req.tenantContext.getTenantId();
-    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id);
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id || 0);
     const loadId = BigInt(dto.load_id);
     const pallet = await this.prisma.license_plate_numbers.findFirst({
       where: { tenant_id: tenantId, facility_id: facilityId, lpn_number: dto.pallet_barcode },
@@ -430,7 +430,7 @@ export class RfShippingController {
   @ApiOperation({ summary: 'Validate carton for loading — phase 1 before confirm (RF)' })
   async validateCarton(@Req() req: any, @Body() dto: RfValidateCartonDto) {
     const tenantId = req.tenantContext.getTenantId();
-    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id);
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id || 0);
     const loadId = BigInt(dto.load_id);
     const lpn = await this.prisma.license_plate_numbers.findFirst({
       where: { tenant_id: tenantId, facility_id: facilityId, lpn_number: dto.lpn_barcode },
@@ -454,7 +454,7 @@ export class RfShippingController {
   @ApiOperation({ summary: 'Confirm carton loaded — phase 2 after validate (RF)' })
   async confirmLoad(@Req() req: any, @Body() dto: RfConfirmLoadDto) {
     const tenantId = req.tenantContext.getTenantId();
-    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id);
+    const facilityId = BigInt(req.rfSession.facilityId || dto.facility_id || 0);
     const loadId = BigInt(dto.load_id);
     const userId = req.rfSession?.userId;
     const lpn = await this.prisma.license_plate_numbers.findFirst({

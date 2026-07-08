@@ -66,7 +66,7 @@ export class WorkOrdersService {
   }
 
   async findAll(tenantId: string, query: any) {
-    const where: any = { tenant_id: tenantId, facility_id: BigInt(query.facilityId) };
+    const where: any = { tenant_id: tenantId, ...(query.facilityId ? { facility_id: BigInt(query.facilityId) } : {})  };
     if (query.status) where.status = query.status;
     if (query.workOrderType) where.work_order_type = query.workOrderType;
     if (query.assignedToUserId) where.assigned_to_user_id = query.assignedToUserId;

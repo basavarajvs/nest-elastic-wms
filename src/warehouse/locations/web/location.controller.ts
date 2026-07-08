@@ -22,7 +22,7 @@ export class LocationController {
   @ApiOkResponse({ type: PaginatedResponseDto })
   async findAll(@Req() req: any, @Query() query: any) {
     const tenantId = req.tenantContext.getTenantId();
-    return this.locationService.findAll(tenantId, BigInt(query.facilityId), query);
+    return this.locationService.findAll(tenantId, query.facilityId ? BigInt(query.facilityId) : (undefined as any), query);
   }
 
   @Get(':id')
@@ -70,6 +70,6 @@ export class LocationController {
   @ApiOkResponse({ type: LocationResponseDto, isArray: true })
   async findAvailable(@Req() req: any, @Query() query: any) {
     const tenantId = req.tenantContext.getTenantId();
-    return this.locationService.findAvailable(tenantId, BigInt(query.facilityId), query.locationType);
+    return this.locationService.findAvailable(tenantId, query.facilityId ? BigInt(query.facilityId) : (undefined as any), query.locationType);
   }
 }

@@ -246,7 +246,7 @@ export class PickingWaveService {
   }
 
   async findAllWaves(tenantId: string, query: any) {
-    const where: any = { tenant_id: tenantId, facility_id: BigInt(query.facilityId) };
+    const where: any = { tenant_id: tenantId, ...(query.facilityId ? { facility_id: BigInt(query.facilityId) } : {})  };
     if (query.status) where.status = query.status;
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 20;

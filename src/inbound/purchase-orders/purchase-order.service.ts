@@ -116,7 +116,7 @@ export class PurchaseOrderService {
   }
 
   async findAll(tenantId: string, query: any) {
-    const where: any = { tenant_id: tenantId, facility_id: BigInt(query.facilityId) };
+    const where: any = { tenant_id: tenantId, ...(query.facilityId ? { facility_id: BigInt(query.facilityId) } : {})  };
     if (query.vendorId) where.vendor_id = BigInt(query.vendorId);
     if (query.search) {
       where.OR = [

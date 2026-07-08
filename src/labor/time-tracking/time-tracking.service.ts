@@ -74,6 +74,7 @@ export class TimeTrackingService {
         total_break_minutes: breakMinutes,
         net_worked_minutes: netMinutes,
         status: 'CLOCKED_OUT',
+        notes: dto.notes,
         updated_by: userId,
       },
     });

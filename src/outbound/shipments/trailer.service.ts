@@ -54,7 +54,7 @@ export class TrailerService {
   }
 
   async findAll(tenantId: string, query: any) {
-    const where: any = { tenant_id: tenantId, facility_id: BigInt(query.facilityId) };
+    const where: any = { tenant_id: tenantId, ...(query.facilityId ? { facility_id: BigInt(query.facilityId) } : {})  };
     if (query.status) where.status = query.status;
     if (query.is_active !== undefined) where.is_active = query.is_active === 'true';
     if (query.search) {
