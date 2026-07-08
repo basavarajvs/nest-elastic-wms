@@ -7,6 +7,7 @@
  */
 
 export interface OrderLineDto {
+  allocated_quantity?: number;
   fulfilled_quantity?: number;
   line_id: string;
   line_number: number;

@@ -556,6 +556,7 @@ export class PickingTaskService {
     const where: any = { tenant_id: tenantId };
     if (query.facilityId) where.facility_id = BigInt(query.facilityId);
     if (query.waveId) where.wave_id = BigInt(query.waveId);
+    if (query.orderId) where.order_id = BigInt(query.orderId);
     if (query.status) where.status = query.status;
     if (query.assignedToUserId) where.assigned_to_user_id = query.assignedToUserId;
 

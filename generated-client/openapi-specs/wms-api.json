@@ -3593,6 +3593,45 @@
           "Outbound - Picking Waves"
         ]
       },
+      "patch": {
+        "operationId": "PickingWaveWebController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePickingWaveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PickingWaveDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Update wave metadata (only PENDING waves)",
+        "tags": [
+          "Outbound - Picking Waves"
+        ]
+      },
       "delete": {
         "operationId": "PickingWaveWebController_delete",
         "parameters": [
@@ -3649,6 +3688,37 @@
           }
         },
         "summary": "Release wave — allocate inventory + generate pick tasks",
+        "tags": [
+          "Outbound - Picking Waves"
+        ]
+      }
+    },
+    "/api/v1/wms/web/picking-waves/{id}/cancel": {
+      "post": {
+        "operationId": "PickingWaveWebController_cancel",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PickingWaveDetailDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Cancel picking wave — revert orders, cancel tasks, release allocations",
         "tags": [
           "Outbound - Picking Waves"
         ]
@@ -12028,6 +12098,37 @@
         ]
       }
     },
+    "/api/v1/wms/web/locations/lookup": {
+      "get": {
+        "operationId": "LocationController_lookup",
+        "parameters": [
+          {
+            "name": "facilityId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Lightweight location lookup for dropdown filters",
+        "tags": [
+          "Storage Locations"
+        ]
+      }
+    },
     "/api/v1/wms/web/locations/{id}": {
       "get": {
         "operationId": "LocationController_findById",
@@ -13318,6 +13419,28 @@
           }
         },
         "summary": "List products",
+        "tags": [
+          "Products"
+        ]
+      }
+    },
+    "/api/v1/wms/web/products/lookup": {
+      "get": {
+        "operationId": "ProductController_lookup",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Lightweight product lookup for dropdown filters",
         "tags": [
           "Products"
         ]
@@ -18626,6 +18749,28 @@
         ]
       }
     },
+    "/api/v1/wms/web/quality/inspections": {
+      "get": {
+        "operationId": "InspectionWebController_findAll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspectionPaginatedDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List quality inspections",
+        "tags": [
+          "Quality"
+        ]
+      }
+    },
     "/api/v1/wms/web/quality/inspections/pending-review": {
       "get": {
         "operationId": "InspectionWebController_pendingReview",
@@ -18654,6 +18799,120 @@
             }
           }
         },
+        "summary": "List inspections pending supervisor review",
+        "tags": [
+          "Quality"
+        ]
+      }
+    },
+    "/api/v1/wms/web/quality/inspections/{id}": {
+      "get": {
+        "operationId": "InspectionWebController_findById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualityInspectionDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get inspection detail with results, defects, temperature logs, events",
+        "tags": [
+          "Quality"
+        ]
+      }
+    },
+    "/api/v1/wms/web/quality/inspections/{id}/approve": {
+      "post": {
+        "operationId": "InspectionWebController_approve",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupervisorApproveDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupervisorApproveResultDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Approve inspection result",
+        "tags": [
+          "Quality"
+        ]
+      }
+    },
+    "/api/v1/wms/web/quality/inspections/{id}/reject": {
+      "post": {
+        "operationId": "InspectionWebController_reject",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupervisorRejectDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupervisorRejectResultDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Reject inspection result and create re-inspection",
         "tags": [
           "Quality"
         ]
@@ -26362,6 +26621,9 @@
           "lot_number": {
             "type": "string"
           },
+          "lpn_code": {
+            "type": "string"
+          },
           "quantity_on_hand": {
             "type": "number"
           },
@@ -26379,6 +26641,12 @@
           },
           "quantity_damaged": {
             "type": "number"
+          },
+          "inbound_qty": {
+            "type": "number"
+          },
+          "status": {
+            "type": "string"
           },
           "uom_id": {
             "type": "string"
@@ -30148,6 +30416,9 @@
           "total_order_value": {
             "type": "number"
           },
+          "total_lines": {
+            "type": "number"
+          },
           "assigned_sales_rep_id": {
             "type": "string"
           },
@@ -30293,6 +30564,9 @@
             "type": "number"
           },
           "total_order_value": {
+            "type": "number"
+          },
+          "total_lines": {
             "type": "number"
           },
           "assigned_sales_rep_id": {
@@ -30495,6 +30769,9 @@
             "type": "string"
           },
           "requested_quantity": {
+            "type": "number"
+          },
+          "allocated_quantity": {
             "type": "number"
           },
           "fulfilled_quantity": {
@@ -30891,6 +31168,9 @@
           "description": {
             "type": "string"
           },
+          "wave_type": {
+            "type": "string"
+          },
           "selection_criteria_json": {
             "type": "string"
           },
@@ -30931,11 +31211,17 @@
           "description": {
             "type": "string"
           },
+          "wave_type": {
+            "type": "string"
+          },
           "status": {
             "type": "string"
           },
           "assigned_to_user_id": {
             "type": "string"
+          },
+          "order_count": {
+            "type": "number"
           },
           "total_tasks": {
             "type": "number"
@@ -30944,6 +31230,10 @@
             "type": "number"
           },
           "scheduled_start_time": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "released_at": {
             "format": "date-time",
             "type": "string"
           },
@@ -31029,11 +31319,17 @@
           "description": {
             "type": "string"
           },
+          "wave_type": {
+            "type": "string"
+          },
           "status": {
             "type": "string"
           },
           "assigned_to_user_id": {
             "type": "string"
+          },
+          "order_count": {
+            "type": "number"
           },
           "total_tasks": {
             "type": "number"
@@ -31042,6 +31338,10 @@
             "type": "number"
           },
           "scheduled_start_time": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "released_at": {
             "format": "date-time",
             "type": "string"
           },
@@ -31116,6 +31416,30 @@
           "limit",
           "data"
         ]
+      },
+      "UpdatePickingWaveDto": {
+        "type": "object",
+        "properties": {
+          "wave_name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "wave_type": {
+            "type": "string"
+          },
+          "assigned_to_user_id": {
+            "type": "string"
+          },
+          "scheduled_start_time": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
       },
       "WaveOrderDto": {
         "type": "object",
@@ -47824,7 +48148,36 @@
           "lot_number": {
             "type": "string"
           },
+          "lpn_code": {
+            "type": "string"
+          },
+          "findings_summary": {
+            "type": "string"
+          },
+          "total_items_inspected": {
+            "type": "number"
+          },
+          "total_passed_items": {
+            "type": "number"
+          },
+          "total_failed_items": {
+            "type": "number"
+          },
+          "started_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "completed_at": {
+            "format": "date-time",
+            "type": "string"
+          },
           "notes": {
+            "type": "string"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "updated_by": {
             "type": "string"
           },
           "created_at": {
@@ -47841,20 +48194,40 @@
           "tenant_id",
           "facility_id",
           "inspection_number",
-          "inspection_name",
-          "description",
           "reference_type",
           "reference_id",
-          "product_id",
-          "lot_id",
           "inspection_type",
           "inspection_scope",
-          "status",
-          "result",
-          "assigned_to_user_id",
-          "notes",
-          "created_at",
-          "updated_at"
+          "status"
+        ]
+      },
+      "InspectionPaginatedDto": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "number",
+            "description": "Total number of records matching the query"
+          },
+          "page": {
+            "type": "number",
+            "description": "Current page number (1-indexed)"
+          },
+          "limit": {
+            "type": "number",
+            "description": "Number of records per page"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QualityInspectionDto"
+            }
+          }
+        },
+        "required": [
+          "total",
+          "page",
+          "limit",
+          "data"
         ]
       },
       "SupervisorApproveDto": {
@@ -47879,6 +48252,14 @@
           "approved",
           "inspectionId"
         ]
+      },
+      "SupervisorRejectDto": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          }
+        }
       },
       "SupervisorRejectResultDto": {
         "type": "object",
@@ -47934,6 +48315,15 @@
           "defect_code_id": {
             "format": "int64",
             "type": "integer"
+          },
+          "defect_code_name": {
+            "type": "string"
+          },
+          "defect_code_category": {
+            "type": "string"
+          },
+          "defect_code_severity": {
+            "type": "string"
           },
           "quantity_affected": {
             "type": "number"
@@ -49097,16 +49487,61 @@
           "product_name": {
             "type": "string"
           },
+          "lot_number": {
+            "type": "string"
+          },
           "inspection_type": {
+            "type": "string"
+          },
+          "inspection_scope": {
             "type": "string"
           },
           "status": {
             "type": "string"
           },
+          "result": {
+            "type": "string"
+          },
+          "assigned_to_user_id": {
+            "type": "string"
+          },
+          "facility_name": {
+            "type": "string"
+          },
+          "findings_summary": {
+            "type": "string"
+          },
+          "total_items_inspected": {
+            "type": "number"
+          },
+          "total_passed_items": {
+            "type": "number"
+          },
+          "total_failed_items": {
+            "type": "number"
+          },
+          "started_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "completed_at": {
+            "format": "date-time",
+            "type": "string"
+          },
           "notes": {
             "type": "string"
           },
+          "created_by": {
+            "type": "string"
+          },
+          "updated_by": {
+            "type": "string"
+          },
           "created_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "updated_at": {
             "format": "date-time",
             "type": "string"
           }
@@ -49114,14 +49549,11 @@
         "required": [
           "inspection_id",
           "inspection_number",
-          "inspection_name",
           "reference_type",
           "reference_id",
-          "product_id",
           "inspection_type",
-          "status",
-          "notes",
-          "created_at"
+          "inspection_scope",
+          "status"
         ]
       },
       "ReceivingInspectionPaginatedDto": {

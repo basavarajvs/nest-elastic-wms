@@ -2729,11 +2729,13 @@ model picking_waves {
   wave_number             String                @db.VarChar(100)
   wave_name               String?               @db.VarChar(200)
   description             String?
+  wave_type               String                @default("PICKING") @db.VarChar(30)
   status                  String                @default("PENDING") @db.VarChar(20)
   assigned_to_user_id     String?               @db.Uuid
   created_date            DateTime              @default(dbgenerated("CURRENT_DATE")) @db.Date
   scheduled_start_time    DateTime?             @db.Timestamptz(6)
   started_at              DateTime?             @db.Timestamptz(6)
+  released_at             DateTime?             @db.Timestamptz(6)
   completed_at            DateTime?             @db.Timestamptz(6)
   selection_criteria_json String?
   total_tasks             Int?                  @default(0)

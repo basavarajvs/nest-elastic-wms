@@ -22,6 +22,8 @@ import type {
 import type {
   CreateLocationDto,
   LocationCapacityDto,
+  LocationControllerLookup200,
+  LocationControllerLookupParams,
   LocationResponseDto,
   PaginatedResponseDto,
   UpdateLocationDto
@@ -218,6 +220,95 @@ export const useLocationControllerFindAll = <TError = unknown,
         TContext
       > => {
       return useMutation(getLocationControllerFindAllMutationOptions(options));
+    }
+    export type LocationController_lookupResponse200 = {
+  data: LocationControllerLookup200
+  status: 200
+}
+
+export type LocationController_lookupResponseSuccess = (LocationController_lookupResponse200) & {
+  headers: Headers;
+};
+;
+
+export type LocationController_lookupResponse = (LocationController_lookupResponseSuccess)
+
+export const getLocationControllerLookupUrl = (params: LocationControllerLookupParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/wms/web/locations/lookup?${stringifiedParams}` : `/api/v1/wms/web/locations/lookup`
+}
+
+/**
+ * @summary Lightweight location lookup for dropdown filters
+ */
+export const LocationController_lookup = async (params: LocationControllerLookupParams, options?: RequestInit): Promise<LocationController_lookupResponse> => {
+
+  return customInstance<LocationController_lookupResponse>(getLocationControllerLookupUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getLocationControllerLookupMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof LocationController_lookup>>, TError,{params: LocationControllerLookupParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof LocationController_lookup>>, TError,{params: LocationControllerLookupParams}, TContext> => {
+
+const mutationKey = ['locationControllerLookup'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof LocationController_lookup>>, {params: LocationControllerLookupParams}> = (props) => {
+          const {params} = props ?? {};
+
+          return  LocationController_lookup(params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LocationControllerLookupMutationResult = NonNullable<Awaited<ReturnType<typeof LocationController_lookup>>>
+
+    export type LocationControllerLookupMutationError = unknown
+
+    /**
+ * @summary Lightweight location lookup for dropdown filters
+ */
+export const useLocationControllerLookup = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof LocationController_lookup>>, TError,{params: LocationControllerLookupParams}, TContext>, request?: SecondParameter<typeof customInstance>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof LocationController_lookup>>,
+        TError,
+        {params: LocationControllerLookupParams},
+        TContext
+      > => {
+      return useMutation(getLocationControllerLookupMutationOptions(options));
     }
     export type LocationController_findByIdResponse200 = {
   data: LocationResponseDto

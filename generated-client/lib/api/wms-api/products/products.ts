@@ -22,6 +22,7 @@ import type {
 import type {
   CreateProductDto,
   PaginatedResponseDto,
+  ProductControllerLookup200,
   ProductResponseDto,
   UpdateProductDto
 } from '../../../types/wms-api';
@@ -217,6 +218,88 @@ export const useProductControllerFindAll = <TError = unknown,
         TContext
       > => {
       return useMutation(getProductControllerFindAllMutationOptions(options));
+    }
+    export type ProductController_lookupResponse200 = {
+  data: ProductControllerLookup200
+  status: 200
+}
+
+export type ProductController_lookupResponseSuccess = (ProductController_lookupResponse200) & {
+  headers: Headers;
+};
+;
+
+export type ProductController_lookupResponse = (ProductController_lookupResponseSuccess)
+
+export const getProductControllerLookupUrl = () => {
+
+
+
+
+  return `/api/v1/wms/web/products/lookup`
+}
+
+/**
+ * @summary Lightweight product lookup for dropdown filters
+ */
+export const ProductController_lookup = async ( options?: RequestInit): Promise<ProductController_lookupResponse> => {
+
+  return customInstance<ProductController_lookupResponse>(getProductControllerLookupUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getProductControllerLookupMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ProductController_lookup>>, TError,void, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof ProductController_lookup>>, TError,void, TContext> => {
+
+const mutationKey = ['productControllerLookup'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof ProductController_lookup>>, void> = () => {
+
+
+          return  ProductController_lookup(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ProductControllerLookupMutationResult = NonNullable<Awaited<ReturnType<typeof ProductController_lookup>>>
+
+    export type ProductControllerLookupMutationError = unknown
+
+    /**
+ * @summary Lightweight product lookup for dropdown filters
+ */
+export const useProductControllerLookup = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof ProductController_lookup>>, TError,void, TContext>, request?: SecondParameter<typeof customInstance>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof ProductController_lookup>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getProductControllerLookupMutationOptions(options));
     }
     export type ProductController_findByIdResponse200 = {
   data: ProductResponseDto

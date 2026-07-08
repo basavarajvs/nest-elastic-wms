@@ -11,10 +11,12 @@ export interface InventoryOnHandResponseDto {
   created_by?: string;
   facility_id: string;
   facility_name?: string;
+  inbound_qty?: number;
   location_id: string;
   location_name?: string;
   lot_id?: string;
   lot_number?: string;
+  lpn_code?: string;
   on_hand_id: string;
   owner_client_id?: string;
   product_id: string;
@@ -25,6 +27,7 @@ export interface InventoryOnHandResponseDto {
   quantity_on_hold: number;
   quantity_picked: number;
   quantity_reserved: number;
+  status?: string;
   tenant_id: string;
   uom_id: string;
   uom_name?: string;

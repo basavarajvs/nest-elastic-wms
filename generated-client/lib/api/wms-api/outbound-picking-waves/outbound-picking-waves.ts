@@ -24,6 +24,7 @@ import type {
   DeleteResultDto,
   PickingWaveDetailDto,
   PickingWavePaginatedResponseDto,
+  UpdatePickingWaveDto,
   WaveOrderDto
 } from '../../../types/wms-api';
 
@@ -301,7 +302,99 @@ export const usePickingWaveWebControllerFindById = <TError = unknown,
       > => {
       return useMutation(getPickingWaveWebControllerFindByIdMutationOptions(options));
     }
-    export type PickingWaveWebController_deleteResponse200 = {
+    export type PickingWaveWebController_updateResponse200 = {
+  data: PickingWaveDetailDto
+  status: 200
+}
+
+export type PickingWaveWebController_updateResponseSuccess = (PickingWaveWebController_updateResponse200) & {
+  headers: Headers;
+};
+;
+
+export type PickingWaveWebController_updateResponse = (PickingWaveWebController_updateResponseSuccess)
+
+export const getPickingWaveWebControllerUpdateUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/wms/web/picking-waves/${id}`
+}
+
+/**
+ * @summary Update wave metadata (only PENDING waves)
+ */
+export const PickingWaveWebController_update = async (id: string,
+    updatePickingWaveDto: UpdatePickingWaveDto, options?: RequestInit): Promise<PickingWaveWebController_updateResponse> => {
+
+  return customInstance<PickingWaveWebController_updateResponse>(getPickingWaveWebControllerUpdateUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(updatePickingWaveDto)
+  }
+);}
+
+
+
+
+
+export const getPickingWaveWebControllerUpdateQueryKey = (id: string,
+    updatePickingWaveDto?: UpdatePickingWaveDto,) => {
+    return [
+    'PATCH', `/api/v1/wms/web/picking-waves/${id}`, updatePickingWaveDto
+    ] as const;
+    }
+
+
+export const getPickingWaveWebControllerUpdateQueryOptions = <TData = Awaited<ReturnType<typeof PickingWaveWebController_update>>, TError = unknown>(id: string,
+    updatePickingWaveDto: UpdatePickingWaveDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof PickingWaveWebController_update>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPickingWaveWebControllerUpdateQueryKey(id,updatePickingWaveDto);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof PickingWaveWebController_update>>> = ({ signal }) => PickingWaveWebController_update(id,updatePickingWaveDto, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof PickingWaveWebController_update>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type PickingWaveWebControllerUpdateQueryResult = NonNullable<Awaited<ReturnType<typeof PickingWaveWebController_update>>>
+export type PickingWaveWebControllerUpdateQueryError = unknown
+
+
+/**
+ * @summary Update wave metadata (only PENDING waves)
+ */
+
+export function usePickingWaveWebControllerUpdate<TData = Awaited<ReturnType<typeof PickingWaveWebController_update>>, TError = unknown>(
+ id: string,
+    updatePickingWaveDto: UpdatePickingWaveDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof PickingWaveWebController_update>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getPickingWaveWebControllerUpdateQueryOptions(id,updatePickingWaveDto,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type PickingWaveWebController_deleteResponse200 = {
   data: DeleteResultDto
   status: 200
 }
@@ -466,6 +559,94 @@ export function usePickingWaveWebControllerRelease<TData = Awaited<ReturnType<ty
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getPickingWaveWebControllerReleaseQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type PickingWaveWebController_cancelResponse201 = {
+  data: PickingWaveDetailDto
+  status: 201
+}
+
+export type PickingWaveWebController_cancelResponseSuccess = (PickingWaveWebController_cancelResponse201) & {
+  headers: Headers;
+};
+;
+
+export type PickingWaveWebController_cancelResponse = (PickingWaveWebController_cancelResponseSuccess)
+
+export const getPickingWaveWebControllerCancelUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/wms/web/picking-waves/${id}/cancel`
+}
+
+/**
+ * @summary Cancel picking wave — revert orders, cancel tasks, release allocations
+ */
+export const PickingWaveWebController_cancel = async (id: string, options?: RequestInit): Promise<PickingWaveWebController_cancelResponse> => {
+
+  return customInstance<PickingWaveWebController_cancelResponse>(getPickingWaveWebControllerCancelUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getPickingWaveWebControllerCancelQueryKey = (id: string,) => {
+    return [
+    'POST', `/api/v1/wms/web/picking-waves/${id}/cancel`
+    ] as const;
+    }
+
+
+export const getPickingWaveWebControllerCancelQueryOptions = <TData = Awaited<ReturnType<typeof PickingWaveWebController_cancel>>, TError = unknown>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof PickingWaveWebController_cancel>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPickingWaveWebControllerCancelQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof PickingWaveWebController_cancel>>> = ({ signal }) => PickingWaveWebController_cancel(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof PickingWaveWebController_cancel>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type PickingWaveWebControllerCancelQueryResult = NonNullable<Awaited<ReturnType<typeof PickingWaveWebController_cancel>>>
+export type PickingWaveWebControllerCancelQueryError = unknown
+
+
+/**
+ * @summary Cancel picking wave — revert orders, cancel tasks, release allocations
+ */
+
+export function usePickingWaveWebControllerCancel<TData = Awaited<ReturnType<typeof PickingWaveWebController_cancel>>, TError = unknown>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof PickingWaveWebController_cancel>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getPickingWaveWebControllerCancelQueryOptions(id,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

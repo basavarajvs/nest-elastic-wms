@@ -114,6 +114,14 @@ export class ProductService {
     return this.getFullProduct(tenantId, productId);
   }
 
+  async findLookup(tenantId: string) {
+    return this.prisma.products.findMany({
+      where: { tenant_id: tenantId, is_active: true, is_deleted: false },
+      select: { product_id: true, product_name: true },
+      orderBy: { product_name: 'asc' },
+    });
+  }
+
   async findByBarcode(tenantId: string, barcode: string) {
     const productBarcode = await this.prisma.product_barcodes.findFirst({
       where: { tenant_id: tenantId, barcode_value: barcode, is_active: true },

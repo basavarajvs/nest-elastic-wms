@@ -35,6 +35,7 @@ import type {
   CreateReceivingInspectionDto,
   DefectCodeDto,
   HazmatMaterialDto,
+  InspectionPaginatedDto,
   InspectionProfileDto,
   InspectionProfileWebControllerGetForProductParams,
   InspectionWebControllerPendingReviewParams,
@@ -51,6 +52,7 @@ import type {
   SeedResultDto,
   SupervisorApproveDto,
   SupervisorApproveResultDto,
+  SupervisorRejectDto,
   SupervisorRejectResultDto,
   UpdateComplianceAuditDto,
   UpdateComplianceRequirementDto,
@@ -83,7 +85,89 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
-export type InspectionWebController_pendingReviewResponse200 = {
+export type InspectionWebController_findAllResponse200 = {
+  data: InspectionPaginatedDto
+  status: 200
+}
+
+export type InspectionWebController_findAllResponseSuccess = (InspectionWebController_findAllResponse200) & {
+  headers: Headers;
+};
+;
+
+export type InspectionWebController_findAllResponse = (InspectionWebController_findAllResponseSuccess)
+
+export const getInspectionWebControllerFindAllUrl = () => {
+
+
+
+
+  return `/api/v1/wms/web/quality/inspections`
+}
+
+/**
+ * @summary List quality inspections
+ */
+export const InspectionWebController_findAll = async ( options?: RequestInit): Promise<InspectionWebController_findAllResponse> => {
+
+  return customInstance<InspectionWebController_findAllResponse>(getInspectionWebControllerFindAllUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getInspectionWebControllerFindAllMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof InspectionWebController_findAll>>, TError,void, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof InspectionWebController_findAll>>, TError,void, TContext> => {
+
+const mutationKey = ['inspectionWebControllerFindAll'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof InspectionWebController_findAll>>, void> = () => {
+
+
+          return  InspectionWebController_findAll(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type InspectionWebControllerFindAllMutationResult = NonNullable<Awaited<ReturnType<typeof InspectionWebController_findAll>>>
+
+    export type InspectionWebControllerFindAllMutationError = unknown
+
+    /**
+ * @summary List quality inspections
+ */
+export const useInspectionWebControllerFindAll = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof InspectionWebController_findAll>>, TError,void, TContext>, request?: SecondParameter<typeof customInstance>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof InspectionWebController_findAll>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getInspectionWebControllerFindAllMutationOptions(options));
+    }
+    export type InspectionWebController_pendingReviewResponse200 = {
   data: QualityInspectionDto[]
   status: 200
 }
@@ -110,6 +194,9 @@ export const getInspectionWebControllerPendingReviewUrl = (params: InspectionWeb
   return stringifiedParams.length > 0 ? `/api/v1/wms/web/quality/inspections/pending-review?${stringifiedParams}` : `/api/v1/wms/web/quality/inspections/pending-review`
 }
 
+/**
+ * @summary List inspections pending supervisor review
+ */
 export const InspectionWebController_pendingReview = async (params: InspectionWebControllerPendingReviewParams, options?: RequestInit): Promise<InspectionWebController_pendingReviewResponse> => {
 
   return customInstance<InspectionWebController_pendingReviewResponse>(getInspectionWebControllerPendingReviewUrl(params),
@@ -156,7 +243,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type InspectionWebControllerPendingReviewMutationError = unknown
 
-    export const useInspectionWebControllerPendingReview = <TError = unknown,
+    /**
+ * @summary List inspections pending supervisor review
+ */
+export const useInspectionWebControllerPendingReview = <TError = unknown,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof InspectionWebController_pendingReview>>, TError,{params: InspectionWebControllerPendingReviewParams}, TContext>, request?: SecondParameter<typeof customInstance>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof InspectionWebController_pendingReview>>,
@@ -166,7 +256,273 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getInspectionWebControllerPendingReviewMutationOptions(options));
     }
-    export type InspectionWebController_supervisorApproveResponse201 = {
+    export type InspectionWebController_findByIdResponse200 = {
+  data: QualityInspectionDto
+  status: 200
+}
+
+export type InspectionWebController_findByIdResponseSuccess = (InspectionWebController_findByIdResponse200) & {
+  headers: Headers;
+};
+;
+
+export type InspectionWebController_findByIdResponse = (InspectionWebController_findByIdResponseSuccess)
+
+export const getInspectionWebControllerFindByIdUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/wms/web/quality/inspections/${id}`
+}
+
+/**
+ * @summary Get inspection detail with results, defects, temperature logs, events
+ */
+export const InspectionWebController_findById = async (id: string, options?: RequestInit): Promise<InspectionWebController_findByIdResponse> => {
+
+  return customInstance<InspectionWebController_findByIdResponse>(getInspectionWebControllerFindByIdUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getInspectionWebControllerFindByIdMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof InspectionWebController_findById>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+): UseMutationOptions<Awaited<ReturnType<typeof InspectionWebController_findById>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['inspectionWebControllerFindById'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof InspectionWebController_findById>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  InspectionWebController_findById(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type InspectionWebControllerFindByIdMutationResult = NonNullable<Awaited<ReturnType<typeof InspectionWebController_findById>>>
+
+    export type InspectionWebControllerFindByIdMutationError = unknown
+
+    /**
+ * @summary Get inspection detail with results, defects, temperature logs, events
+ */
+export const useInspectionWebControllerFindById = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof InspectionWebController_findById>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customInstance>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof InspectionWebController_findById>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getInspectionWebControllerFindByIdMutationOptions(options));
+    }
+    export type InspectionWebController_approveResponse201 = {
+  data: SupervisorApproveResultDto
+  status: 201
+}
+
+export type InspectionWebController_approveResponseSuccess = (InspectionWebController_approveResponse201) & {
+  headers: Headers;
+};
+;
+
+export type InspectionWebController_approveResponse = (InspectionWebController_approveResponseSuccess)
+
+export const getInspectionWebControllerApproveUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/wms/web/quality/inspections/${id}/approve`
+}
+
+/**
+ * @summary Approve inspection result
+ */
+export const InspectionWebController_approve = async (id: string,
+    supervisorApproveDto: SupervisorApproveDto, options?: RequestInit): Promise<InspectionWebController_approveResponse> => {
+
+  return customInstance<InspectionWebController_approveResponse>(getInspectionWebControllerApproveUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(supervisorApproveDto)
+  }
+);}
+
+
+
+
+
+export const getInspectionWebControllerApproveQueryKey = (id: string,
+    supervisorApproveDto?: SupervisorApproveDto,) => {
+    return [
+    'POST', `/api/v1/wms/web/quality/inspections/${id}/approve`, supervisorApproveDto
+    ] as const;
+    }
+
+
+export const getInspectionWebControllerApproveQueryOptions = <TData = Awaited<ReturnType<typeof InspectionWebController_approve>>, TError = unknown>(id: string,
+    supervisorApproveDto: SupervisorApproveDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof InspectionWebController_approve>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getInspectionWebControllerApproveQueryKey(id,supervisorApproveDto);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof InspectionWebController_approve>>> = ({ signal }) => InspectionWebController_approve(id,supervisorApproveDto, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof InspectionWebController_approve>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type InspectionWebControllerApproveQueryResult = NonNullable<Awaited<ReturnType<typeof InspectionWebController_approve>>>
+export type InspectionWebControllerApproveQueryError = unknown
+
+
+/**
+ * @summary Approve inspection result
+ */
+
+export function useInspectionWebControllerApprove<TData = Awaited<ReturnType<typeof InspectionWebController_approve>>, TError = unknown>(
+ id: string,
+    supervisorApproveDto: SupervisorApproveDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof InspectionWebController_approve>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getInspectionWebControllerApproveQueryOptions(id,supervisorApproveDto,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type InspectionWebController_rejectResponse201 = {
+  data: SupervisorRejectResultDto
+  status: 201
+}
+
+export type InspectionWebController_rejectResponseSuccess = (InspectionWebController_rejectResponse201) & {
+  headers: Headers;
+};
+;
+
+export type InspectionWebController_rejectResponse = (InspectionWebController_rejectResponseSuccess)
+
+export const getInspectionWebControllerRejectUrl = (id: string,) => {
+
+
+
+
+  return `/api/v1/wms/web/quality/inspections/${id}/reject`
+}
+
+/**
+ * @summary Reject inspection result and create re-inspection
+ */
+export const InspectionWebController_reject = async (id: string,
+    supervisorRejectDto: SupervisorRejectDto, options?: RequestInit): Promise<InspectionWebController_rejectResponse> => {
+
+  return customInstance<InspectionWebController_rejectResponse>(getInspectionWebControllerRejectUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(supervisorRejectDto)
+  }
+);}
+
+
+
+
+
+export const getInspectionWebControllerRejectQueryKey = (id: string,
+    supervisorRejectDto?: SupervisorRejectDto,) => {
+    return [
+    'POST', `/api/v1/wms/web/quality/inspections/${id}/reject`, supervisorRejectDto
+    ] as const;
+    }
+
+
+export const getInspectionWebControllerRejectQueryOptions = <TData = Awaited<ReturnType<typeof InspectionWebController_reject>>, TError = unknown>(id: string,
+    supervisorRejectDto: SupervisorRejectDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof InspectionWebController_reject>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getInspectionWebControllerRejectQueryKey(id,supervisorRejectDto);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof InspectionWebController_reject>>> = ({ signal }) => InspectionWebController_reject(id,supervisorRejectDto, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof InspectionWebController_reject>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type InspectionWebControllerRejectQueryResult = NonNullable<Awaited<ReturnType<typeof InspectionWebController_reject>>>
+export type InspectionWebControllerRejectQueryError = unknown
+
+
+/**
+ * @summary Reject inspection result and create re-inspection
+ */
+
+export function useInspectionWebControllerReject<TData = Awaited<ReturnType<typeof InspectionWebController_reject>>, TError = unknown>(
+ id: string,
+    supervisorRejectDto: SupervisorRejectDto, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof InspectionWebController_reject>>, TError, TData>, request?: SecondParameter<typeof customInstance>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getInspectionWebControllerRejectQueryOptions(id,supervisorRejectDto,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type InspectionWebController_supervisorApproveResponse201 = {
   data: SupervisorApproveResultDto
   status: 201
 }

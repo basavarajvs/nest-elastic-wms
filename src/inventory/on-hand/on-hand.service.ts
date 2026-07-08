@@ -16,7 +16,7 @@ export class OnHandService {
   }
 
   async findAll(tenantId: string, query: any) {
-    const { locationId, productId, lotId, facilityId } = query;
+    const { locationId, productId, lotId, facilityId, search, status } = query;
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 50;
     const skip = (page - 1) * limit;
@@ -25,6 +25,55 @@ export class OnHandService {
     if (productId) where.product_id = BigInt(productId);
     if (lotId) where.lot_id = BigInt(lotId);
     if (facilityId) where.facility_id = BigInt(facilityId);
+    // Status filter — translates to quantity-based WHERE since status is computed
+    if (status) {
+      switch (status) {
+        case 'IN_STOCK':
+          where.quantity_on_hand = { gt: 0 };
+          where.quantity_on_hold = 0;
+          where.quantity_damaged = 0;
+          break;
+        case 'OUT_OF_STOCK':
+          where.quantity_on_hand = 0;
+          where.quantity_allocated = 0;
+          where.quantity_reserved = 0;
+          where.quantity_on_hold = 0;
+          where.quantity_damaged = 0;
+          break;
+        case 'ALLOCATED':
+          where.OR = [
+            { quantity_allocated: { gt: 0 } },
+            { quantity_reserved: { gt: 0 } },
+          ];
+          where.quantity_on_hold = 0;
+          break;
+        case 'ON_HOLD':
+          where.quantity_on_hold = { gt: 0 };
+          break;
+        case 'DAMAGED':
+          where.quantity_damaged = { gt: 0 };
+          break;
+      }
+    }
+    // Resolve search by product/location name before fetching data
+    if (search) {
+      const [matchingProducts, matchingLocations] = await Promise.all([
+        this.prisma.products.findMany({ where: { tenant_id: tenantId, product_name: { contains: search, mode: 'insensitive' } }, select: { product_id: true } }),
+        this.prisma.storage_locations.findMany({ where: { tenant_id: tenantId, location_name: { contains: search, mode: 'insensitive' } }, select: { location_id: true } }),
+      ]);
+      const searchProductIds = matchingProducts.map(p => p.product_id);
+      const searchLocationIds = matchingLocations.map(l => l.location_id);
+      if (where.product_id && searchProductIds.length) {
+        where.product_id = { in: searchProductIds };
+      } else if (searchProductIds.length) {
+        where.product_id = { in: searchProductIds };
+      }
+      if (where.location_id && searchLocationIds.length) {
+        where.location_id = { in: searchLocationIds };
+      } else if (searchLocationIds.length) {
+        where.location_id = { in: searchLocationIds };
+      }
+    }
     const [data, total] = await Promise.all([
       this.prisma.inventory_on_hand.findMany({
         where,
@@ -38,21 +87,70 @@ export class OnHandService {
     const productIds = [...new Set(data.map(r => r.product_id))];
     const locationIds = [...new Set(data.map(r => r.location_id))];
     const lotIds = [...new Set(data.filter(r => r.lot_id).map(r => r.lot_id!))];
-    const [products, locations, lots] = await Promise.all([
+    const [products, locations, lots, lpns, inboundLines] = await Promise.all([
       productIds.length ? this.prisma.products.findMany({ where: { product_id: { in: productIds } }, select: { product_id: true, product_name: true } }) : [],
       locationIds.length ? this.prisma.storage_locations.findMany({ where: { tenant_id: tenantId, location_id: { in: locationIds } }, select: { location_id: true, location_name: true } }) : [],
       lotIds.length ? this.prisma.inventory_lots.findMany({ where: { lot_id: { in: lotIds } }, select: { lot_id: true, lot_number: true } }) : [],
+      data.length
+        ? this.prisma.license_plate_numbers.findMany({
+            where: {
+              tenant_id: tenantId,
+              facility_id: { in: [...new Set(data.map(r => r.facility_id))] },
+              location_id: { in: locationIds },
+              product_id: productIds.length ? { in: productIds } : undefined,
+              status: { notIn: ['SHIPPED', 'LOADED', 'DISPOSED'] },
+            },
+            select: { lpn_id: true, lpn_number: true, location_id: true, product_id: true },
+          })
+        : [],
+      data.length
+        ? this.prisma.asn_lines.findMany({
+            where: {
+              tenant_id: tenantId,
+              facility_id: { in: [...new Set(data.map(r => r.facility_id))] },
+              product_id: productIds.length ? { in: productIds } : undefined,
+              line_status: { notIn: ['RECEIVED', 'CANCELLED'] },
+            },
+            select: { asn_line_id: true, product_id: true, expected_quantity: true, received_quantity: true, facility_id: true },
+          })
+        : [],
     ]);
     const productMap = new Map<string, string>(products.map(p => [p.product_id.toString(), p.product_name] as [string, string]));
     const locationMap = new Map<string, string>(locations.map(l => [l.location_id.toString(), l.location_name] as [string, string]));
     const lotMap = new Map<string, string>(lots.map(l => [l.lot_id.toString(), l.lot_number] as [string, string]));
+    // Build LPN map: location_id+product_id → first active LPN code
+    const lpnMap = new Map<string, string>();
+    for (const lpn of lpns) {
+      const key = `${lpn.location_id.toString()}:${lpn.product_id?.toString()}`;
+      if (!lpnMap.has(key)) lpnMap.set(key, lpn.lpn_number);
+    }
+    // Build inbound qty map: product_id → sum(expected - received)
+    const inboundMap = new Map<string, number>();
+    for (const line of inboundLines) {
+      const key = line.product_id.toString();
+      const total = inboundMap.get(key) || 0;
+      inboundMap.set(key, total + Number(line.expected_quantity) - Number(line.received_quantity || 0));
+    }
     const mappedData = data.map(r => {
       const { warehouse_facilities, units_of_measure, ...rest } = r as any;
+      const qoh = Number(r.quantity_on_hand);
+      const qohHold = Number(r.quantity_on_hold);
+      const qohDamaged = Number(r.quantity_damaged);
+      let status: string;
+      if (qohHold > 0) status = 'ON_HOLD';
+      else if (qohDamaged > 0) status = 'DAMAGED';
+      else if (qoh > 0) status = 'IN_STOCK';
+      else if (Number(r.quantity_allocated) > 0 || Number(r.quantity_reserved) > 0) status = 'ALLOCATED';
+      else status = 'OUT_OF_STOCK';
+      const locProdKey = `${r.location_id.toString()}:${r.product_id.toString()}`;
       return {
         ...rest,
         product_name: productMap.get(r.product_id.toString()) ?? null,
         location_name: locationMap.get(r.location_id.toString()) ?? null,
         lot_number: r.lot_id ? lotMap.get(r.lot_id.toString()) ?? null : null,
+        lpn_code: lpnMap.get(locProdKey) ?? null,
+        status,
+        inbound_qty: inboundMap.get(r.product_id.toString()) ?? 0,
         uom_name: units_of_measure?.uom_name ?? null,
       };
     });
@@ -65,17 +163,51 @@ export class OnHandService {
       include: { warehouse_facilities: true, units_of_measure: true },
     });
     if (!record) return null;
-    const [product, location, lot] = await Promise.all([
+    const [product, location, lot, lpn] = await Promise.all([
       this.prisma.products.findFirst({ where: { product_id: record.product_id }, select: { product_name: true } }),
       this.prisma.storage_locations.findFirst({ where: { tenant_id: tenantId, location_id: record.location_id }, select: { location_name: true } }),
       record.lot_id ? this.prisma.inventory_lots.findFirst({ where: { lot_id: record.lot_id }, select: { lot_number: true } }) : null,
+      this.prisma.license_plate_numbers.findFirst({
+        where: {
+          tenant_id: tenantId,
+          facility_id: record.facility_id,
+          location_id: record.location_id,
+          product_id: record.product_id,
+          status: { notIn: ['SHIPPED', 'LOADED', 'DISPOSED'] },
+        },
+        orderBy: { created_at: 'asc' },
+        select: { lpn_number: true },
+      }),
     ]);
+    // Compute inbound qty for this product
+    const inboundLines = await this.prisma.asn_lines.findMany({
+      where: {
+        tenant_id: tenantId,
+        facility_id: record.facility_id,
+        product_id: record.product_id,
+        line_status: { notIn: ['RECEIVED', 'CANCELLED'] },
+      },
+      select: { expected_quantity: true, received_quantity: true },
+    });
+    const inbound_qty = inboundLines.reduce((sum, l) => sum + Number(l.expected_quantity) - Number(l.received_quantity || 0), 0);
+    const qoh = Number(record.quantity_on_hand);
+    const qohHold = Number(record.quantity_on_hold);
+    const qohDamaged = Number(record.quantity_damaged);
+    let status: string;
+    if (qohHold > 0) status = 'ON_HOLD';
+    else if (qohDamaged > 0) status = 'DAMAGED';
+    else if (qoh > 0) status = 'IN_STOCK';
+    else if (Number(record.quantity_allocated) > 0 || Number(record.quantity_reserved) > 0) status = 'ALLOCATED';
+    else status = 'OUT_OF_STOCK';
     const { warehouse_facilities, units_of_measure, ...rest } = record as any;
     return {
       ...rest,
       product_name: product?.product_name ?? null,
       location_name: location?.location_name ?? null,
       lot_number: lot?.lot_number ?? null,
+      lpn_code: lpn?.lpn_number ?? null,
+      status,
+      inbound_qty,
       uom_name: units_of_measure?.uom_name ?? null,
     };
   }

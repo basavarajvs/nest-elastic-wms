@@ -9,11 +9,14 @@ export class PickingWaveDto {
   @ApiProperty() wave_number: string;
   @ApiPropertyOptional() wave_name?: string;
   @ApiPropertyOptional() description?: string;
+  @ApiPropertyOptional() wave_type?: string;
   @ApiPropertyOptional() status?: string;
   @ApiPropertyOptional() assigned_to_user_id?: string;
+  @ApiPropertyOptional() order_count?: number;
   @ApiPropertyOptional() total_tasks?: number;
   @ApiPropertyOptional() completed_tasks?: number;
   @ApiPropertyOptional() scheduled_start_time?: Date;
+  @ApiPropertyOptional() released_at?: Date;
   @ApiPropertyOptional() started_at?: Date;
   @ApiPropertyOptional() completed_at?: Date;
   @ApiPropertyOptional() selection_criteria_json?: string;
@@ -70,7 +73,17 @@ export class CreatePickingWaveDto {
   @ApiPropertyOptional() wave_number?: string;
   @ApiPropertyOptional() wave_name?: string;
   @ApiPropertyOptional() description?: string;
+  @ApiPropertyOptional() wave_type?: string;
   @ApiPropertyOptional() selection_criteria_json?: string;
+  @ApiPropertyOptional() scheduled_start_time?: Date;
+  @ApiPropertyOptional() notes?: string;
+}
+
+export class UpdatePickingWaveDto {
+  @ApiPropertyOptional() wave_name?: string;
+  @ApiPropertyOptional() description?: string;
+  @ApiPropertyOptional() wave_type?: string;
+  @ApiPropertyOptional() assigned_to_user_id?: string;
   @ApiPropertyOptional() scheduled_start_time?: Date;
   @ApiPropertyOptional() notes?: string;
 }

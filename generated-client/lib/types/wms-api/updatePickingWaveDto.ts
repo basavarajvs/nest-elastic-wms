@@ -6,14 +6,11 @@
  * OpenAPI spec version: 1.0.0
  */
 
-export interface CreatePickingWaveDto {
+export interface UpdatePickingWaveDto {
+  assigned_to_user_id?: string;
   description?: string;
-  facility_id: string;
   notes?: string;
-  order_ids: string[];
   scheduled_start_time?: string;
-  selection_criteria_json?: string;
   wave_name?: string;
-  wave_number?: string;
   wave_type?: string;
 }

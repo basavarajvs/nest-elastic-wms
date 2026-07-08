@@ -150,11 +150,18 @@ export class CreateAsnDto {
 }
 
 export class UpdateAsnDto {
+  @ApiPropertyOptional() asn_number: string;
+  @ApiPropertyOptional() vendor_id: number;
+  @ApiPropertyOptional() po_number: string;
   @ApiPropertyOptional() carrier_name: string;
   @ApiPropertyOptional() tracking_number: string;
+  @ApiPropertyOptional() shipment_date: string;
   @ApiPropertyOptional() expected_arrival_date: string;
   @ApiPropertyOptional() actual_arrival_date: string;
+  @ApiPropertyOptional() weight: number;
+  @ApiPropertyOptional() volume: number;
   @ApiPropertyOptional() notes: string;
+  @ApiPropertyOptional() inbound_for_client_id: number;
 }
 
 export class CreateAsnImportJobDto {

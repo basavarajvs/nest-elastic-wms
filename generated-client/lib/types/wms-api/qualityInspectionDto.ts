@@ -7,25 +7,34 @@
  */
 
 export interface QualityInspectionDto {
-  assigned_to_user_id: string;
-  created_at: string;
-  description: string;
+  assigned_to_user_id?: string;
+  completed_at?: string;
+  created_at?: string;
+  created_by?: string;
+  description?: string;
   facility_id: number;
   facility_name?: string;
+  findings_summary?: string;
   inspection_id: number;
-  inspection_name: string;
+  inspection_name?: string;
   inspection_number: string;
   inspection_scope: string;
   inspection_type: string;
-  lot_id: number;
+  lot_id?: number;
   lot_number?: string;
-  notes: string;
-  product_id: number;
+  lpn_code?: string;
+  notes?: string;
+  product_id?: number;
   product_name?: string;
   reference_id: number;
   reference_type: string;
-  result: string;
+  result?: string;
+  started_at?: string;
   status: string;
   tenant_id: string;
-  updated_at: string;
+  total_failed_items?: number;
+  total_items_inspected?: number;
+  total_passed_items?: number;
+  updated_at?: string;
+  updated_by?: string;
 }

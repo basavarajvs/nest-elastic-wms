@@ -895,12 +895,15 @@ export class InventoryOnHandResponseDto {
   @ApiPropertyOptional() location_name?: string;
   @ApiPropertyOptional() lot_id?: string;
   @ApiPropertyOptional() lot_number?: string;
+  @ApiPropertyOptional() lpn_code?: string;
   @ApiProperty() quantity_on_hand: number;
   @ApiProperty() quantity_allocated: number;
   @ApiProperty() quantity_reserved: number;
   @ApiProperty() quantity_picked: number;
   @ApiProperty() quantity_on_hold: number;
   @ApiProperty() quantity_damaged: number;
+  @ApiPropertyOptional() inbound_qty: number;
+  @ApiPropertyOptional() status?: string;
   @ApiProperty() uom_id: string;
   @ApiPropertyOptional() uom_name?: string;
   @ApiPropertyOptional() owner_client_id?: string;

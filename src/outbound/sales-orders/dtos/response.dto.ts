@@ -32,6 +32,7 @@ export class SalesOrderDto {
   @ApiPropertyOptional() currency_code?: string;
   @ApiPropertyOptional() total_order_quantity?: number;
   @ApiPropertyOptional() total_order_value?: number;
+  @ApiPropertyOptional() total_lines?: number;
   @ApiPropertyOptional() assigned_sales_rep_id?: string;
   @ApiPropertyOptional() assigned_warehouse_user_id?: string;
   @ApiPropertyOptional() confirmed_date?: Date;
@@ -62,6 +63,7 @@ export class OrderLineDto {
   @ApiPropertyOptional() product_name?: string;
   @ApiPropertyOptional() product_code?: string;
   @ApiProperty() requested_quantity: number;
+  @ApiPropertyOptional() allocated_quantity?: number;
   @ApiPropertyOptional() fulfilled_quantity?: number;
   @ApiPropertyOptional() remaining_quantity?: number;
   @ApiPropertyOptional() uom_id?: string;

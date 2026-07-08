@@ -25,6 +25,14 @@ export class ProductController {
     return this.productService.findAll(tenantId, query);
   }
 
+  @Get('lookup')
+  @ApiOperation({ summary: 'Lightweight product lookup for dropdown filters' })
+  @ApiOkResponse({ type: Object })
+  async lookup(@Req() req: any) {
+    const tenantId = req.tenantContext.getTenantId();
+    return this.productService.findLookup(tenantId);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get full product with barcodes, suppliers, packaging' })
   @ApiOkResponse({ type: ProductResponseDto })

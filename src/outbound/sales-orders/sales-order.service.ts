@@ -122,10 +122,21 @@ export class SalesOrderService {
       }),
       this.prisma.sales_orders.count({ where }),
     ]);
+    // Batch count lines per order
+    const orderIds = data.map(d => d.order_id) as bigint[];
+    const lineCounts = orderIds.length
+      ? await this.prisma.sales_order_lines.groupBy({
+          by: ['order_id'],
+          where: { order_id: { in: orderIds } },
+          _count: { line_id: true },
+        })
+      : [];
+    const lineCountMap = new Map(lineCounts.map(lc => [lc.order_id, lc._count.line_id]));
     const mapped = data.map(d => ({
       ...d,
       facility_name: (d as any).warehouse_facilities?.facility_name,
       customer_name: (d as any).customers?.customer_name,
+      total_lines: lineCountMap.get(d.order_id) ?? 0,
       warehouse_facilities: undefined,
       customers: undefined,
     }));
@@ -238,7 +249,20 @@ export class SalesOrderService {
       where: { tenant_id: tenantId, order_id: orderId },
       select: { order_number: true },
     });
-    return rows.map(r => ({ ...r, order_number: order?.order_number }));
+    const lineIds = rows.map(l => l.line_id) as bigint[];
+    const allocations = lineIds.length
+      ? await this.prisma.inventory_allocations.groupBy({
+          by: ['allocated_for_reference_id'],
+          where: {
+            allocated_for_reference_type: 'SALES_ORDER_LINE',
+            allocated_for_reference_id: { in: lineIds },
+            status: 'ALLOCATED',
+          },
+          _sum: { quantity_allocated: true },
+        })
+      : [];
+    const allocMap = new Map(allocations.map(a => [a.allocated_for_reference_id, Number(a._sum.quantity_allocated)]));
+    return rows.map(r => ({ ...r, order_number: order?.order_number, allocated_quantity: allocMap.get(r.line_id) ?? 0 }));
   }
 
   /**
@@ -308,12 +332,30 @@ export class SalesOrderService {
       where: { tenant_id: tenantId, order_id: orderId },
       orderBy: { line_number: 'asc' },
     });
+    // Batch resolve allocated_quantity per line from inventory_allocations
+    const lineIds = lines.map(l => l.line_id) as bigint[];
+    const allocations = lineIds.length
+      ? await this.prisma.inventory_allocations.groupBy({
+          by: ['allocated_for_reference_id'],
+          where: {
+            allocated_for_reference_type: 'SALES_ORDER_LINE',
+            allocated_for_reference_id: { in: lineIds },
+            status: 'ALLOCATED',
+          },
+          _sum: { quantity_allocated: true },
+        })
+      : [];
+    const allocMap = new Map(allocations.map(a => [a.allocated_for_reference_id, Number(a._sum.quantity_allocated)]));
+    const linesWithAlloc = lines.map(l => ({
+      ...l,
+      allocated_quantity: allocMap.get(l.line_id) ?? 0,
+    }));
     const { warehouse_facilities, customers, ...orderData } = order as any;
     return {
       ...orderData,
       facility_name: warehouse_facilities?.facility_name,
       customer_name: customers?.customer_name,
-      lines,
+      lines: linesWithAlloc,
     };
   }
 }

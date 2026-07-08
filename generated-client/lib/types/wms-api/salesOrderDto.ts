@@ -43,6 +43,7 @@ export interface SalesOrderDto {
   shipped_date?: string;
   status?: string;
   tenant_id: string;
+  total_lines?: number;
   total_order_quantity?: number;
   total_order_value?: number;
   updated_at: string;

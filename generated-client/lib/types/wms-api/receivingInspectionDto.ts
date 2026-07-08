@@ -7,15 +7,29 @@
  */
 
 export interface ReceivingInspectionDto {
-  created_at: string;
+  assigned_to_user_id?: string;
+  completed_at?: string;
+  created_at?: string;
+  created_by?: string;
+  facility_name?: string;
+  findings_summary?: string;
   inspection_id: number;
-  inspection_name: string;
+  inspection_name?: string;
   inspection_number: string;
+  inspection_scope: string;
   inspection_type: string;
-  notes: string;
-  product_id: number;
+  lot_number?: string;
+  notes?: string;
+  product_id?: number;
   product_name?: string;
   reference_id: number;
   reference_type: string;
+  result?: string;
+  started_at?: string;
   status: string;
+  total_failed_items?: number;
+  total_items_inspected?: number;
+  total_passed_items?: number;
+  updated_at?: string;
+  updated_by?: string;
 }

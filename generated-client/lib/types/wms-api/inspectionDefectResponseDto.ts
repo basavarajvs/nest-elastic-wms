@@ -7,7 +7,10 @@
  */
 
 export interface InspectionDefectResponseDto {
+  defect_code_category?: string;
   defect_code_id: number;
+  defect_code_name?: string;
+  defect_code_severity?: string;
   defect_id: number;
   inspection_id: number;
   notes?: string;

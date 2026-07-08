@@ -101,15 +101,22 @@ export class AsnService {
   }
 
   async update(tenantId: string, asnId: bigint, dto: any) {
+    const data: any = {};
+    if (dto.asn_number !== undefined) data.asn_number = dto.asn_number;
+    if (dto.vendor_id !== undefined) data.vendor_id = BigInt(dto.vendor_id);
+    if (dto.po_number !== undefined) data.po_number = dto.po_number;
+    if (dto.carrier_name !== undefined) data.carrier_name = dto.carrier_name;
+    if (dto.tracking_number !== undefined) data.tracking_number = dto.tracking_number;
+    if (dto.shipment_date !== undefined) data.shipment_date = new Date(dto.shipment_date);
+    if (dto.expected_arrival_date !== undefined) data.expected_arrival_date = new Date(dto.expected_arrival_date);
+    if (dto.actual_arrival_date !== undefined) data.actual_arrival_date = new Date(dto.actual_arrival_date);
+    if (dto.weight !== undefined) data.weight = dto.weight;
+    if (dto.volume !== undefined) data.volume = dto.volume;
+    if (dto.notes !== undefined) data.notes = dto.notes;
+    if (dto.inbound_for_client_id !== undefined) data.inbound_for_client_id = BigInt(dto.inbound_for_client_id);
     await this.prisma.advance_ship_notices.updateMany({
       where: { tenant_id: tenantId, asn_id: asnId },
-      data: {
-        carrier_name: dto.carrier_name,
-        tracking_number: dto.tracking_number,
-        expected_arrival_date: dto.expected_arrival_date ? new Date(dto.expected_arrival_date) : undefined,
-        actual_arrival_date: dto.actual_arrival_date ? new Date(dto.actual_arrival_date) : undefined,
-        notes: dto.notes,
-      },
+      data,
     });
     return this.findById(tenantId, asnId);
   }

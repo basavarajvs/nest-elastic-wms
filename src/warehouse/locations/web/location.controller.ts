@@ -25,6 +25,14 @@ export class LocationController {
     return this.locationService.findAll(tenantId, query.facilityId ? BigInt(query.facilityId) : (undefined as any), query);
   }
 
+  @Get('lookup')
+  @ApiOperation({ summary: 'Lightweight location lookup for dropdown filters' })
+  @ApiOkResponse({ type: Object })
+  async lookup(@Req() req: any, @Query('facilityId') facilityId?: string) {
+    const tenantId = req.tenantContext.getTenantId();
+    return this.locationService.findLookup(tenantId, facilityId ? BigInt(facilityId) : undefined);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get location by ID' })
   @ApiOkResponse({ type: LocationResponseDto })

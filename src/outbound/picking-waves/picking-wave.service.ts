@@ -19,6 +19,28 @@ export class PickingWaveService {
     return wave;
   }
 
+  async updateWave(tenantId: string, waveId: bigint, dto: any) {
+    const wave = await this.prisma.picking_waves.findFirst({
+      where: { tenant_id: tenantId, wave_id: waveId },
+    });
+    if (!wave) throw new BadRequestException('Wave not found');
+    if (wave.status !== 'PENDING') {
+      throw new BadRequestException('Only PENDING waves can be edited');
+    }
+    const data: any = {};
+    if (dto.wave_name !== undefined) data.wave_name = dto.wave_name;
+    if (dto.description !== undefined) data.description = dto.description;
+    if (dto.wave_type !== undefined) data.wave_type = dto.wave_type;
+    if (dto.assigned_to_user_id !== undefined) data.assigned_to_user_id = dto.assigned_to_user_id;
+    if (dto.scheduled_start_time !== undefined) data.scheduled_start_time = new Date(dto.scheduled_start_time);
+    if (dto.notes !== undefined) data.notes = dto.notes;
+    await this.prisma.picking_waves.updateMany({
+      where: { tenant_id: tenantId, wave_id: waveId },
+      data,
+    });
+    return this.findWaveById(tenantId, waveId);
+  }
+
   async createWave(tenantId: string, dto: any) {
     const facilityId = BigInt(dto.facility_id);
     const orderIds = (dto.order_ids || []).map((id: string) => BigInt(id));
@@ -45,6 +67,7 @@ export class PickingWaveService {
         wave_number: dto.wave_number || `WAVE-${Date.now()}`,
         wave_name: dto.wave_name,
         description: dto.description,
+        wave_type: dto.wave_type || 'PICKING',
         selection_criteria_json: dto.selection_criteria_json || JSON.stringify({ orderIds: orderIds.map((id) => id.toString()) }),
         scheduled_start_time: dto.scheduled_start_time ? new Date(dto.scheduled_start_time) : undefined,
         notes: dto.notes,
@@ -151,10 +174,10 @@ export class PickingWaveService {
       });
     }
 
-    // Step 3: Update wave status, total tasks, and order status
+    // Step 3: Update wave status, total tasks, released_at, and order status
     await this.prisma.picking_waves.updateMany({
       where: { tenant_id: tenantId, wave_id: waveId },
-      data: { status: 'RELEASED', total_tasks: taskCount },
+      data: { status: 'RELEASED', total_tasks: taskCount, released_at: new Date() },
     });
 
     for (const wo of waveOrders) {
@@ -195,6 +218,79 @@ export class PickingWaveService {
     await this.prisma.wave_orders.updateMany({
       where: { tenant_id: tenantId, wave_id: waveId },
       data: { status: 'COMPLETED', completed_at: new Date() },
+    });
+
+    return this.findWaveById(tenantId, waveId);
+  }
+
+  /**
+   * Cancel a picking wave — reverts order statuses, cancels tasks, releases allocations.
+   * Only PENDING or RELEASED waves can be cancelled.
+   */
+  async cancelWave(tenantId: string, waveId: bigint) {
+    const wave = await this.prisma.picking_waves.findFirst({
+      where: { tenant_id: tenantId, wave_id: waveId },
+    });
+    if (!wave) throw new BadRequestException('Wave not found');
+    if (!['PENDING', 'RELEASED'].includes(wave.status)) {
+      throw new BadRequestException(`Cannot cancel wave in '${wave.status}' status. Only PENDING or RELEASED waves can be cancelled.`);
+    }
+
+    const waveOrders = await this.prisma.wave_orders.findMany({
+      where: { tenant_id: tenantId, wave_id: waveId },
+    });
+
+    // Revert order statuses from WAVED back to RELEASED
+    for (const wo of waveOrders) {
+      await this.prisma.sales_orders.updateMany({
+        where: { tenant_id: tenantId, order_id: wo.order_id, status: 'WAVED' },
+        data: { status: 'RELEASED' },
+      });
+    }
+
+    // Cancel picking tasks in the wave
+    const tasks = await this.prisma.picking_tasks.findMany({
+      where: { tenant_id: tenantId, wave_id: waveId },
+    });
+    for (const task of tasks) {
+      await this.prisma.picking_tasks.updateMany({
+        where: { tenant_id: tenantId, task_id: task.task_id },
+        data: { status: 'CANCELLED' as any },
+      });
+    }
+
+    // Release inventory allocations for the cancelled wave's order lines
+    const orderIds = waveOrders.map(wo => wo.order_id);
+    if (orderIds.length) {
+      const lines = await this.prisma.sales_order_lines.findMany({
+        where: { tenant_id: tenantId, order_id: { in: orderIds } },
+      });
+      const lineIds = lines.map(l => l.line_id);
+      if (lineIds.length) {
+        await this.prisma.inventory_allocations.updateMany({
+          where: {
+            tenant_id: tenantId,
+            allocated_for_reference_type: 'SALES_ORDER_LINE',
+            allocated_for_reference_id: { in: lineIds },
+            status: 'ALLOCATED',
+          },
+          data: { status: 'CANCELLED' },
+        });
+      }
+    }
+
+    // Mark wave-orders as removed
+    for (const wo of waveOrders) {
+      await this.prisma.wave_orders.updateMany({
+        where: { tenant_id: tenantId, wave_order_id: wo.wave_order_id },
+        data: { status: 'REMOVED', removed_at: new Date() },
+      });
+    }
+
+    // Mark wave as CANCELLED
+    await this.prisma.picking_waves.updateMany({
+      where: { tenant_id: tenantId, wave_id: waveId },
+      data: { status: 'CANCELLED', completed_at: new Date() },
     });
 
     return this.findWaveById(tenantId, waveId);
@@ -260,9 +356,19 @@ export class PickingWaveService {
       }),
       this.prisma.picking_waves.count({ where }),
     ]);
+    // Batch count orders per wave
+    const waveIds = data.map(d => d.wave_id) as bigint[];
+    const orderCounts = waveIds.length
+      ? await this.prisma.wave_orders.groupBy({
+          by: ['wave_id'],
+          where: { wave_id: { in: waveIds } },
+          _count: { wave_order_id: true },
+        })
+      : [];
+    const orderCountMap = new Map(orderCounts.map(oc => [oc.wave_id, oc._count.wave_order_id]));
     const mapped = data.map((d: any) => {
       const { warehouse_facilities, ...rest } = d;
-      return { ...rest, facility_name: warehouse_facilities?.facility_name };
+      return { ...rest, facility_name: warehouse_facilities?.facility_name, order_count: orderCountMap.get(d.wave_id) ?? 0 };
     });
     return { data: mapped, total, page, limit };
   }

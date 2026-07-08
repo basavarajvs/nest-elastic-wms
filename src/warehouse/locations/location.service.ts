@@ -88,6 +88,16 @@ export class LocationService {
     return { data: this.flattenLocations(data), total, page, limit };
   }
 
+  async findLookup(tenantId: string, facilityId?: bigint) {
+    const where: any = { tenant_id: tenantId, is_active: true };
+    if (facilityId) where.facility_id = facilityId;
+    return this.prisma.storage_locations.findMany({
+      where,
+      select: { location_id: true, location_name: true, location_code: true },
+      orderBy: { location_name: 'asc' },
+    });
+  }
+
   async findByBarcode(tenantId: string, barcode: string) {
     const location = await this.prisma.storage_locations.findFirst({
       where: { tenant_id: tenantId, barcode_value: barcode, is_active: true },

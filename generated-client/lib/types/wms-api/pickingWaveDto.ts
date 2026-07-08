@@ -17,6 +17,8 @@ export interface PickingWaveDto {
   facility_id: string;
   facility_name?: string;
   notes?: string;
+  order_count?: number;
+  released_at?: string;
   scheduled_start_time?: string;
   selection_criteria_json?: string;
   started_at?: string;
@@ -28,4 +30,5 @@ export interface PickingWaveDto {
   wave_id: string;
   wave_name?: string;
   wave_number: string;
+  wave_type?: string;
 }
