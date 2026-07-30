@@ -44,6 +44,7 @@ import { CoreClientModule } from './core-client/core-client.module';
 import { QuotaModule } from './quota/quota.module';
 import { SeedModule } from './seed/seed.module';
 import { ClusterModule } from './cluster/cluster.module';
+import { EventsModule } from './events/events.module';
 import { appValidationSchema } from './config/app.config';
 import { JwtAuthGuard } from './common/auth/jwt-auth.guard';
 import { JwtValidationService } from './common/auth/jwt-validation.service';
@@ -123,6 +124,7 @@ import { ShutdownDrainMiddleware } from './lifecycle/shutdown-drain.middleware';
     QuotaModule,
     SeedModule,
     ClusterModule,
+    EventsModule,
   ],
   providers: [
     JwtAuthGuard,

@@ -1,9 +1,14 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
+import { NcrCreatedEvent } from '../../events/definitions/quality.events';
 
 @Injectable()
 export class NcrService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async create(tenantId: string, dto: any) {
     const ncr = await this.prisma.non_conformance_reports.create({
@@ -26,6 +31,20 @@ export class NcrService {
         created_by: dto.created_by,
       },
     });
+
+    this.eventEmitter.emit(
+      'ncr.created',
+      new NcrCreatedEvent({
+        tenant_id: tenantId,
+        facility_id: ncr.facility_id,
+        ncr_id: ncr.ncr_id,
+        product_id: ncr.product_id || undefined,
+        description: ncr.description || '',
+        severity: ncr.severity || 'MEDIUM',
+        created_by: ncr.created_by || dto.reported_by_user_id || '',
+      }),
+    );
+
     let product_name: string | undefined;
     if (ncr.product_id) {
       const product = await this.prisma.products.findFirst({ where: { tenant_id: tenantId, product_id: ncr.product_id } });

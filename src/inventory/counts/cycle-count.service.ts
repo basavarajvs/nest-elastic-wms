@@ -1,7 +1,9 @@
 import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { investigation_status } from '@prisma/client';
 import { CycleCountThresholdService } from './cycle-count-threshold.service';
+import { CycleCountCompletedEvent } from '../../events/definitions/inventory.events';
 
 @Injectable()
 export class CycleCountService {
@@ -9,6 +11,7 @@ export class CycleCountService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
     private readonly thresholdService: CycleCountThresholdService,
   ) {}
 
@@ -470,6 +473,21 @@ export class CycleCountService {
           await this.logEvent(tenantId, count.facility_id, BigInt(id), 'RECOUNT_CREATED', userId, { investigationId: inv.investigation_id });
         }
       }
+
+      this.eventEmitter.emit(
+        'cycle_count.completed',
+        new CycleCountCompletedEvent({
+          tenant_id: tenantId,
+          facility_id: count.facility_id,
+          count_id: BigInt(id),
+          count_number: count.count_number,
+          product_id: line.product_id,
+          location_id: line.location_id,
+          expected_quantity: systemQty,
+          counted_quantity: countedQty,
+          variance: variance,
+        }),
+      );
     }
 
     // APP-CC-A: State machine — COUNTED → APPROVED/CLOSED

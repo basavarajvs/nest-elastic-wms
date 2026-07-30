@@ -1,11 +1,21 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
+import {
+  WaveCreatedEvent,
+  WaveReleasedEvent,
+  WaveCompletedEvent,
+  WaveCancelledEvent,
+} from '../../events/definitions/outbound.events';
 
 @Injectable()
 export class PickingWaveService {
   private readonly logger = new Logger(PickingWaveService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   /**
    * Create a picking wave from selected sales orders.
@@ -90,6 +100,18 @@ export class PickingWaveService {
         data: { status: 'WAVED' },
       });
     }
+
+    this.eventEmitter.emit(
+      'wave.created',
+      new WaveCreatedEvent({
+        tenant_id: tenantId,
+        facility_id: facilityId,
+        wave_id: wave.wave_id,
+        wave_number: wave.wave_number,
+        wave_type: wave.wave_type,
+        order_count: dto.orders?.length || 0,
+      }),
+    );
 
     return this.findWaveById(tenantId, wave.wave_id);
   }
@@ -187,6 +209,17 @@ export class PickingWaveService {
       });
     }
 
+    this.eventEmitter.emit(
+      'wave.released',
+      new WaveReleasedEvent({
+        tenant_id: tenantId,
+        facility_id: wave.facility_id,
+        wave_id: waveId,
+        wave_number: wave.wave_number,
+        order_count: waveOrders?.length || 0,
+      }),
+    );
+
     return this.findWaveById(tenantId, waveId);
   }
 
@@ -219,6 +252,17 @@ export class PickingWaveService {
       where: { tenant_id: tenantId, wave_id: waveId },
       data: { status: 'COMPLETED', completed_at: new Date() },
     });
+
+    this.eventEmitter.emit(
+      'wave.completed',
+      new WaveCompletedEvent({
+        tenant_id: tenantId,
+        facility_id: wave.facility_id,
+        wave_id: waveId,
+        wave_number: wave.wave_number,
+        completed_tasks: completedTasks,
+      }),
+    );
 
     return this.findWaveById(tenantId, waveId);
   }
@@ -292,6 +336,16 @@ export class PickingWaveService {
       where: { tenant_id: tenantId, wave_id: waveId },
       data: { status: 'CANCELLED', completed_at: new Date() },
     });
+
+    this.eventEmitter.emit(
+      'wave.cancelled',
+      new WaveCancelledEvent({
+        tenant_id: tenantId,
+        facility_id: wave.facility_id,
+        wave_id: waveId,
+        wave_number: wave.wave_number,
+      }),
+    );
 
     return this.findWaveById(tenantId, waveId);
   }

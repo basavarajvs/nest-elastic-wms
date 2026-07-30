@@ -1,8 +1,14 @@
 import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PickRouteService } from './pick-route.service';
 import { PickExceptionReason, PICK_EXCEPTION_REASONS } from './pick-exception.enum';
 import { ReplenishmentService } from '../replenishment/replenishment.service';
+import {
+  PickTaskAssignedEvent,
+  PickTaskCompletedEvent,
+  PickTaskShortEvent,
+} from '../../events/definitions/outbound.events';
 
 const LOCATION_MISMATCH_LIMIT = 3;
 
@@ -12,6 +18,7 @@ export class PickingTaskService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
     private readonly pickRouteService: PickRouteService,
     private readonly replenishmentService: ReplenishmentService,
   ) {}
@@ -113,6 +120,18 @@ export class PickingTaskService {
       where: { tenant_id: tenantId, task_id: taskId },
       data: { assigned_to_user_id: userId, status: 'ASSIGNED' },
     });
+
+    this.eventEmitter.emit(
+      'pick_task.assigned',
+      new PickTaskAssignedEvent({
+        tenant_id: tenantId,
+        facility_id: task.facility_id,
+        task_id: taskId,
+        task_number: task.task_number,
+        user_id: userId,
+      }),
+    );
+
     return this.findTaskById(tenantId, taskId);
   }
 
@@ -537,7 +556,22 @@ export class PickingTaskService {
       await this.checkWaveCompletion(tenantId, task.wave_id);
     }
 
-    return { taskId: taskId.toString(), pickedQty: actualPicked, requestedQty: task.quantity_to_pick, shortQty: Number(task.quantity_to_pick) - actualPicked };
+    const shortQty = Number(task.quantity_to_pick) - actualPicked;
+    this.eventEmitter.emit(
+      'pick_task.short',
+      new PickTaskShortEvent({
+        tenant_id: tenantId,
+        facility_id: task.facility_id,
+        task_id: taskId,
+        task_number: task.task_number,
+        order_id: task.order_id || undefined,
+        product_id: task.product_id || undefined,
+        quantity_short: shortQty,
+        reason: rawReason,
+      }),
+    );
+
+    return { taskId: taskId.toString(), pickedQty: actualPicked, requestedQty: task.quantity_to_pick, shortQty };
   }
 
   async myTasks(tenantId: string, userId: string, facilityId?: bigint) {
@@ -798,6 +832,21 @@ export class PickingTaskService {
     if (task.wave_id) {
       await this.checkWaveCompletion(tenantId, task.wave_id);
     }
+
+    this.eventEmitter.emit(
+      'pick_task.completed',
+      new PickTaskCompletedEvent({
+        tenant_id: tenantId,
+        facility_id: task.facility_id,
+        task_id: BigInt(taskId),
+        task_number: task.task_number,
+        order_id: task.order_id || undefined,
+        wave_id: task.wave_id || undefined,
+        product_id: task.product_id || undefined,
+        quantity_picked: pickedQty,
+        completed_by: userId,
+      }),
+    );
 
     return this.findTaskById(tenantId, BigInt(taskId));
   }

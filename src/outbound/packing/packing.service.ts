@@ -1,6 +1,8 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CartonizationService } from './cartonization.service';
+import { CartonPackedEvent } from '../../events/definitions/outbound.events';
 
 @Injectable()
 export class PackingService {
@@ -8,6 +10,7 @@ export class PackingService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
     private readonly cartonizationService: CartonizationService,
   ) {}
 
@@ -343,6 +346,19 @@ export class PackingService {
         priority: 0,
       },
     }).catch(() => {});
+
+    this.eventEmitter.emit(
+      'carton.packed',
+      new CartonPackedEvent({
+        tenant_id: tenantId,
+        facility_id: facilityId,
+        carton_id: lpn.lpn_id,
+        session_id: session.id,
+        order_id: BigInt(orderId),
+        items_packed: session.cartons_completed || 0,
+        packed_by: session.user_id || undefined,
+      }),
+    );
 
     return {
       lpnId: lpn.lpn_id.toString(),

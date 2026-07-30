@@ -1,11 +1,21 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
+import {
+  ShipmentStagedEvent,
+  ShipmentLoadedEvent,
+  ShipmentDispatchedEvent,
+  OrderShippedEvent,
+} from '../../events/definitions/outbound.events';
 
 @Injectable()
 export class ShipmentService {
   private readonly logger = new Logger(ShipmentService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   /**
    * Create a shipment from a sales order or directly.
@@ -209,6 +219,18 @@ export class ShipmentService {
     });
 
     await this.recordStatusChange(tenantId, shipmentId, 'STAGED');
+
+    this.eventEmitter.emit(
+      'shipment.staged',
+      new ShipmentStagedEvent({
+        tenant_id: tenantId,
+        facility_id: shipment.facility_id,
+        shipment_id: shipmentId,
+        shipment_number: shipment.shipment_number,
+        staging_location_id: stagingLocationId,
+      }),
+    );
+
     return this.findShipmentById(tenantId, shipmentId);
   }
 
@@ -256,6 +278,18 @@ export class ShipmentService {
     });
 
     await this.recordStatusChange(tenantId, shipmentId, 'LOADED');
+
+    this.eventEmitter.emit(
+      'shipment.loaded',
+      new ShipmentLoadedEvent({
+        tenant_id: tenantId,
+        facility_id: shipment.facility_id,
+        shipment_id: shipmentId,
+        shipment_number: shipment.shipment_number,
+        load_id: loadId,
+      }),
+    );
+
     return this.findShipmentById(tenantId, shipmentId);
   }
 
@@ -313,6 +347,43 @@ export class ShipmentService {
     }
 
     await this.recordStatusChange(tenantId, shipmentId, 'SHIPPED');
+
+    const orderForShipment = shipment.order_id
+      ? await this.prisma.sales_orders.findFirst({
+          where: { tenant_id: tenantId, order_id: shipment.order_id },
+          select: { order_number: true },
+        })
+      : null;
+
+    this.eventEmitter.emit(
+      'shipment.dispatched',
+      new ShipmentDispatchedEvent({
+        tenant_id: tenantId,
+        facility_id: shipment.facility_id,
+        shipment_id: shipmentId,
+        shipment_number: shipment.shipment_number,
+        order_id: shipment.order_id || undefined,
+        order_number: orderForShipment?.order_number,
+        tracking_number: dto.tracking_number || shipment.tracking_number || undefined,
+        shipped_by: dto.driver_name || undefined,
+      }),
+    );
+
+    if (shipment.order_id) {
+      this.eventEmitter.emit(
+        'order.shipped',
+        new OrderShippedEvent({
+          tenant_id: tenantId,
+          facility_id: shipment.facility_id,
+          order_id: shipment.order_id,
+          order_number: orderForShipment?.order_number || '',
+          shipment_id: shipmentId,
+          tracking_number: dto.tracking_number || shipment.tracking_number || undefined,
+          shipped_by: dto.driver_name || undefined,
+        }),
+      );
+    }
+
     return this.findShipmentById(tenantId, shipmentId);
   }
 

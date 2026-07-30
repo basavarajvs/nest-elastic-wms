@@ -1,6 +1,8 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { asn_status, receipt_status } from '@prisma/client';
+import { ReceivingStartedEvent, ReceivingCompletedEvent } from '../../events/definitions/inbound.events';
 
 const VARIANCE_NONE = 'NONE';
 const VARIANCE_OVER = 'OVER';
@@ -15,7 +17,10 @@ const DISPOSITION_RTV = 'RETURN_TO_VENDOR';
 export class ReceivingService {
   private readonly logger = new Logger(ReceivingService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async createReceipt(tenantId: string, dto: any) {
     return this.prisma.goods_receipts.create({
@@ -434,6 +439,27 @@ export class ReceivingService {
       }
     }
 
+    // Emit receiving.completed
+    const asnForReceipt = receipt.asn_number
+      ? await this.prisma.advance_ship_notices.findFirst({
+          where: { tenant_id: tenantId, facility_id: receipt.facility_id, asn_number: receipt.asn_number },
+          select: { asn_id: true },
+        })
+      : null;
+
+    this.eventEmitter.emit(
+      'receiving.completed',
+      new ReceivingCompletedEvent({
+        tenant_id: tenantId,
+        facility_id: receipt.facility_id,
+        receipt_id: receiptId,
+        receipt_number: receipt.receipt_number,
+        asn_id: asnForReceipt?.asn_id || 0n,
+        total_lines: lines.length,
+        received_lines: lines.filter(l => l.line_status === 'RECEIVED').length,
+      }),
+    );
+
     return this.findReceiptById(tenantId, receiptId);
   }
 
@@ -553,6 +579,27 @@ export class ReceivingService {
         data: { status: receipt_status.ARRIVED },
       });
     }
+
+    // Resolve optional ASN reference for events
+    let asnId: bigint | undefined;
+    if (dto.asn_number) {
+      const asnRecord = await this.prisma.advance_ship_notices.findFirst({
+        where: { tenant_id: tenantId, facility_id: facilityId, asn_number: dto.asn_number },
+        select: { asn_id: true },
+      });
+      if (asnRecord) asnId = asnRecord.asn_id;
+    }
+
+    this.eventEmitter.emit(
+      'receiving.started',
+      new ReceivingStartedEvent({
+        tenant_id: tenantId,
+        facility_id: facilityId,
+        receipt_id: receipt.receipt_id,
+        receipt_number: receipt.receipt_number,
+        asn_id: asnId,
+      }),
+    );
 
     return this.findReceiptById(tenantId, receipt.receipt_id);
   }

@@ -1,11 +1,21 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
+import {
+  LoadCreatedEvent,
+  LoadStartedEvent,
+  LoadCompletedEvent,
+  LoadDepartedEvent,
+} from '../../events/definitions/outbound.events';
 
 @Injectable()
 export class LoadService {
   private readonly logger = new Logger(LoadService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async delete(tenantId: string, loadId: bigint) {
     const load = await this.findById(tenantId, loadId);
@@ -16,7 +26,7 @@ export class LoadService {
   }
 
   async create(tenantId: string, dto: any) {
-    return this.prisma.loads.create({
+    const load = await this.prisma.loads.create({
       data: {
         tenant_id: tenantId,
         facility_id: BigInt(dto.facility_id),
@@ -49,6 +59,19 @@ export class LoadService {
         notes: dto.notes,
       },
     });
+
+    this.eventEmitter.emit(
+      'load.created',
+      new LoadCreatedEvent({
+        tenant_id: tenantId,
+        facility_id: load.facility_id,
+        load_id: load.load_id,
+        load_number: load.load_number,
+        carrier_name: load.carrier_name || undefined,
+      }),
+    );
+
+    return load;
   }
 
   async findAll(tenantId: string, query: any) {
@@ -163,6 +186,16 @@ export class LoadService {
       data: { status: 'LOADING', load_start_time: new Date() },
     });
 
+    this.eventEmitter.emit(
+      'load.started',
+      new LoadStartedEvent({
+        tenant_id: tenantId,
+        facility_id: load.facility_id,
+        load_id: loadId,
+        load_number: load.load_number,
+      }),
+    );
+
     return this.findById(tenantId, loadId);
   }
 
@@ -189,6 +222,20 @@ export class LoadService {
       },
     });
 
+    this.eventEmitter.emit(
+      'load.completed',
+      new LoadCompletedEvent({
+        tenant_id: tenantId,
+        facility_id: load.facility_id,
+        load_id: loadId,
+        load_number: load.load_number,
+        loaded_cartons: loadedCartons,
+        seal_number: dto.seal_number || load.seal_number || undefined,
+        bol_number: dto.bol_number || load.bol_number || undefined,
+        pro_number: dto.pro_number || load.pro_number || undefined,
+      }),
+    );
+
     return this.findById(tenantId, loadId);
   }
 
@@ -209,6 +256,17 @@ export class LoadService {
       where: { tenant_id: tenantId, assigned_load_id: loadId },
       data: { status: 'SHIPPED' },
     });
+
+    this.eventEmitter.emit(
+      'load.departed',
+      new LoadDepartedEvent({
+        tenant_id: tenantId,
+        facility_id: load.facility_id,
+        load_id: loadId,
+        load_number: load.load_number,
+        actual_departure_time: new Date(),
+      }),
+    );
 
     return this.findById(tenantId, loadId);
   }

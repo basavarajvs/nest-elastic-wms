@@ -1,6 +1,8 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { asn_status } from '@prisma/client';
+import { AsnStatusChangedEvent } from '../../events/definitions/inbound.events';
 
 const ASN_TRANSITIONS: Record<asn_status, asn_status[]> = {
   CREATED: [asn_status.CONFIRMED, asn_status.IN_RECEIVING, asn_status.CANCELLED],
@@ -18,7 +20,10 @@ const ASN_TRANSITIONS: Record<asn_status, asn_status[]> = {
 export class AsnService {
   private readonly logger = new Logger(AsnService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   private assertValidTransition(current: asn_status, next: asn_status) {
     const allowed = ASN_TRANSITIONS[current];
@@ -137,6 +142,20 @@ export class AsnService {
         status_changed_by: changedBy ? BigInt(changedBy) : undefined,
       },
     });
+
+    this.eventEmitter.emit(
+      'asn.status_changed',
+      new AsnStatusChangedEvent({
+        tenant_id: tenantId,
+        facility_id: asn.facility_id,
+        asn_id: asnId,
+        asn_number: asn.asn_number,
+        old_status: asn.status,
+        new_status: status,
+        changed_by: changedBy,
+      }),
+    );
+
     return this.findById(tenantId, asnId);
   }
 

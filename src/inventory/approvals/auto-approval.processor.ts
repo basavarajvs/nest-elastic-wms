@@ -1,8 +1,8 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { Logger } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
-import { AuditService } from '../../common/audit/audit.service';
 
 @Processor('auto-approval-processor')
 export class AutoApprovalProcessor extends WorkerHost {
@@ -10,7 +10,7 @@ export class AutoApprovalProcessor extends WorkerHost {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly auditService: AuditService,
+    private readonly eventEmitter: EventEmitter2,
   ) {
     super();
   }
@@ -29,12 +29,10 @@ export class AutoApprovalProcessor extends WorkerHost {
           where: { request_id: req.request_id },
           data: { status: 'APPROVED' as any },
         });
-        await this.auditService.log({
-          tenantId: req.tenant_id,
-          action: 'AUTO_APPROVE_ADJUSTMENT',
-          tableName: 'adjustment_approval_requests',
-          recordId: String(req.request_id),
-          notes: 'Auto-approved below threshold',
+        this.eventEmitter.emit('adjustment.auto_approved', {
+          tenant_id: req.tenant_id,
+          request_id: req.request_id,
+          facility_id: req.facility_id,
         });
       } catch (err) {
         this.logger.error(`Failed to auto-approve ${req.request_id}: ${err}`);

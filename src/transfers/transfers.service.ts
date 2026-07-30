@@ -1,9 +1,14 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../prisma/prisma.service';
+import { InventoryMovedEvent } from '../events/definitions/inventory.events';
 
 @Injectable()
 export class TransfersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async getNextTransferNumber(tenantId: string, facilityId: bigint): Promise<string> {
     const facility = await this.prisma.$queryRawUnsafe<Record<string, any>[]>(
@@ -193,6 +198,21 @@ export class TransfersService {
       dto.notes || null,
       id,
       tenantId,
+    );
+
+    const firstLine = lines[0];
+    this.eventEmitter.emit(
+      'inventory.moved',
+      new InventoryMovedEvent({
+        tenant_id: tenantId,
+        facility_id: transfer.facility_id,
+        transfer_id: id,
+        transfer_number: transfer.transfer_number,
+        product_id: firstLine?.product_id || 0n,
+        quantity: Number(firstLine?.quantity || 0),
+        from_location_id: transfer.source_warehouse_id || 0n,
+        to_location_id: transfer.destination_warehouse_id || 0n,
+      }),
     );
 
     return this.findById(tenantId, id);

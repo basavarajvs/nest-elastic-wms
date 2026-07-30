@@ -1,9 +1,14 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
+import { QualityHoldCreatedEvent, HoldReleasedEvent } from '../../events/definitions/quality.events';
 
 @Injectable()
 export class QualityHoldService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async create(tenantId: string, dto: any) {
     const hold = await this.prisma.quality_holds.create({
@@ -33,6 +38,20 @@ export class QualityHoldService {
       const product = await this.prisma.products.findFirst({ where: { tenant_id: tenantId, product_id: hold.product_id } });
       product_name = product?.product_name;
     }
+
+    this.eventEmitter.emit(
+      'hold.created',
+      new QualityHoldCreatedEvent({
+        tenant_id: tenantId,
+        facility_id: hold.facility_id,
+        hold_id: hold.hold_id,
+        product_id: hold.product_id || undefined,
+        location_id: hold.location_id || undefined,
+        reason: hold.hold_reason,
+        created_by: hold.placed_by_user_id || dto.created_by || '',
+      }),
+    );
+
     return { ...hold, product_name };
   }
 
@@ -118,6 +137,19 @@ export class QualityHoldService {
       where: { hold_id: BigInt(id) },
       data: { status: 'RELEASED', released_by_user_id: userId, released_at: new Date(), notes: reason || undefined },
     });
+
+    this.eventEmitter.emit(
+      'hold.released',
+      new HoldReleasedEvent({
+        tenant_id: tenantId,
+        facility_id: hold.facility_id,
+        hold_id: hold.hold_id,
+        product_id: hold.product_id || undefined,
+        released_by: userId,
+        reason: reason,
+      }),
+    );
+
     return { message: 'Hold released successfully' };
   }
 }

@@ -1,11 +1,16 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
+import { InventoryReservedEvent, OrderAllocatedEvent } from '../../events/definitions/inventory.events';
 
 @Injectable()
 export class AllocationService {
   private readonly logger = new Logger(AllocationService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   /**
    * Allocate inventory for a sales order line using rule-based strategy.
@@ -208,6 +213,42 @@ export class AllocationService {
         data: { status: 'ALLOCATED' },
       });
     }
+
+    const order = await this.prisma.sales_orders.findFirst({
+      where: { tenant_id: tenantId, order_id: orderId },
+      select: { order_number: true, facility_id: true },
+    });
+
+    for (const r of results) {
+      if (r.allocations) {
+        for (const alloc of r.allocations) {
+          this.eventEmitter.emit(
+            'inventory.reserved',
+            new InventoryReservedEvent({
+              tenant_id: tenantId,
+              facility_id: facilityId,
+              allocation_id: alloc.allocation_id,
+              order_id: orderId,
+              order_line_id: r.lineId,
+              product_id: alloc.product_id,
+              quantity: alloc.quantity_allocated,
+              location_id: alloc.location_id,
+            }),
+          );
+        }
+      }
+    }
+
+    this.eventEmitter.emit(
+      'order.allocated',
+      new OrderAllocatedEvent({
+        tenant_id: tenantId,
+        facility_id: facilityId,
+        order_id: orderId,
+        order_number: order?.order_number || '',
+        total_short: totalShort,
+      }),
+    );
 
     return { orderId: orderId.toString(), results, totalShort };
   }

@@ -1,9 +1,14 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
+import { InspectionPassedEvent, InspectionFailedEvent } from '../../events/definitions/quality.events';
 
 @Injectable()
 export class InspectionService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async lookupLpnForQc(tenantId: string, facilityId: bigint, barcode: string) {
     const lpn = await this.prisma.license_plate_numbers.findFirst({
@@ -585,6 +590,19 @@ export class InspectionService {
         inspector_user_id: BigInt(0),
       },
     });
+    this.eventEmitter.emit(
+      'inspection.passed',
+      new InspectionPassedEvent({
+        tenant_id: tenantId,
+        facility_id: inspection.facility_id,
+        inspection_id: inspectionId,
+        grn_id: undefined,
+        product_id: inspection.product_id || undefined,
+        approved_by: supervisorId,
+        disposition: overrideDisposition || inspection.result || undefined,
+      }),
+    );
+
     return { approved: true, inspectionId };
   }
 
@@ -627,6 +645,19 @@ export class InspectionService {
         reason: rejectReason,
       },
     });
+    this.eventEmitter.emit(
+      'inspection.failed',
+      new InspectionFailedEvent({
+        tenant_id: tenantId,
+        facility_id: inspection.facility_id,
+        inspection_id: inspectionId,
+        grn_id: undefined,
+        product_id: inspection.product_id || undefined,
+        rejected_by: supervisorId,
+        reason: rejectReason,
+      }),
+    );
+
     return { rejected: true, originalInspectionId: inspectionId, newInspectionId: newInspection.inspection_id };
   }
 

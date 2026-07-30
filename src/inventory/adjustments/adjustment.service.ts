@@ -1,9 +1,14 @@
 import { Injectable } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
+import { InventoryAdjustedEvent } from '../../events/definitions/inventory.events';
 
 @Injectable()
 export class AdjustmentService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async create(tenantId: string, dto: any) {
     const { lines, facility_id, ...header } = dto;
@@ -94,6 +99,27 @@ export class AdjustmentService {
       data: { status: 'APPROVED' as any, approved_by_user_id: userId, approved_date: new Date() },
       include: { warehouse_facilities: true },
     });
+
+    const firstLine = await this.prisma.inventory_adjustment_lines.findFirst({
+      where: { tenant_id: tenantId, adjustment_id: BigInt(id) },
+      orderBy: { adjustment_line_id: 'asc' },
+    });
+
+    this.eventEmitter.emit(
+      'inventory.adjusted',
+      new InventoryAdjustedEvent({
+        tenant_id: tenantId,
+        facility_id: result.facility_id,
+        adjustment_id: BigInt(id),
+        product_id: firstLine?.product_id || 0n,
+        location_id: firstLine?.location_id || 0n,
+        old_quantity: 0,
+        new_quantity: Number(firstLine?.quantity_adjustment || 0),
+        reason: adj.reason || adj.reason_code || undefined,
+        approved_by: userId,
+      }),
+    );
+
     const { warehouse_facilities, ...rest } = result as any;
     return { ...rest, facility_name: warehouse_facilities?.facility_name ?? null };
   }

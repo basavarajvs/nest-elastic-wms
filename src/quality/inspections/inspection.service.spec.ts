@@ -102,7 +102,8 @@ describe('InspectionService', () => {
       putaway_tasks: { create: jest.fn().mockResolvedValue({ task_id: BigInt(1) }) },
       inspection_defects: { findMany: jest.fn().mockResolvedValue([]), createMany: jest.fn().mockResolvedValue({ count: 1 }) },
     };
-    service = new InspectionService(mockPrisma as any);
+    const mockEventEmitter = { emit: jest.fn() };
+    service = new InspectionService(mockPrisma as any, mockEventEmitter as any);
   });
 
   describe('lookupLpnForQc', () => {

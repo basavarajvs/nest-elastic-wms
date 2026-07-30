@@ -1,11 +1,14 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SupervisorPinService } from '../../security/supervisor-pin.service';
+import { HoldReleasedEvent } from '../../events/definitions/quality.events';
 
 @Injectable()
 export class HoldService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
     private readonly supervisorPinService: SupervisorPinService,
   ) {}
 
@@ -102,6 +105,19 @@ export class HoldService {
         release_notes: reason || null,
       },
     });
+
+    this.eventEmitter.emit(
+      'hold.released',
+      new HoldReleasedEvent({
+        tenant_id: tenantId,
+        facility_id: hold.facility_id,
+        hold_id: hold.hold_id,
+        product_id: hold.product_id || undefined,
+        released_by: userId,
+        reason: reason,
+      }),
+    );
+
     const mapped = await this.mapHolds(tenantId, [updated]);
     return mapped[0];
   }

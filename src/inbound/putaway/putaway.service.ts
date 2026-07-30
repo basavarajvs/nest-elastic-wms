@@ -1,6 +1,8 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../prisma/prisma.service';
 import { task_status_old } from '@prisma/client';
+import { PutawayCompletedEvent } from '../../events/definitions/inbound.events';
 
 interface NamedTask {
   facility_name: string | null;
@@ -14,7 +16,10 @@ interface NamedTask {
 export class PutawayService {
   private readonly logger = new Logger(PutawayService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   async createTask(tenantId: string, dto: any) {
     const task = await this.prisma.putaway_tasks.create({
@@ -389,6 +394,27 @@ export class PutawayService {
 
     const qty = Number(task.quantity);
     const qtyGood = Math.max(0, qty - damageQty);
+
+    const lpnRecord = task.lpn_barcode
+      ? await this.prisma.license_plate_numbers.findFirst({
+          where: { tenant_id: tenantId, lpn_number: task.lpn_barcode },
+          select: { lpn_id: true, lpn_number: true },
+        })
+      : null;
+
+    this.eventEmitter.emit(
+      'putaway.completed',
+      new PutawayCompletedEvent({
+        tenant_id: tenantId,
+        facility_id: task.facility_id,
+        putaway_task_id: taskId,
+        product_id: task.product_id,
+        location_id: toLocationId,
+        quantity: qtyGood,
+        lpn_id: lpnRecord?.lpn_id,
+        lpn_number: lpnRecord?.lpn_number,
+      }),
+    );
 
     if (qtyGood <= 0) {
       return { durationSeconds, damageQty };
